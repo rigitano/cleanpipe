@@ -6,6 +6,6 @@ setup(
     packages=find_packages(),
     description='A custom package for clean code',
     author='Henrique Rigitano',
-    author_email='dontbotherme@example.com',
-    url='https://github.com/your-repo/my_package',  # Optional
+    author_email='henrique.rigitano@gmail.com',
+    url='https://github.com/rigitano/cleanpipe',
 )

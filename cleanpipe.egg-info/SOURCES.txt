@@ -1,5 +1,0 @@
-setup.py
-cleanpipe.egg-info/PKG-INFO
-cleanpipe.egg-info/SOURCES.txt
-cleanpipe.egg-info/dependency_links.txt
-cleanpipe.egg-info/top_level.txt

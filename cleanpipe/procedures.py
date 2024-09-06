@@ -1,6 +1,5 @@
 import subprocess
-import os
-import filemanager
+from cleanpipe import filemanager
 
 
 
