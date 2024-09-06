@@ -1,0 +1,29 @@
+REMARK   DATE:     2/ 5/21     14:43:19      CREATED BY USER: nathan                  
+ATOM      1  C1  OCT O   1      -4.510  -0.222   0.000  1.00  0.00      OCTN
+ATOM      2  H11 OCT O   1      -5.368   0.483  -0.000  1.00  0.00      OCTN
+ATOM      3  H12 OCT O   1      -4.582  -0.866  -0.902  1.00  0.00      OCTN
+ATOM      4  H13 OCT O   1      -4.582  -0.866   0.902  1.00  0.00      OCTN
+ATOM      5  C2  OCT O   1      -3.187   0.549  -0.000  1.00  0.00      OCTN
+ATOM      6  H21 OCT O   1      -3.154   1.205  -0.898  1.00  0.00      OCTN
+ATOM      7  H22 OCT O   1      -3.154   1.205   0.898  1.00  0.00      OCTN
+ATOM      8  C3  OCT O   1      -1.938  -0.347   0.000  1.00  0.00      OCTN
+ATOM      9  H31 OCT O   1      -1.964  -1.001   0.900  1.00  0.00      OCTN
+ATOM     10  H32 OCT O   1      -1.964  -1.001  -0.900  1.00  0.00      OCTN
+ATOM     11  C4  OCT O   1      -0.624   0.448  -0.000  1.00  0.00      OCTN
+ATOM     12  H41 OCT O   1      -0.598   1.102  -0.900  1.00  0.00      OCTN
+ATOM     13  H42 OCT O   1      -0.598   1.102   0.900  1.00  0.00      OCTN
+ATOM     14  C5  OCT O   1       0.624  -0.448  -0.000  1.00  0.00      OCTN
+ATOM     15  H51 OCT O   1       0.598  -1.102   0.900  1.00  0.00      OCTN
+ATOM     16  H52 OCT O   1       0.598  -1.102  -0.900  1.00  0.00      OCTN
+ATOM     17  C6  OCT O   1       1.938   0.347   0.000  1.00  0.00      OCTN
+ATOM     18  H61 OCT O   1       1.964   1.001  -0.900  1.00  0.00      OCTN
+ATOM     19  H62 OCT O   1       1.964   1.001   0.900  1.00  0.00      OCTN
+ATOM     20  C7  OCT O   1       3.187  -0.549  -0.000  1.00  0.00      OCTN
+ATOM     21  H71 OCT O   1       3.154  -1.205   0.898  1.00  0.00      OCTN
+ATOM     22  H72 OCT O   1       3.154  -1.205  -0.898  1.00  0.00      OCTN
+ATOM     23  C8  OCT O   1       4.510   0.222   0.000  1.00  0.00      OCTN
+ATOM     24  H81 OCT O   1       5.368  -0.483  -0.000  1.00  0.00      OCTN
+ATOM     25  H82 OCT O   1       4.582   0.866  -0.902  1.00  0.00      OCTN
+ATOM     26  H83 OCT O   1       4.582   0.866   0.902  1.00  0.00      OCTN
+TER      27      OCTN     1
+END
