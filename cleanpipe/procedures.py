@@ -21,6 +21,7 @@ def pdb2filledBox(s_pdbfile):
     subprocess.run(f"gmx pdb2gmx -f {s_filename}.pdb -o {s_filename}.gro -p {s_filename}.top -i {s_filename}_posres.itp -water none -ff charmm36-jul2022" , shell=True)
     
     #manipulate the GRO file to create a 5x5x5 box and fill it with copyes of the molecule
+    subprocess.run(f"gmx insert-molecules -ci {s_filename}.gro -nmol 1000 -box 5 5 5 -o {s_filename}_filledbox.gro" , shell=True)
     result = subprocess.run(f"gmx insert-molecules -ci {s_filename}.gro -nmol 1000 -box 5 5 5 -o {s_filename}_filledbox.gro" , shell=True, capture_output=True,text=True)
     
     #get the number of molecules realy added. this will be done by reading the standard output
