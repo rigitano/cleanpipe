@@ -22,10 +22,13 @@ def pdb2filledBox(s_pdbfile):
     
     #manipulate the GRO file to create a 5x5x5 box and fill it with copyes of the molecule
     result = subprocess.run(f"gmx insert-molecules -ci {s_filename}.gro -nmol 1000 -box 5 5 5 -o {s_filename}_filledbox.gro" , shell=True, capture_output=True,text=True)
-    print(result)
+
+
+    print("stdout:", result.stdout)
+    print("stderr:", result.stderr)
     #get the number of molecules realy added. this will be done by reading the standard output
     stdout = result.stdout
-    match = re.search(r'Added\s+(\d+)\s+molecules', result)
+    match = re.search(r'Added\s+(\d+)\s+molecules', result.stdout)
     added_molecules = int(match.group(1))
 
     #change the molecule name inside the TOP file the same as the original pdb file
