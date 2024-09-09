@@ -30,11 +30,11 @@ def pdb2filledBox(s_pdbfile):
     added_molecules = int(match.group(1))
 
     #change the molecule name inside the TOP file the same as the original pdb file
-    uglyMolName = topContent.getMoleculeName({s_filename}+".top")
+    uglyMolName = topContent.getMoleculeName(f"{s_filename}.top")
     molName = s_filename
-    topContent.replaceMoleculeName({s_filename}+".top", uglyMolName, molName)
+    topContent.replaceMoleculeName(f"{s_filename}.top", uglyMolName, molName)
 
     #update the TOP file with the new total the molecule
-    topContent.update_molecule_quantity({s_filename}+".top", molName, added_molecules)
+    topContent.update_molecule_quantity(f"{s_filename}.top", molName, added_molecules)
 
 
