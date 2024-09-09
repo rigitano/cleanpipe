@@ -25,7 +25,7 @@ def pdb2filledBox(s_pdbfile):
     print(result)
     #get the number of molecules realy added. this will be done by reading the standard output
     stdout = result.stdout
-    match = re.search(r'Output configuration contains\s+(\d+)\s+atoms', stdout)
+    match = re.search(r'Added\s+(\d+)\s+molecules', stdout)
     added_molecules = int(match.group(1))
 
     #change the molecule name inside the TOP file the same as the original pdb file
