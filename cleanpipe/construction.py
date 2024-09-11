@@ -113,10 +113,10 @@ def build_peptide_in_solution(s_outFileName, s_nTerminusCAP, s_aminoacids, s_cTe
         subprocess.run(f"rm \\#{s_outFileName}.top.1\\#" , shell=True)#I chose to overwrite the old top
 
         #edit top to insert a line including a reference of the solvent itp before the [ system ] directive
-        subprocess.run(rf'''awk -v line='#include "{s_solvent}//{s_base_name}.itp"' '/\[ system \]/{{print line"\n"; i=2}}i&&!--i{{next}}1' alaHO.top > temp.top && mv temp.top alaHO.top''', shell=True, check=True)
+        subprocess.run(rf'''awk -v line='#include "./{s_solvent}/{s_base_name}.itp"' '/\[ system \]/{{print line"\n"; i=2}}i&&!--i{{next}}1' {s_outFileName}.top > temp.top && mv temp.top {s_outFileName}.top''', shell=True, check=True)
 
         #make that itp file realy available in the current system
-        subprocess.run(f"cp {s_solvent}//{s_base_name}.itp ." , shell=True)
+        subprocess.run(f"cp {s_solvent}/{s_base_name}.itp ." , shell=True)
 
         #set the the name of the system in the top file
         topContent.setSystemName(f"{s_outFileName}.top", f"peptide in custom solvent" )
