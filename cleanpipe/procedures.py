@@ -38,4 +38,7 @@ def pdb2filledBox(s_pdbfile):
     #update the TOP file with the new total the molecule
     topContent.update_molecule_quantity(f"{s_filename}.top", molName, added_molecules)
 
+    #give a name for the system
+    topContent.setSystemName(f"{s_filename}.top", f"box filed with {s_filename} )
+
 

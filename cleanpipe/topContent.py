@@ -38,9 +38,38 @@ def getMoleculeName(top_file_path, order=1):
         return molecules[index]
     else:
         return None  # If the requested order is out of bounds
+    
+def getSystemName(top_file_path):
+    """
+    obtains the name of the system inside a top file. 
+    You have to give the top file
+
+    """
+    
+    # Open and read the .top file
+    with open(top_file_path, 'r') as file:
+        lines = file.readlines()
+        
+        # Flag to indicate if we are in the [ system ] section
+        in_system_section = False
+        
+        for line in lines:
+            line = line.strip()
+            
+            # Check if the line is the start of the [ molecules ] section
+            if line.startswith('[ system ]'):
+                in_system_section = True
+                continue
+            
+            # If we are in the [ system ] section and encounter a non-comment, non-empty line
+            if in_system_section and line and not line.startswith(';'):
+                # Extract the first line that is not a comment, this should be the system name
+                return line
+    
 
 
-def replaceWordInsideDirective(top_filename, target_directive, old_molecule_name, new_molecule_name):
+
+def replaceWordInsideDirective(top_filename, target_directive, old_word, new_word):
     """
     this replaces a word inside a specific directive. 
     you gave to informe the top file, the directive to look into, the wor to be replaced, and the new word
@@ -67,8 +96,8 @@ def replaceWordInsideDirective(top_filename, target_directive, old_molecule_name
             inside_target_directive = False
 
         # Replace the molecule name in the target_directive (ex: [ moleculetype ]) 
-        if inside_target_directive and old_molecule_name in stripped_line:
-            updated_lines.append(line.replace(old_molecule_name, new_molecule_name))
+        if inside_target_directive and old_word in stripped_line:
+            updated_lines.append(line.replace(old_word, new_word))
         else:
             updated_lines.append(line)
 
@@ -83,6 +112,16 @@ def replaceMoleculeName(top_filename, old_molecule_name, new_molecule_name):
 
     replaceWordInsideDirective(top_filename, "[ moleculetype ]", old_molecule_name, new_molecule_name)
     replaceWordInsideDirective(top_filename, "[ molecules ]", old_molecule_name, new_molecule_name)
+
+
+def setSystemName(top_filename, new_system_name):
+    """
+    to replace the system name, this function find the current system name and then replace the name that appears inside two specific directives: [ moleculetype ] and [ molecules ]
+    """
+
+    old_system_name = getSystemName(top_filename)
+
+    replaceWordInsideDirective(top_filename, "[ system ]", old_system_name, new_system_name)
 
 
 def update_molecule_quantity(top_file, molecule_name, new_quantity):
@@ -129,3 +168,6 @@ def update_molecule_quantity(top_file, molecule_name, new_quantity):
     # Write the modified lines back to the file
     with open(top_file, 'w') as file:
         file.writelines(new_lines)
+
+
+
