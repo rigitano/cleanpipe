@@ -8,4 +8,16 @@ setup(
     author='Henrique Rigitano',
     author_email='henrique.rigitano@gmail.com',
     url='https://github.com/rigitano/cleanpipe',
+    install_requires=[
+        'PeptideBuilder', 
+        'Bio',
+        'Geometry',
+        'mdtraj',
+        'pandas',
+        'numpy',
+        'requests',
+        'matplotlib',
+        'seaborn',
+        'MDAnalysis',
+    ],
 )
