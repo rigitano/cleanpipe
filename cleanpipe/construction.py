@@ -80,7 +80,7 @@ def build_peptide_in_solution(s_outFileName, s_nTerminusCAP, s_aminoacids, s_cTe
     subprocess.run(f"printf '8\n7\n' | gmx pdb2gmx -f {s_outFileName}.pdb -o {s_outFileName}.gro -p {s_outFileName}.top -i {s_outFileName}.posres.itp -missing -ter -ignh -water tip3p -ff {s_forceField}", shell=True)
     
     #pdb is not necessary anymore. as pdb2gmx provided the gro and top files to describe the system
-    subprocess.run(f"rm {s_outFileName.pdb} , shell=True)# I chose to overwrite the old gro
+    subprocess.run(f"rm {s_outFileName.pdb}" , shell=True)# I chose to overwrite the old gro
     
     #define box size. s_boxSize contains the user definition (ex: "3 3 3")
     subprocess.run(f"gmx editconf -f {s_outFileName}.gro -o {s_outFileName}.gro -c -box {s_boxSize} -bt cubic", shell=True)
