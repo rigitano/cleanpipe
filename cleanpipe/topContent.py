@@ -1,62 +1,4 @@
 
-
-def replaceMoleculeName(top_filename, old_molecule_name, new_molecule_name):
-    """
-    this replaces the name of a molecule present in the top file.
-    you gave to informe the top file, the name of the molecule to be replaced, and the new name
-    """
-
-    # Reading the file contents
-    with open(top_filename, 'r') as file:
-        lines = file.readlines()
-
-    inside_moleculetype = False
-    inside_molecules = False
-    updated_lines = []
-
-    for line in lines:
-        stripped_line = line.strip()
-
-        # Look for [ moleculetype ] directive and its contents
-        if stripped_line.startswith("[ moleculetype ]"):
-            inside_moleculetype = True
-            updated_lines.append(line)
-            continue
-
-        # Exiting [ moleculetype ] when a blank line or another directive is found
-        if inside_moleculetype and stripped_line.startswith("[") and "moleculetype" not in stripped_line:
-            inside_moleculetype = False
-
-        # Replace the molecule name in the [ moleculetype ] directive
-        if inside_moleculetype and old_molecule_name in stripped_line:
-            updated_lines.append(line.replace(old_molecule_name, new_molecule_name))
-        else:
-            updated_lines.append(line)
-
-        # Look for [ molecules ] directive and its contents
-        if stripped_line.startswith("[ molecules ]"):
-            inside_molecules = True
-            updated_lines.append(line)
-            continue
-
-        # Exiting [ molecules ] when a blank line or another directive is found
-        if inside_molecules and stripped_line.startswith("[") and "molecules" not in stripped_line:
-            inside_molecules = False
-
-        # Replace the molecule name in the [ molecules ] directive
-        if inside_molecules and old_molecule_name in stripped_line:
-            updated_lines.append(line.replace(old_molecule_name, new_molecule_name))
-        else:
-            if not inside_moleculetype:
-                updated_lines.append(line)
-
-    # Writing the modified content back to the file
-    with open(top_filename, 'w') as file:
-        file.writelines(updated_lines)
-
-    print(f"Replaced all occurrences of '{old_molecule_name}' with '{new_molecule_name}' in the file '{top_filename}'.")
-
-
 def getMoleculeName(top_file_path, order=1):
     """
     obtains the name of a molecule inside a top file. 
@@ -96,6 +38,51 @@ def getMoleculeName(top_file_path, order=1):
         return molecules[index]
     else:
         return None  # If the requested order is out of bounds
+
+
+def replaceWordInsideDirective(top_filename, target_directive, old_molecule_name, new_molecule_name):
+    """
+    this replaces a word inside a specific directive. 
+    you gave to informe the top file, the directive to look into, the wor to be replaced, and the new word
+    """
+
+    # Reading the file contents
+    with open(top_filename, 'r') as file:
+        lines = file.readlines()
+
+    inside_target_directive = False
+    updated_lines = []
+
+    for line in lines:
+        stripped_line = line.strip()
+
+        # Look for target_directive (ex: [ moleculetype ]) and its contents
+        if stripped_line.startswith(target_directive):
+            inside_target_directive = True
+            updated_lines.append(line)
+            continue
+
+        # Exiting target_directive (ex: [ moleculetype ]) when a blank line or another directive is found
+        if inside_target_directive and stripped_line.startswith("[") and target_directive not in stripped_line:
+            inside_target_directive = False
+
+        # Replace the molecule name in the target_directive (ex: [ moleculetype ]) 
+        if inside_target_directive and old_molecule_name in stripped_line:
+            updated_lines.append(line.replace(old_molecule_name, new_molecule_name))
+        else:
+            updated_lines.append(line)
+
+    # Writing the modified content back to the file
+    with open(top_filename, 'w') as file:
+        file.writelines(updated_lines)
+
+def replaceMoleculeName(top_filename, old_molecule_name, new_molecule_name):
+    """
+    to replace a molecule name, you have to do replace the name that appears inside two specific directives: [ moleculetype ] and [ molecules ]
+    """
+
+    replaceWordInsideDirective(top_filename, "[ moleculetype ]", old_molecule_name, new_molecule_name)
+    replaceWordInsideDirective(top_filename, "[ molecules ]", old_molecule_name, new_molecule_name)
 
 
 def update_molecule_quantity(top_file, molecule_name, new_quantity):

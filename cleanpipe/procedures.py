@@ -29,9 +29,10 @@ def pdb2filledBox(s_pdbfile):
     match = re.search(r'Added\s+(\d+)\s+molecules', result.stdout+result.stderr)
     added_molecules = int(match.group(1))
 
-    #change the molecule name inside the TOP file the same as the original pdb file
+    #change the ugly molecule name currently inside the TOP file. it will be changed to be the same as the original pdb file
     uglyMolName = topContent.getMoleculeName(f"{s_filename}.top")
     molName = s_filename
+    topContent.replaceMoleculeName(f"{s_filename}.top", uglyMolName, molName)
     topContent.replaceMoleculeName(f"{s_filename}.top", uglyMolName, molName)
 
     #update the TOP file with the new total the molecule
