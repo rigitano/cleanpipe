@@ -85,7 +85,7 @@ def create_peptide_in_solution(s_outName, s_nTerminusCAP, s_aminoacids, s_cTermi
     
     #define box size. s_boxSize contains the user definition (ex: "3 3 3")
     subprocess.run(f"gmx editconf -f {s_outPathAndName}.gro -o {s_outPathAndName}.gro -c -box {s_boxSize} -bt cubic", shell=True)
-    subprocess.run(f"rm \\#{s_outPathAndName}.gro.1\\#" , shell=True)# I chose to overwrite the old gro
+    subprocess.run(f"rm {s_outName}/\\#{s_outName}.gro.1\\#" , shell=True)# I chose to overwrite the old gro
 
 
     ################################## add solvent to the system. I have 2 options here: tip3p or filled box ##############################################
@@ -95,8 +95,8 @@ def create_peptide_in_solution(s_outName, s_nTerminusCAP, s_aminoacids, s_cTermi
         #this mean the user has chosen the tip3p water model, already part of the forcefield
 
         subprocess.run(f"gmx solvate -cp {s_outPathAndName}.gro -p {s_outPathAndName}.top -o {s_outPathAndName}.gro -maxsol 3616", shell=True)
-        subprocess.run(f"rm \\#{s_outPathAndName}.gro.1\\#" , shell=True)#I chose to overwrite the old gro
-        subprocess.run(f"rm \\#{s_outPathAndName}.top.1\\#" , shell=True)#I chose to overwrite the old top
+        subprocess.run(f"rm {s_outName}/\\#{s_outName}.gro.1\\#" , shell=True)#I chose to overwrite the old gro
+        subprocess.run(f"rm {s_outName}/\\#{s_outName}.top.1\\#" , shell=True)#I chose to overwrite the old top
 
         #set the the name of the system in the top file
         topContent.setSystemName(f"{s_outPathAndName}.top", f"peptide in water (tip3p)" )
@@ -110,8 +110,8 @@ def create_peptide_in_solution(s_outName, s_nTerminusCAP, s_aminoacids, s_cTermi
 
         #edit gro to insert the solvent
         subprocess.run(f"gmx solvate -cp {s_outPathAndName}.gro -cs {s_solvent}//{s_sol_base_name}.gro -p {s_outPathAndName}.top -o {s_outPathAndName}.gro -maxsol 395", shell=True)
-        subprocess.run(f"rm \\#{s_outPathAndName}.gro.1\\#" , shell=True)#I chose to overwrite the old gro
-        subprocess.run(f"rm \\#{s_outPathAndName}.top.1\\#" , shell=True)#I chose to overwrite the old top
+        subprocess.run(f"rm {s_outName}/\\#{s_outName}.gro.1\\#" , shell=True)#I chose to overwrite the old gro
+        subprocess.run(f"rm {s_outName}/\\#{s_outName}.top.1\\#" , shell=True)#I chose to overwrite the old top
 
         #edit top to insert a line including a reference of the solvent itp before the [ system ] directive
         subprocess.run(rf'''awk -v line='#include "{s_sol_base_name}.itp"' '/\[ system \]/{{print line"\n"; i=2}}i&&!--i{{next}}1' {s_outPathAndName}.top > temp.top && mv temp.top {s_outPathAndName}.top''', shell=True, check=True)
