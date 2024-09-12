@@ -27,8 +27,8 @@ def pdb2filledBox(s_pdbfile):
 
 
     #create a system with 1 molecule.
-    subprocess.run(f"gmx pdb2gmx -f {s_filename}.pdb -o {s_outPathAndName}.gro -p {s_outPathAndName}.top -i {s_outPathAndName}.posres.itp -water none -ff charmm36-jul2022" , shell=True)
-    # xxx the generated posres is keeping fixed only one solvent molecule
+    subprocess.run(f"gmx pdb2gmx -f {s_filename}.pdb -o {s_outPathAndName}.gro -p {s_outPathAndName}.top -water none -ff charmm36-jul2022" , shell=True)
+    # xxx the generated posres is keeping fixed only one solvent molecule -i {s_outPathAndName}.posres.itp
 
     #manipulate the GRO file to create a 5x5x5 box and fill it with copyes of the molecule
     result = subprocess.run(f"gmx insert-molecules -ci {s_outPathAndName}.gro -nmol 1000 -box 5 5 5 -o {s_outPathAndName}_filledbox.gro" , shell=True, capture_output=True,text=True)
