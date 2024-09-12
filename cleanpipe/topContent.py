@@ -188,30 +188,29 @@ def decompose_TOP_file_into_SOCKETTOP_and_ITPs(top_file_path):
     molecule_types = set()
     global_sections_started = False
 
-    # Regular expressions can also be used to make parsing more robust
+    # Go through file lines
     for line in lines:
         # Look for the beginning of a new molecule type
         if line.startswith("[ moleculetype ]") and not global_sections_started:
             # Start of a new molecule type
             inside_molecule = True
+            inside_moleculetype_directive = True
             current_molecule = None  # Reset current molecule
             
-            # Extract the molecule name on the next line
-            molecule_line = lines[lines.index(line) + 1].strip().split()
-            if len(molecule_line) > 0:
-                current_molecule = molecule_line[0]  # Molecule name
-                molecule_sections[current_molecule] = []
-                molecule_types.add(current_molecule)
+        # Extract the molecule name. if you are in the moleculetype section and encounter a non-comment, non-empty line
+        elif inside_moleculetype_directive and line and not line.startswith(';') and bool(line.strip) : 
+            current_molecule = line.strip.split()[0] # Extract the first word in the line, which is the molecule name
+            molecule_sections[current_molecule] = []
+            molecule_types.add(current_molecule)
         elif inside_molecule and (line.startswith("[") and not line.startswith("[ moleculetype ]")):
-            # The end of the molecule-specific section, meaning the molecule block has ended
-            inside_molecule = False
+            # You are in the title of a directive other than [ moleculetype ]
+            inside_moleculetype_directive = False
         elif inside_molecule:
             # Append lines related to the current molecule
             molecule_sections[current_molecule].append(line)
-        else:
+        elif line.startswith("[ system ]") or line.startswith("[ molecules ]"):
             # Detect global system-related sections after molecule definitions
-            if line.startswith("[ system ]") or line.startswith("[ molecules ]"):
-                global_sections_started = True
+            global_sections_started = True
             # These lines go into the general system info, including the global sections
             system_info.append(line)
     
@@ -237,7 +236,7 @@ def decompose_TOP_file_into_SOCKETTOP_and_ITPs(top_file_path):
             f.writelines(section_lines)
     
     print(f"System topology written to: {system_top_file}")
-    print(f"Generated {len(molecule_sections)} itp files for the molecules.")
+    print(f"Generated {len(molecule_sections)} itp files for the molecules: {str(molecule_sections.keys())}")
 
 
     #after creating this function. use it on create_peptide_solution when the solvent is a filled box. filled boxes dont have itps, but custom solvent requires itps
