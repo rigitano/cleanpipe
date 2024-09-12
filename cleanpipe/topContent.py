@@ -248,5 +248,31 @@ def decompose_TOP_file_into_SOCKETTOP_and_ITPs(top_file_path):
             # Write molecule-specific content to the itp file
             f.writelines(section_lines)
         print(f"                      {itp_file}")
+
+
+def remove_posres_inclusion(s_topfile):
+    """
+    unfortunately pdb2gmx always create a posres.itp file. this is sometimes useless, for example
+    when creating a box full of the same molecule to use it as a custom solvent
+    this function removes the inclusion of a posres.itp file 
+    """
+
+    chunk_to_remove = '''
+    ; Include Position restraint file
+    #ifdef POSRES
+    #include "posres.itp"
+    #endif
+    '''
+
+    # Open the file and read its contents
+    with open(s_topfile, 'r') as file:
+        file_contents = file.read()
+
+    # Remove the exact chunk of text
+    updated_contents = file_contents.replace(chunk_to_remove, '')
+
+    # Write the updated contents back to the file
+    with open(s_topfile, 'w') as file:
+        file.write(updated_contents)
     
      

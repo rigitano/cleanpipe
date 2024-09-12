@@ -27,7 +27,11 @@ def pdb2filledBox(s_pdbfile):
 
 
     #create a system with 1 molecule.
-    subprocess.run(f"gmx pdb2gmx -f {s_filename}.pdb -o {s_outPathAndName}.gro -p {s_outPathAndName}.top -water none -ff charmm36-jul2022" , shell=True)
+    subprocess.run(f"gmx pdb2gmx -f {s_filename}.pdb -o {s_outPathAndName}.gro -p {s_outPathAndName}.top -i posres.itp -water none -ff charmm36-jul2022" , shell=True)
+    
+    #pdb2gmx generates a useless posres.itp with useless posres for 1 molecule. so I delete the posres.itp and the inclusion in the top
+    subprocess.run(f"rm posres.itp" , shell=True) 
+    topContent.remove_posres_inclusion({s_outPathAndName}.top)
 
     #manipulate the GRO file to create a 5x5x5 box and fill it with copyes of the molecule
     result = subprocess.run(f"gmx insert-molecules -ci {s_outPathAndName}.gro -nmol 1000 -box 5 5 5 -o {s_outPathAndName}_filledbox.gro" , shell=True, capture_output=True,text=True)
