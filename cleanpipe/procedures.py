@@ -22,37 +22,40 @@ def pdb2filledBox(s_pdbfile):
     s_filename = filemanager.get_filename_without_extension(s_pdbfile) 
 
 
+    subprocess.run(f"mkdir {s_filename}", shell=True)
+    s_outPathAndName = f"{s_filename}/{s_filename}"
+
+
     #create a system with 1 molecule.
-    subprocess.run(f"gmx pdb2gmx -f {s_filename}.pdb -o {s_filename}.gro -p {s_filename}.top -i {s_filename}.posres.itp -water none -ff charmm36-jul2022" , shell=True)
-    
+    subprocess.run(f"gmx pdb2gmx -f {s_filename}.pdb -o {s_outPathAndName}.gro -p {s_outPathAndName}.top -i {s_outPathAndName}.posres.itp -water none -ff charmm36-jul2022" , shell=True)
+    # xxx the generated posres is keeping fixed only one solvent molecule
+
     #manipulate the GRO file to create a 5x5x5 box and fill it with copyes of the molecule
-    result = subprocess.run(f"gmx insert-molecules -ci {s_filename}.gro -nmol 1000 -box 5 5 5 -o {s_filename}_filledbox.gro" , shell=True, capture_output=True,text=True)
+    result = subprocess.run(f"gmx insert-molecules -ci {s_outPathAndName}.gro -nmol 1000 -box 5 5 5 -o {s_outPathAndName}_filledbox.gro" , shell=True, capture_output=True,text=True)
     print(result.stdout+result.stderr)
-    subprocess.run(f"rm {s_filename}.gro" , shell=True)# now that we have the filled box gro, the 1 molecule gro can be deleted
+    subprocess.run(f"rm {s_outPathAndName}.gro" , shell=True)# now that we have the filled box gro, the 1 molecule gro can be deleted
 
     #get the number of molecules really added. this will be done by reading the standard output
     match = re.search(r'Added\s+(\d+)\s+molecules', result.stdout+result.stderr)
     added_molecules = int(match.group(1))
 
     #rename the top and posres.itp files. but notice the top will have to be edited so to reflect the new molecule total. the name of the system and molecules will also be edited
-    subprocess.run(f"mv {s_filename}.top {s_filename}_filledbox.top" , shell=True)
-    subprocess.run(f"mv {s_filename}.posres.itp {s_filename}.posres.itp" , shell=True)# xxx this posres is keeping fixed only one solvent molecule
-
+    subprocess.run(f"mv {s_outPathAndName}.top {s_outPathAndName}_filledbox.top" , shell=True)
 
     #change the ugly molecule name currently inside the TOP file. it will be changed to be the same as the original pdb file
-    uglyMolName = topContent.getMoleculeName(f"{s_filename}_filledbox.top")
+    uglyMolName = topContent.getMoleculeName(f"{s_outPathAndName}_filledbox.top")
     molName = s_filename
-    topContent.replaceMoleculeName(f"{s_filename}_filledbox.top", uglyMolName, molName)
-    topContent.replaceMoleculeName(f"{s_filename}_filledbox.top", uglyMolName, molName)
+    topContent.replaceMoleculeName(f"{s_outPathAndName}_filledbox.top", uglyMolName, molName)
+    topContent.replaceMoleculeName(f"{s_outPathAndName}_filledbox.top", uglyMolName, molName)
 
     #update the TOP file with the new total the molecule
-    topContent.update_molecule_quantity(f"{s_filename}_filledbox.top", molName, added_molecules)
+    topContent.update_molecule_quantity(f"{s_outPathAndName}_filledbox.top", molName, added_molecules)
 
     #split the TOP file, into a ITP that describes the molecule and a simple TOP that contains only name of the system and the totals.
-    topContent.decompose_TOP_file_into_SOCKETTOP_and_ITPs(f"{s_filename}_filledbox.top")
-    subprocess.run(f"rm {s_filename}_filledbox.top" , shell=True)
+    topContent.decompose_TOP_file_into_SOCKETTOP_and_ITPs(f"{s_outPathAndName}_filledbox.top")
+    subprocess.run(f"rm {s_outPathAndName}_filledbox.top" , shell=True)
 
     #give a name for the system
-    topContent.setSystemName(f"{s_filename}_filledbox.top", f"box filled with {s_filename}" )
+    topContent.setSystemName(f"{s_outPathAndName}_filledbox.socket.top", f"box filled with {s_filename}" )
 
 
