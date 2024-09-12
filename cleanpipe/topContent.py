@@ -1,5 +1,5 @@
 import os
-
+import subprocess
 
 def getMoleculeName(top_file_path, order=1):
     """
@@ -244,19 +244,23 @@ def decompose_TOP_file_into_SOCKETTOP_and_ITPs(top_file_path):
         for line in system_info:
             f.write(line)
 
-        # Add #include for each molecule itp file
-        for molecule_name in molecule_names.values():
-            f.write(f'#include "{molecule_name}.itp"\n')
+    # Add #include for each molecule itp file
+    for cont in range(0,len(molecule_names),-1):
+        molecule_name = molecule_names[cont]
+        subprocess.run(rf'''awk -v line='#include "{molecule_name}.itp"' '/\[ system \]/{{print line"\n"; i=2}}i&&!--i{{next}}1' {system_top_file} > temp.top && mv temp.top {system_top_file}''', shell=True, check=True)
+
+    print(f"socket top file written to '{system_top_file}'")
     
     # Create separate itp files for each molecule
+    print(f"found {len(molecule_names)} molecules inside the top file:")
     for molecule_id, section_lines in molecule_sections.items():
         itp_file = os.path.join(top_dir, f"{molecule_names[molecule_id]}.itp")
         with open(itp_file, 'w') as f:
             # Write molecule-specific content to the itp file
             f.writelines(section_lines)
+        print(f" itp file #{molecule_id+1} writen to '{molecule_names[molecule_id]}.itp'")
     
-    print(f"System topology written to: {system_top_file}")
-    print(f"Generated {len(molecule_sections)} itp files for the molecules: {str(molecule_names.values())}")
+     
 
 
     #after creating this function. use it on create_peptide_solution when the solvent is a filled box. filled boxes dont have itps, but custom solvent requires itps
