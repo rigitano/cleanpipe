@@ -1,5 +1,6 @@
 import os
 import subprocess
+import re
 
 def getMoleculeName(top_file_path, order=1):
     """
@@ -250,6 +251,8 @@ def decompose_TOP_file_into_SOCKETTOP_and_ITPs(top_file_path):
         print(f"                      {itp_file}")
 
 
+
+
 def remove_posres_inclusion(s_topfile):
     """
     unfortunately pdb2gmx always create a posres.itp file. this is sometimes useless, for example
@@ -259,24 +262,21 @@ def remove_posres_inclusion(s_topfile):
 
     print(s_topfile)
 
-    chunk_to_remove = '''
-    ; Include Position restraint file
-    #ifdef POSRES
-    #include "posres.itp"
-    #endif
-    '''
+    # Create a more flexible regex pattern to match the inclusion block
+    pattern_to_remove = r';\s*Include\s*Position\s*restraint\s*file\s*\n#ifdef\s*POSRES\s*\n#include\s*"posres\.itp"\s*\n#endif\s*'
 
     # Open the file and read its contents
     with open(s_topfile, 'r') as file:
         file_contents = file.read()
         print(file_contents)
 
-    # Remove the exact chunk of text
-    updated_contents = file_contents.replace(chunk_to_remove, '')
+    # Remove the matched block using the regex pattern
+    updated_contents = re.sub(pattern_to_remove, '', file_contents, flags=re.MULTILINE)
     print(updated_contents)
 
     # Write the updated contents back to the file
     with open(s_topfile, 'w') as file:
         file.write(updated_contents)
+
     
      
