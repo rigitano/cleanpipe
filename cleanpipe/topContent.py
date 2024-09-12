@@ -187,9 +187,12 @@ def decompose_TOP_file_into_SOCKETTOP_and_ITPs(top_file_path):
     inside_molecule = False
     molecule_types = set()
     global_sections_started = False
+    inside_moleculetype_directive = False
 
     # Go through file lines
     for line in lines:
+
+
         # Look for the beginning of a new molecule type
         if line.startswith("[ moleculetype ]") and not global_sections_started:
             # Start of a new molecule type
@@ -208,7 +211,12 @@ def decompose_TOP_file_into_SOCKETTOP_and_ITPs(top_file_path):
         elif inside_molecule:
             # Append lines related to the current molecule
             molecule_sections[current_molecule].append(line)
-        elif line.startswith("[ system ]") or line.startswith("[ molecules ]"):
+        elif not inside_molecule:
+            #this will be true before finding the first [ moleculetype ] directive
+            system_info.append(line)
+        if line.startswith("[ system ]") or line.startswith("[ molecules ]"):
+            inside_molecule = False
+            inside_moleculetype_directive = False
             # Detect global system-related sections after molecule definitions
             global_sections_started = True
             # These lines go into the general system info, including the global sections
