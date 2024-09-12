@@ -36,7 +36,7 @@ def pdb2filledBox(s_pdbfile):
 
     #rename the top and posres.itp files. but notice the top will have to be edited so to reflect the new molecule total. the name of the system and molecules will also be edited
     subprocess.run(f"mv {s_filename}.top {s_filename}_filledbox.top" , shell=True)
-    subprocess.run(f"mv {s_filename}.posres.itp {s_filename}_filledbox.posres.itp" , shell=True)# xxx this posres is keeping fixed only one solvent molecule
+    subprocess.run(f"mv {s_filename}.posres.itp {s_filename}.posres.itp" , shell=True)# xxx this posres is keeping fixed only one solvent molecule
 
 
     #change the ugly molecule name currently inside the TOP file. it will be changed to be the same as the original pdb file
