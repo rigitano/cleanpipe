@@ -22,8 +22,8 @@ def pdb2filledBox(s_pdbfile):
     s_filename = filemanager.get_filename_without_extension(s_pdbfile) 
 
 
-    subprocess.run(f"mkdir {s_filename}", shell=True)
-    s_outPathAndName = f"{s_filename}/{s_filename}"
+    subprocess.run(f"mkdir {s_filename}_filledbox", shell=True)
+    s_outPathAndName = f"{s_filename}_filledbox/{s_filename}"
 
 
     #create a system with 1 molecule.
