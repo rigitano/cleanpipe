@@ -247,6 +247,6 @@ def decompose_TOP_file_into_SOCKETTOP_and_ITPs(top_file_path):
         with open(itp_file, 'w') as f:
             # Write molecule-specific content to the itp file
             f.writelines(section_lines)
-        print(f"                      {molecule_names[molecule_id]}.itp")
+        print(f"                      {itp_file}")
     
      
