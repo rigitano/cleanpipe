@@ -268,11 +268,9 @@ def remove_posres_inclusion(s_topfile):
     # Open the file and read its contents
     with open(s_topfile, 'r') as file:
         file_contents = file.read()
-        print(file_contents)
 
     # Remove the matched block using the regex pattern
     updated_contents = re.sub(pattern_to_remove, '', file_contents, flags=re.MULTILINE)
-    print(updated_contents)
 
     # Write the updated contents back to the file
     with open(s_topfile, 'w') as file:
