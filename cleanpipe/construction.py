@@ -17,7 +17,7 @@ import os
 def create_peptide_in_solution(s_outName, s_nTerminusCAP, s_aminoacids, s_cTerminusCAP, l_phi, l_psi_im1, s_solvent, s_forceField, s_boxSize):
     """
     example:
-    build_peptide_in_solution(alaHW,"acyl","AAAAAA","amide",[-57.8,-57.8,-57.8,-57.8,-57.8,-57.8],[-47.0,-47.0,-47.0,-47.0,-47.0,-47.0],"tip3p","charmm36-jul2022", "5.1 5.1 5.1")
+    create_peptide_in_solution("alaHW","acyl","AAAAAA","amide",[-57.8,-57.8,-57.8,-57.8,-57.8,-57.8],[-47.0,-47.0,-47.0,-47.0,-47.0,-47.0],"tip3p","charmm36-jul2022", "5.1 5.1 5.1")
     
     this are the N terminus CAP 
     this are the C terminus CAP 
@@ -28,7 +28,7 @@ def create_peptide_in_solution(s_outName, s_nTerminusCAP, s_aminoacids, s_cTermi
     s_cTerminusCAP  : options: "amide", none
     l_phi           : vector with angles
     l_psi_im1       : vector with angles
-    s_solvent       : choose a water model, such as "tip3p", or put a folder containg a system with a solvent box, sucha as "octn_filledbox", making sure there are a octn_filledbox.gro and octn_filledbox.itp inside that folder
+    s_solvent       : choose a water model, such as "tip3p", or put a folder containg a system with a solvent box, sucha as "octn_filledbox", making sure there are a octn_filledbox.gro and octn_filledbox.top inside that folder
     s_forceField    : one of the gromacs recognized force fields
     s_boxSize       : string with x y z sizes, for example "3 3 3"
      
@@ -94,7 +94,7 @@ def create_peptide_in_solution(s_outName, s_nTerminusCAP, s_aminoacids, s_cTermi
     if s_solvent == "tip3p":
         #this mean the user has chosen the tip3p water model, already part of the forcefield
 
-        subprocess.run(f"gmx solvate -cp {s_outPathAndName}.gro -p {s_outPathAndName}.top -o {s_outPathAndName}.gro -maxsol 3616", shell=True)
+        subprocess.run(f"gmx solvate -cp {s_outPathAndName}.gro -p {s_outPathAndName}.top -o {s_outPathAndName}.gro", shell=True)
         subprocess.run(f"rm {s_outName}/\\#{s_outName}.gro.1\\#" , shell=True)#I chose to overwrite the old gro
         subprocess.run(f"rm {s_outName}/\\#{s_outName}.top.1\\#" , shell=True)#I chose to overwrite the old top
 
@@ -109,7 +109,7 @@ def create_peptide_in_solution(s_outName, s_nTerminusCAP, s_aminoacids, s_cTermi
         s_sol_base_name = os.path.basename(os.path.normpath(s_solvent))
 
         #edit gro to insert the solvent
-        subprocess.run(f"gmx solvate -cp {s_outPathAndName}.gro -cs {s_solvent}//{s_sol_base_name}.gro -p {s_outPathAndName}.top -o {s_outPathAndName}.gro -maxsol 395", shell=True)
+        subprocess.run(f"gmx solvate -cp {s_outPathAndName}.gro -cs {s_solvent}//{s_sol_base_name}.gro -p {s_outPathAndName}.top -o {s_outPathAndName}.gro", shell=True)
         subprocess.run(f"rm {s_outName}/\\#{s_outName}.gro.1\\#" , shell=True)#I chose to overwrite the old gro
         subprocess.run(f"rm {s_outName}/\\#{s_outName}.top.1\\#" , shell=True)#I chose to overwrite the old top
 

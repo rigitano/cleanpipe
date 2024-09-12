@@ -34,9 +34,9 @@ def pdb2filledBox(s_pdbfile):
     match = re.search(r'Added\s+(\d+)\s+molecules', result.stdout+result.stderr)
     added_molecules = int(match.group(1))
 
-    #rename the top and itp files. but notice the top will have to be edited so to reflect the new molecule total. the name of the system and molecules will also be edited
+    #rename the top and posres.itp files. but notice the top will have to be edited so to reflect the new molecule total. the name of the system and molecules will also be edited
     subprocess.run(f"mv {s_filename}.top {s_filename}_filledbox.top" , shell=True)
-    subprocess.run(f"mv {s_filename}.posres.itp {s_filename}_filledbox.posres.itp" , shell=True)
+    subprocess.run(f"mv {s_filename}.posres.itp {s_filename}_filledbox.posres.itp" , shell=True)# xxx this posres is keeping fixed only one solvent molecule
 
 
     #change the ugly molecule name currently inside the TOP file. it will be changed to be the same as the original pdb file
