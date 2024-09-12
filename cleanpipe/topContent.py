@@ -204,9 +204,9 @@ def decompose_TOP_file_into_SOCKETTOP_and_ITPs(top_file_path):
             molecule_sections[current_molecule_id] = [] #initialise place were molecule infos are going to be stored
             
         # check if we are in the line with the molecule name
-        elif inside_moleculetype_directive and line and not line.startswith(';') and bool(line.strip): 
+        elif inside_moleculetype_directive and line and not line.startswith(';') and bool(line.strip()): 
             print("a")
-            current_molecule_name = line.strip.split()[0] # Extract the first word in the line, which is the molecule name
+            current_molecule_name = line.strip().split()[0] # Extract the first word in the line, which is the molecule name
             molecule_names[current_molecule_id] = current_molecule_name
             
             #molecule_types.add(current_molecule_name)
