@@ -257,6 +257,8 @@ def remove_posres_inclusion(s_topfile):
     this function removes the inclusion of a posres.itp file 
     """
 
+    print(s_topfile)
+
     chunk_to_remove = '''
     ; Include Position restraint file
     #ifdef POSRES
@@ -267,9 +269,11 @@ def remove_posres_inclusion(s_topfile):
     # Open the file and read its contents
     with open(s_topfile, 'r') as file:
         file_contents = file.read()
+        print(file_contents)
 
     # Remove the exact chunk of text
     updated_contents = file_contents.replace(chunk_to_remove, '')
+    print(updated_contents)
 
     # Write the updated contents back to the file
     with open(s_topfile, 'w') as file:
