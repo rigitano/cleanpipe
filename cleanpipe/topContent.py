@@ -183,10 +183,11 @@ def decompose_TOP_file_into_SOCKETTOP_and_ITPs(top_file_path):
     # Storage for system information and molecule-specific sections
     system_info = []
     molecule_sections = {}
-    current_molecule = None
+    molecule_names = {}
+    current_molecule_name = None
+    current_molecule_id = -1
     inside_molecule = False
     molecule_types = set()
-    global_sections_started = False
     inside_moleculetype_directive = False
 
     # Go through file lines
@@ -199,20 +200,22 @@ def decompose_TOP_file_into_SOCKETTOP_and_ITPs(top_file_path):
             # Start of a new molecule type
             inside_molecule = True
             inside_moleculetype_directive = True
-            current_molecule = None  # Reset current molecule
+            current_molecule_name = None  # Reset current molecule
+            molecule_sections[current_molecule_id] = [] #initialise place were molecule infos are going to be stored
             
         # check if we are in the line with the molecule name
         elif inside_moleculetype_directive and line and not line.startswith(';') and bool(line.strip): 
             print("a")
-            current_molecule = line.strip.split()[0] # Extract the first word in the line, which is the molecule name
-            molecule_sections[current_molecule] = [] #initialise place were molecule infos are going to be stored
-            molecule_types.add(current_molecule)
+            current_molecule_name = line.strip.split()[0] # Extract the first word in the line, which is the molecule name
+            molecule_names[current_molecule_id] = current_molecule_name
+            
+            #molecule_types.add(current_molecule_name)
         #check if we are in any other title
         elif inside_molecule and (line.startswith("[") and not line.startswith("[ moleculetype ]")):
             print("b")
             # You are in the title of a directive other than [ moleculetype ]
             inside_moleculetype_directive = False
-        
+            
 
         #check if the molecules are all passed and we are in the system description at the end of the file
         if line.startswith("[ system ]") or line.startswith("[ molecules ]"):
@@ -225,7 +228,7 @@ def decompose_TOP_file_into_SOCKETTOP_and_ITPs(top_file_path):
         if inside_molecule:
             print("c")
             # Append lines related to the current molecule
-            molecule_sections[current_molecule].append(line) #store line with molecule info
+            molecule_sections[current_molecule_id].append(line) #store line with molecule info
         elif not inside_molecule:
             print("d")
             #this will be true before finding the first [ moleculetype ] directive
@@ -242,18 +245,18 @@ def decompose_TOP_file_into_SOCKETTOP_and_ITPs(top_file_path):
             f.write(line)
 
         # Add #include for each molecule itp file
-        for molecule in molecule_sections.keys():
-            f.write(f'#include "{molecule}.itp"\n')
+        for molecule_name in molecule_names.values():
+            f.write(f'#include "{molecule_name}.itp"\n')
     
     # Create separate itp files for each molecule
-    for molecule, section_lines in molecule_sections.items():
-        itp_file = os.path.join(top_dir, f"{molecule}.itp")
+    for molecule_id, section_lines in molecule_sections.items():
+        itp_file = os.path.join(top_dir, f"{molecule_names[molecule_id]}.itp")
         with open(itp_file, 'w') as f:
             # Write molecule-specific content to the itp file
             f.writelines(section_lines)
     
     print(f"System topology written to: {system_top_file}")
-    print(f"Generated {len(molecule_sections)} itp files for the molecules: {str(molecule_sections.keys())}")
+    print(f"Generated {len(molecule_sections)} itp files for the molecules: {str(molecule_names.values())}")
 
 
     #after creating this function. use it on create_peptide_solution when the solvent is a filled box. filled boxes dont have itps, but custom solvent requires itps
