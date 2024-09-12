@@ -191,35 +191,44 @@ def decompose_TOP_file_into_SOCKETTOP_and_ITPs(top_file_path):
 
     # Go through file lines
     for line in lines:
+        print(line)
 
-
-        # Look for the beginning of a new molecule type
-        if line.startswith("[ moleculetype ]") and not global_sections_started:
+        # Check if we are in the moleculetype title
+        if line.startswith("[ moleculetype ]"):
+            print("0")
             # Start of a new molecule type
             inside_molecule = True
             inside_moleculetype_directive = True
             current_molecule = None  # Reset current molecule
             
-        # Extract the molecule name. if you are in the moleculetype section and encounter a non-comment, non-empty line
-        elif inside_moleculetype_directive and line and not line.startswith(';') and bool(line.strip) : 
+        # check if we are in the line with the molecule name
+        elif inside_moleculetype_directive and line and not line.startswith(';') and bool(line.strip): 
+            print("a")
             current_molecule = line.strip.split()[0] # Extract the first word in the line, which is the molecule name
-            molecule_sections[current_molecule] = []
+            molecule_sections[current_molecule] = [] #initialise place were molecule infos are going to be stored
             molecule_types.add(current_molecule)
+        #check if we are in any other title
         elif inside_molecule and (line.startswith("[") and not line.startswith("[ moleculetype ]")):
+            print("b")
             # You are in the title of a directive other than [ moleculetype ]
             inside_moleculetype_directive = False
-        elif inside_molecule:
-            # Append lines related to the current molecule
-            molecule_sections[current_molecule].append(line)
-        elif not inside_molecule:
-            #this will be true before finding the first [ moleculetype ] directive
-            system_info.append(line)
+        
+
+        #check if the molecules are all passed and we are in the system description at the end of the file
         if line.startswith("[ system ]") or line.startswith("[ molecules ]"):
+            print("e")
             inside_molecule = False
             inside_moleculetype_directive = False
             # Detect global system-related sections after molecule definitions
-            global_sections_started = True
-            # These lines go into the general system info, including the global sections
+
+
+        if inside_molecule:
+            print("c")
+            # Append lines related to the current molecule
+            molecule_sections[current_molecule].append(line) #store line with molecule info
+        elif not inside_molecule:
+            print("d")
+            #this will be true before finding the first [ moleculetype ] directive
             system_info.append(line)
     
     # Create new files based on the parsed data
