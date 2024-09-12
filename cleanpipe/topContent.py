@@ -199,6 +199,7 @@ def decompose_TOP_file_into_SOCKETTOP_and_ITPs(top_file_path):
             inside_molecule = True
             inside_moleculetype_directive = True
             current_molecule_name = None  # Reset current molecule
+            current_molecule_id += 1
             molecule_sections[current_molecule_id] = [] #initialise place were molecule infos are going to be stored
 
         #check if the molecules are all passed and we are in the system description at the end of the file
