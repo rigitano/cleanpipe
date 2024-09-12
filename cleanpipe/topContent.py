@@ -172,8 +172,6 @@ def update_molecule_quantity(top_file, molecule_name, new_quantity):
         file.writelines(new_lines)
 
 
-
-
 def decompose_TOP_file_into_SOCKETTOP_and_ITPs(top_file_path):
 
     # Read the content of the original top file
@@ -191,7 +189,6 @@ def decompose_TOP_file_into_SOCKETTOP_and_ITPs(top_file_path):
 
     # Go through file lines
     for line in lines:
-        print(line)
 
         # Check if we are in the moleculetype title
         if line.startswith("[ moleculetype ]"):
@@ -253,6 +250,3 @@ def decompose_TOP_file_into_SOCKETTOP_and_ITPs(top_file_path):
         print(f"                      {molecule_names[molecule_id]}.itp")
     
      
-
-
-    #after creating this function. use it on create_peptide_solution when the solvent is a filled box. filled boxes dont have itps, but custom solvent requires itps

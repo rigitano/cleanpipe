@@ -48,6 +48,10 @@ def pdb2filledBox(s_pdbfile):
     #update the TOP file with the new total the molecule
     topContent.update_molecule_quantity(f"{s_filename}_filledbox.top", molName, added_molecules)
 
+    #split the TOP file, into a ITP that describes the molecule and a simple TOP that contains only name of the system and the totals.
+    topContent.decompose_TOP_file_into_SOCKETTOP_and_ITPs(f"{s_filename}_filledbox.top")
+    subprocess.run(f"rm {s_filename}_filledbox.top" , shell=True)
+
     #give a name for the system
     topContent.setSystemName(f"{s_filename}_filledbox.top", f"box filled with {s_filename}" )
 
