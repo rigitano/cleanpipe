@@ -5,6 +5,7 @@ from io import StringIO
 from cleanpipe import construction_aux
 from cleanpipe import topContent
 from cleanpipe import filemanager
+from cleanpipe import procedures
 import subprocess
 import os
 
@@ -25,14 +26,10 @@ def create_peptide_in_solution(s_outName, s_nTerminusCAP, s_aminoacids, s_cTermi
     l_phi           : vector with angles
     l_psi_im1       : vector with angles
     s_solvent       : choose a water model, for example as "tip3p", or a folder, for example "octn_filledbox". The folder have to contain a system with a solvent box, in other words, it has to contain a octn_filledbox.gro and a octn.itp
-    s_forceField    : one of the gromacs recognized force fields
+    s_forceField    : one of the gromacs recognized force fields, for example "charmm36-jul2022"
     s_boxSize       : string with x y z sizes, for example "3 3 3"
      
     """
-
-    subprocess.run(f"mkdir {s_outName}", shell=True)
-    s_outPathAndName = f"{s_outName}/{s_outName}"
-    
 
 
 
@@ -66,62 +63,20 @@ def create_peptide_in_solution(s_outName, s_nTerminusCAP, s_aminoacids, s_cTermi
         construction_aux.add_amide_to_Cterminus(peptide)
 
 
-    #################################### create system. this will add hydrogens ###################################
+    #################################### create system. (ps this will add hydrogens) ###################################
 
-    # Save temporary pdb file
+    # Save temporary pdb file of the peptide
     io = PDBIO()
     io.set_structure(peptide)
-    io.save(f"{s_outPathAndName}.pdb")
+    io.save("temp.pdb")
 
-    #pdb2gmx
-    subprocess.run(f"printf '8\n7\n' | gmx pdb2gmx -f {s_outPathAndName}.pdb -o {s_outPathAndName}.gro -p {s_outPathAndName}.top -i {s_outName}.posres.itp -missing -ter -ignh -water tip3p -ff {s_forceField}", shell=True)
-    #pdb2gmx generates a posres.itp and put a #include statement it in the top. the generation must be done outside the out folder so not to mess up the reference in the #include statamente
-    subprocess.run(f"mv {s_outName}.posres.itp {s_outPathAndName}.posres.itp" , shell=True) 
+    # Call this important function, that will construct the entire system aroud the peptide
+    procedures.pdb2molecule_in_solvent("temp.pdb", s_outName, s_solvent, s_forceField, s_boxSize)
 
+    # temporary pdb of the peptide is not necessary anymore
+    subprocess.run(f"rm temp.pdb" , shell=True)
 
-    #pdb is not necessary anymore. as pdb2gmx provided the gro and top files to describe the system
-    subprocess.run(f"rm {s_outPathAndName}.pdb" , shell=True)# I chose to overwrite the old gro
-    
-    #define box size. s_boxSize contains the user definition (ex: "3 3 3")
-    subprocess.run(f"gmx editconf -f {s_outPathAndName}.gro -o {s_outPathAndName}.gro -c -box {s_boxSize} -bt cubic", shell=True)
-    subprocess.run(f"rm {s_outName}/\\#{s_outName}.gro.1\\#" , shell=True)# I chose to overwrite the old gro
-
-
-    ################################## add solvent to the system. I have 2 options here: tip3p or filled box ##############################################
-
-    if s_solvent == "tip3p":
-        #this mean the user has chosen the tip3p water model, already part of the forcefield
-
-        subprocess.run(f"gmx solvate -cp {s_outPathAndName}.gro -p {s_outPathAndName}.top -o {s_outPathAndName}.gro", shell=True)
-        subprocess.run(f"rm {s_outName}/\\#{s_outName}.gro.1\\#" , shell=True)#I chose to overwrite the old gro
-        subprocess.run(f"rm {s_outName}/\\#{s_outName}.top.1\\#" , shell=True)#I chose to overwrite the old top
-
-    elif filemanager.check_folder(s_solvent) == True:
-        # this mean the user has chosen a folder (ex: path/to/folder/octn)
-        # lets hope that folder contains a system that is a box filled with solvent. for example octn.gro and octn.itp
-
-        #get the base name (ex: octn)
-        s_sol_folder = os.path.basename(os.path.normpath(s_solvent))
-
-        #get the names of the top and itp files in the solvent box folder
-        s_solbox_groName = filemanager.get_single_gro(s_solvent)
-        l_itpNames = filemanager.get_all_itps(s_solvent)
-
-        #edit gro to insert the solvent
-        subprocess.run(f"gmx solvate -cp {s_outPathAndName}.gro -cs {s_solvent}/{s_solbox_groName} -p {s_outPathAndName}.top -o {s_outPathAndName}.gro", shell=True)
-        subprocess.run(f"rm {s_outName}/\\#{s_outName}.gro.1\\#" , shell=True)#I chose to overwrite the old gro
-        subprocess.run(f"rm {s_outName}/\\#{s_outName}.top.1\\#" , shell=True)#I chose to overwrite the old top
-
-        #edit top to insert a line including a reference of the solvent itp before the [ system ] directive
-        for s_sol_itpName in l_itpNames:
-            subprocess.run(rf'''awk -v line='#include "{s_sol_itpName}"' '/\[ system \]/{{print line"\n"; i=2}}i&&!--i{{next}}1' {s_outPathAndName}.top > temp.top && mv temp.top {s_outPathAndName}.top''', shell=True, check=True)
-
-        #copy all the itp files from the original folder to the current system folder
-        for s_sol_itpName in l_itpNames:
-            subprocess.run(f"cp {s_solvent}/{s_sol_itpName} {s_outName}/" , shell=True)
-
-    else:
-        print("solvation failed")
 
     ################################### set the the name of the system in the top file #######################################
-    topContent.setSystemName(f"{s_outPathAndName}.top", f"custom peptide in solution ({s_outName})" )
+    s_outPathAndName = f"{s_outName}/{s_outName}"
+    topContent.setSystemName(f"{s_outPathAndName}.top", f"{s_outName} (custom peptide, insterted in solution made using {s_solvent})" )
