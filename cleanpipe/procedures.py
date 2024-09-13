@@ -1,5 +1,6 @@
 import subprocess
 import re
+import os
 from cleanpipe import filemanager
 from cleanpipe import topContent
 
@@ -25,21 +26,21 @@ def pdb2filledBox(s_pdbfile, s_forceField):
     s_filename = filemanager.get_filename_without_extension(s_pdbfile) 
 
 
-    subprocess.run(f"mkdir {s_filename}_filledbox", shell=True)
+    subprocess.run(f"mkdir {s_filename}_filledbox", shell=True, check=True)
     s_outPathAndName = f"{s_filename}_filledbox/{s_filename}"
 
 
     #create a system with 1 molecule.
-    subprocess.run(f"gmx pdb2gmx -f {s_filename}.pdb -o {s_outPathAndName}.gro -p {s_outPathAndName}.top -i posres.itp -water none -ff {s_forceField}" , shell=True)
+    subprocess.run(f"gmx pdb2gmx -f {s_filename}.pdb -o {s_outPathAndName}.gro -p {s_outPathAndName}.top -i posres.itp -water none -ff {s_forceField}" , shell=True, check=True)
     
     #pdb2gmx generates a useless posres.itp with useless posres for 1 molecule. so I delete the posres.itp and the inclusion in the top
-    subprocess.run(f"rm posres.itp" , shell=True) 
+    subprocess.run(f"rm posres.itp" , shell=True, check=True) 
     topContent.remove_posres_inclusion(f"{s_outPathAndName}.top")
 
     #manipulate the GRO file to create a 5x5x5 box and fill it with copyes of the molecule
-    result = subprocess.run(f"gmx insert-molecules -ci {s_outPathAndName}.gro -nmol 1000 -box 5 5 5 -o {s_outPathAndName}_filledbox.gro" , shell=True, capture_output=True,text=True)
+    result = subprocess.run(f"gmx insert-molecules -ci {s_outPathAndName}.gro -nmol 1000 -box 5 5 5 -o {s_outPathAndName}_filledbox.gro" , shell=True, check=True, capture_output=True,text=True)
     print(result.stdout+result.stderr)
-    subprocess.run(f"rm {s_outPathAndName}.gro" , shell=True)# now that we have the filled box gro, the 1 molecule gro can be deleted
+    subprocess.run(f"rm {s_outPathAndName}.gro" , shell=True, check=True)# now that we have the filled box gro, the 1 molecule gro can be deleted
     print(f"gro file written: \n                      {s_outPathAndName}_filledbox.gro")
 
     #get the number of molecules really added. this will be done by reading the standard output
@@ -47,9 +48,9 @@ def pdb2filledBox(s_pdbfile, s_forceField):
     added_molecules = int(match.group(1))
 
     #rename the top and posres.itp files. but notice the top will have to be edited so to reflect the new molecule total. the name of the system and molecules will also be edited
-    subprocess.run(f"mv {s_outPathAndName}.top {s_outPathAndName}_filledbox.top" , shell=True)
+    subprocess.run(f"mv {s_outPathAndName}.top {s_outPathAndName}_filledbox.top" , shell=True, check=True)
 
-    #change the ugly molecule name currently inside the TOP file. it will be changed to be the same as the original pdb file
+    #change the ugly molecule name currently inside the TOP file. it will be changed to be the same as the residue name.
     uglyMolName = topContent.getMoleculeName(f"{s_outPathAndName}_filledbox.top")
     molName = s_filename
     topContent.replaceMoleculeName(f"{s_outPathAndName}_filledbox.top", uglyMolName, molName)
@@ -60,7 +61,7 @@ def pdb2filledBox(s_pdbfile, s_forceField):
 
     #split the TOP file, into a ITP that describes the molecule and a simple TOP that contains only name of the system and the totals.
     topContent.decompose_TOP_file_into_SOCKETTOP_and_ITPs(f"{s_outPathAndName}_filledbox.top")
-    subprocess.run(f"rm {s_outPathAndName}_filledbox.top" , shell=True)
+    subprocess.run(f"rm {s_outPathAndName}_filledbox.top" , shell=True, check=True)
 
     #give a name for the system
     topContent.setSystemName(f"{s_outPathAndName}_filledbox.socket.top", f"box filled with {s_filename}" )
@@ -83,19 +84,19 @@ def pdb2molecule_in_solvent(s_pdbfile, s_outName, s_solvent, s_forceField, s_box
     filemanager.check_file(s_pdbfile,['.pdb']) 
 
 
-    subprocess.run(f"mkdir {s_outName}", shell=True)
+    subprocess.run(f"mkdir {s_outName}", shell=True, check=True)
     s_outPathAndName = f"{s_outName}/{s_outName}"
 
     ################################## create gro and top from pdb. then add the box size to the gro ###########################
 
     #pdb2gmx
-    subprocess.run(f"printf '8\n7\n' | gmx pdb2gmx -f {s_pdbfile} -o {s_outPathAndName}.gro -p {s_outPathAndName}.top -i {s_outName}.posres.itp -missing -ter -ignh -water tip3p -ff {s_forceField}", shell=True)
+    subprocess.run(f"printf '8\n7\n' | gmx pdb2gmx -f {s_pdbfile} -o {s_outPathAndName}.gro -p {s_outPathAndName}.top -i {s_outName}.posres.itp -missing -ter -ignh -water tip3p -ff {s_forceField}", shell=True, check=True)
     #pdb2gmx generates a posres.itp and put a #include statement it in the top. the generation must be done outside the out folder so not to mess up the reference in the #include statamente
-    subprocess.run(f"mv {s_outName}.posres.itp {s_outPathAndName}.posres.itp" , shell=True) 
+    subprocess.run(f"mv {s_outName}.posres.itp {s_outPathAndName}.posres.itp" , shell=True, check=True) 
     
     #define box size. s_boxSize contains the user definition (ex: "3 3 3")
-    subprocess.run(f"gmx editconf -f {s_outPathAndName}.gro -o {s_outPathAndName}.gro -c -box {s_boxSize} -bt cubic", shell=True)
-    subprocess.run(f"rm {s_outName}/\\#{s_outName}.gro.1\\#" , shell=True)# I chose to overwrite the old gro
+    subprocess.run(f"gmx editconf -f {s_outPathAndName}.gro -o {s_outPathAndName}.gro -c -box {s_boxSize} -bt cubic", shell=True, check=True)
+    subprocess.run(f"rm {s_outName}/\\#{s_outName}.gro.1\\#" , shell=True, check=True)# I chose to overwrite the old gro
 
 
     ################################## add solvent to the system. I have 2 options here: tip3p or filled box ##############################################
@@ -103,28 +104,35 @@ def pdb2molecule_in_solvent(s_pdbfile, s_outName, s_solvent, s_forceField, s_box
     if s_solvent == "tip3p":
         #this mean the user has chosen the tip3p water model, already part of the forcefield
 
-        subprocess.run(f"gmx solvate -cp {s_outPathAndName}.gro -p {s_outPathAndName}.top -o {s_outPathAndName}.gro", shell=True)
-        subprocess.run(f"rm {s_outName}/\\#{s_outName}.gro.1\\#" , shell=True)#I chose to overwrite the old gro
-        subprocess.run(f"rm {s_outName}/\\#{s_outName}.top.1\\#" , shell=True)#I chose to overwrite the old top
+        subprocess.run(f"gmx solvate -cp {s_outPathAndName}.gro -p {s_outPathAndName}.top -o {s_outPathAndName}.gro", shell=True, check=True)
+        subprocess.run(f"rm {s_outName}/\\#{s_outName}.gro.1\\#" , shell=True, check=True)#I chose to overwrite the old gro
+        subprocess.run(f"rm {s_outName}/\\#{s_outName}.top.1\\#" , shell=True, check=True)#I chose to overwrite the old top
 
         # xxx add ions, to make the box neutral
-        #subprocess.run(f"gmx grompp -f ~/mdparameters/add_ions.mdp -c coord_box_sol.gro -p topol.top -o coord_box_sol_ions.tpr" , shell=True)
-        #subprocess.run(f"printf '13' | gmx  genion -s coord_box_sol_ions.tpr -o coord_box_sol_ions.gro -p topol.top -pname NA -nname CL -neutral" , shell=True)
-        #rm tpr and created backups
+        #subprocess.run(f"gmx grompp -f ~/mdparameters/add_ions.mdp -c coord_box_sol.gro -p topol.top -o coord_box_sol_ions.tpr" , shell=True, check=True)
+        #subprocess.run(f"printf '13' | gmx  genion -s coord_box_sol_ions.tpr -o coord_box_sol_ions.gro -p topol.top -pname NA -nname CL -neutral" , shell=True, check=True)
+        #rm tpr and created backups and mdout
 
     elif filemanager.check_folder(s_solvent) == True:
         # this mean the user has chosen a folder (ex: path/to/folder/octn)
         # lets hope that folder contains a system that is a box filled with solvent. for example octn.gro and octn.itp
+
+        #get the name of the folder, in case its in the end of a path to it
+        s_sol_folder_name = os.path.basename(os.path.normpath(s_solvent))
 
 
         #get the names of the top and itp files in the solvent box folder
         s_solbox_groName = filemanager.get_single_gro(s_solvent)
         l_itpNames = filemanager.get_all_itps(s_solvent)
 
-        #edit gro to insert the solvent
-        subprocess.run(f"gmx solvate -cp {s_outPathAndName}.gro -cs {s_solvent}/{s_solbox_groName} -p {s_outPathAndName}.top -o {s_outPathAndName}.gro", shell=True)
-        subprocess.run(f"rm {s_outName}/\\#{s_outName}.gro.1\\#" , shell=True)#I chose to overwrite the old gro
-        subprocess.run(f"rm {s_outName}/\\#{s_outName}.top.1\\#" , shell=True)#I chose to overwrite the old top
+        #insert the solvent in gro. and inform quantity added in top
+        subprocess.run(f"gmx solvate -cp {s_outPathAndName}.gro -cs {s_solvent}/{s_solbox_groName} -p {s_outPathAndName}.top -o {s_outPathAndName}.gro", shell=True, check=True)
+        subprocess.run(f"rm {s_outName}/\\#{s_outName}.gro.1\\#" , shell=True, check=True)#I chose to overwrite the old gro
+        subprocess.run(f"rm {s_outName}/\\#{s_outName}.top.1\\#" , shell=True, check=True)#I chose to overwrite the old top
+
+        #when gmx solvate inform the quantity added in the top, its possible that it chooses a weird name. lets make sure its the name of the itp file
+        badmolName = topContent.getMoleculeName(f"{s_outPathAndName}.top", order=-1)#get name of the last molecule in the directive [ molecules ]
+        topContent.replaceWordInsideDirective(f"{s_outPathAndName}.top", "[ molecules ]", badmolName, s_sol_folder_name)# xxx I dont know what happens if there are several different molecules in the solvent box
 
         #edit top to insert a line including a reference of the solvent itp before the [ system ] directive
         for s_sol_itpName in l_itpNames:
@@ -132,7 +140,7 @@ def pdb2molecule_in_solvent(s_pdbfile, s_outName, s_solvent, s_forceField, s_box
 
         #copy all the itp files from the original folder to the current system folder
         for s_sol_itpName in l_itpNames:
-            subprocess.run(f"cp {s_solvent}/{s_sol_itpName} {s_outName}/" , shell=True)
+            subprocess.run(f"cp {s_solvent}/{s_sol_itpName} {s_outName}/" , shell=True, check=True)
 
     else:
         print("solvation failed")
@@ -154,12 +162,12 @@ def download_and_clean_pdb(s_molecule_name):
     """
 
     #get pdb from portal
-    subprocess.run(f"wget https://files.rcsb.org/download/{s_molecule_name}.pdb" , shell=True)
+    subprocess.run(f"wget https://files.rcsb.org/download/{s_molecule_name}.pdb" , shell=True, check=True)
 
     #remove water
-    subprocess.run(f"grep -v 'HOH' {s_molecule_name}.pdb > {s_molecule_name}_temp.pdb" , shell=True)
-    subprocess.run(f"rm {s_molecule_name}.pdb" , shell=True)
-    subprocess.run(f"mv {s_molecule_name}_temp.pdb {s_molecule_name}.pdb" , shell=True)
+    subprocess.run(f"grep -v 'HOH' {s_molecule_name}.pdb > {s_molecule_name}_temp.pdb" , shell=True, check=True)
+    subprocess.run(f"rm {s_molecule_name}.pdb" , shell=True, check=True)
+    subprocess.run(f"mv {s_molecule_name}_temp.pdb {s_molecule_name}.pdb" , shell=True, check=True)
 
 
 def make_realistic(s_folder):
@@ -180,22 +188,22 @@ def make_realistic(s_folder):
     s_initialgroName = filemanager.get_single_gro(s_folder)
     s_topName        = filemanager.get_single_top(s_folder)
 
-    #subprocess.run(f"xxxxxxx" , shell=True)
+    #subprocess.run(f"xxxxxxx" , shell=True, check=True)
 
     #EM
-    subprocess.run(f"mkdir {s_folder}/1_EM" , shell=True)
-    subprocess.run(f"gmx grompp -f ~/mdp/em.mdp -c {s_folder}/{s_initialgroName} -p {s_folder}/{s_topName} -o {s_folder}/1_EM/em.tpr -maxwarn 3" , shell=True)
-    subprocess.run(f"gmx mdrun -deffnm {s_folder}/1_EM/em" , shell=True)
+    subprocess.run(f"mkdir {s_folder}/1_EM" , shell=True, check=True)
+    subprocess.run(f"gmx grompp -f ~/mdp/em.mdp -c {s_folder}/{s_initialgroName} -p {s_folder}/{s_topName} -o {s_folder}/1_EM/em.tpr -maxwarn 3" , shell=True, check=True)
+    subprocess.run(f"gmx mdrun -deffnm {s_folder}/1_EM/em" , shell=True, check=True)
 
     #NVT equilibration
-    subprocess.run(f"mkdir {s_folder}/2_NVT" , shell=True)
-    subprocess.run(f"gmx grompp -f ~/mdp/begin_mdNvt_Vr.mdp -c {s_folder}/1_EM/em.gro -r  {s_folder}/1_EM/em.gro -p {s_folder}/{s_topName} -o {s_folder}/2_NVT/nvt.tpr" , shell=True)
-    subprocess.run(f"gmx mdrun -deffnm {s_folder}/2_NVT/nvt" , shell=True)
+    subprocess.run(f"mkdir {s_folder}/2_NVT" , shell=True, check=True)
+    subprocess.run(f"gmx grompp -f ~/mdp/begin_mdNvt_Vr.mdp -c {s_folder}/1_EM/em.gro -r  {s_folder}/1_EM/em.gro -p {s_folder}/{s_topName} -o {s_folder}/2_NVT/nvt.tpr" , shell=True, check=True)
+    subprocess.run(f"gmx mdrun -deffnm {s_folder}/2_NVT/nvt" , shell=True, check=True)
 
     #NPT equilibration
-    subprocess.run(f"mkdir {s_folder}/3_NPT" , shell=True)
-    subprocess.run(f"grompp -f ~/mdp/continue_mdNpt_Vr_PaRa.mdp -c {s_folder}/2_NVT/nvt.gro -r {s_folder}/2_NVT/nvt.gro -t {s_folder}/2_NVT/nvt.cpt -p {s_folder}/{s_topName} -o {s_folder}/3_NPT/npt.tpr" , shell=True)
-    subprocess.run(f"mdrun -deffnm {s_folder}/3_NPT/npt" , shell=True)
+    subprocess.run(f"mkdir {s_folder}/3_NPT" , shell=True, check=True)
+    subprocess.run(f"grompp -f ~/mdp/continue_mdNpt_Vr_PaRa.mdp -c {s_folder}/2_NVT/nvt.gro -r {s_folder}/2_NVT/nvt.gro -t {s_folder}/2_NVT/nvt.cpt -p {s_folder}/{s_topName} -o {s_folder}/3_NPT/npt.tpr" , shell=True, check=True)
+    subprocess.run(f"mdrun -deffnm {s_folder}/3_NPT/npt" , shell=True, check=True)
 
 
 

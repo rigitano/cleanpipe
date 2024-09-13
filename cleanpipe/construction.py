@@ -74,7 +74,7 @@ def create_peptide_in_solution(s_outName, s_nTerminusCAP, s_aminoacids, s_cTermi
     procedures.pdb2molecule_in_solvent("temp.pdb", s_outName, s_solvent, s_forceField, s_boxSize)
 
     # temporary pdb of the peptide is not necessary anymore
-    subprocess.run(f"rm temp.pdb" , shell=True)
+    subprocess.run(f"rm temp.pdb" , shell=True, check=True)
 
 
     ################################### set the the name of the system in the top file #######################################
