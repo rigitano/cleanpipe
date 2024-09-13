@@ -54,7 +54,6 @@ def pdb2filledBox(s_pdbfile, s_forceField):
     uglyMolName = topContent.getMoleculeName(f"{s_outPathAndName}_filledbox.top")
     molName = s_filename
     topContent.replaceMoleculeName(f"{s_outPathAndName}_filledbox.top", uglyMolName, molName)
-    topContent.replaceMoleculeName(f"{s_outPathAndName}_filledbox.top", uglyMolName, molName)
 
     #update the TOP file with the new total the molecule
     topContent.update_molecule_quantity(f"{s_outPathAndName}_filledbox.top", molName, added_molecules)
@@ -117,8 +116,6 @@ def pdb2molecule_in_solvent(s_pdbfile, s_outName, s_solvent, s_forceField, s_box
         # this mean the user has chosen a folder (ex: path/to/folder/octn)
         # lets hope that folder contains a system that is a box filled with solvent. for example octn.gro and octn.itp
 
-        #get the name of the folder, in case its in the end of a path to it
-        s_sol_folder_name = os.path.basename(os.path.normpath(s_solvent))
 
 
         #get the names of the top and itp files in the solvent box folder
@@ -132,7 +129,7 @@ def pdb2molecule_in_solvent(s_pdbfile, s_outName, s_solvent, s_forceField, s_box
 
         #when gmx solvate inform the quantity added in the top, its possible that it chooses a weird name. lets make sure its the name of the itp file
         badmolName = topContent.getMoleculeName(f"{s_outPathAndName}.top", order=-1)#get name of the last molecule in the directive [ molecules ]
-        topContent.replaceWordInsideDirective(f"{s_outPathAndName}.top", "[ molecules ]", badmolName, s_sol_folder_name)# xxx I dont know what happens if there are several different molecules in the solvent box
+        topContent.replaceWordInsideDirective(f"{s_outPathAndName}.top", "[ molecules ]", badmolName, l_itpNames[0])# xxx this is not preparet to deal with a solvent box with several different molecules
 
         #edit top to insert a line including a reference of the solvent itp before the [ system ] directive
         for s_sol_itpName in l_itpNames:
@@ -144,9 +141,6 @@ def pdb2molecule_in_solvent(s_pdbfile, s_outName, s_solvent, s_forceField, s_box
 
     else:
         print("solvation failed")
-
-
-
 
 
     ################################### set the the name of the system in the top file #######################################
