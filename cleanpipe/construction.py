@@ -74,8 +74,11 @@ def create_peptide_in_solution(s_outName, s_nTerminusCAP, s_aminoacids, s_cTermi
     io.save(f"{s_outPathAndName}.pdb")
 
     #pdb2gmx
-    subprocess.run(f"printf '8\n7\n' | gmx pdb2gmx -f {s_outPathAndName}.pdb -o {s_outPathAndName}.gro -p {s_outPathAndName}.top -i {s_outPathAndName}.posres.itp -missing -ter -ignh -water tip3p -ff {s_forceField}", shell=True)
-    
+    subprocess.run(f"printf '8\n7\n' | gmx pdb2gmx -f {s_outPathAndName}.pdb -o {s_outPathAndName}.gro -p {s_outPathAndName}.top -i {s_outName}.posres.itp -missing -ter -ignh -water tip3p -ff {s_forceField}", shell=True)
+    #pdb2gmx generates a posres.itp and put a #include statement it in the top. the generation must be done outside the out folder so not to mess up the reference in the #include statamente
+    subprocess.run(f"mv {s_outName}.posres.itp {s_outPathAndName}.posres.itp" , shell=True) 
+
+
     #pdb is not necessary anymore. as pdb2gmx provided the gro and top files to describe the system
     subprocess.run(f"rm {s_outPathAndName}.pdb" , shell=True)# I chose to overwrite the old gro
     
@@ -92,9 +95,6 @@ def create_peptide_in_solution(s_outName, s_nTerminusCAP, s_aminoacids, s_cTermi
         subprocess.run(f"gmx solvate -cp {s_outPathAndName}.gro -p {s_outPathAndName}.top -o {s_outPathAndName}.gro", shell=True)
         subprocess.run(f"rm {s_outName}/\\#{s_outName}.gro.1\\#" , shell=True)#I chose to overwrite the old gro
         subprocess.run(f"rm {s_outName}/\\#{s_outName}.top.1\\#" , shell=True)#I chose to overwrite the old top
-
-        #set the the name of the system in the top file
-        topContent.setSystemName(f"{s_outPathAndName}.top", f"peptide in water (tip3p)" )
 
     elif filemanager.check_folder(s_solvent) == True:
         # this mean the user has chosen a folder (ex: path/to/folder/octn)
@@ -120,8 +120,8 @@ def create_peptide_in_solution(s_outName, s_nTerminusCAP, s_aminoacids, s_cTermi
         for s_sol_itpName in l_itpNames:
             subprocess.run(f"cp {s_solvent}/{s_sol_itpName} {s_outName}/" , shell=True)
 
-        #set the the name of the system in the top file
-        topContent.setSystemName(f"{s_outPathAndName}.top", f"peptide in custom solvent ({s_sol_folder})" )
-
     else:
         print("solvation failed")
+
+    ################################### set the the name of the system in the top file #######################################
+    topContent.setSystemName(f"{s_outPathAndName}.top", f"custom peptide in solution ({s_outName})" )
