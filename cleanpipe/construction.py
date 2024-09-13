@@ -10,14 +10,10 @@ import os
 
 
 
-
-
-
-
 def create_peptide_in_solution(s_outName, s_nTerminusCAP, s_aminoacids, s_cTerminusCAP, l_phi, l_psi_im1, s_solvent, s_forceField, s_boxSize):
     """
     example:
-    create_peptide_in_solution("alaHW","acyl","AAAAAA","amide",[-57.8,-57.8,-57.8,-57.8,-57.8,-57.8],[-47.0,-47.0,-47.0,-47.0,-47.0,-47.0],"tip3p","charmm36-jul2022", "5.1 5.1 5.1")
+    create_peptide_in_solution("ala_in_solvent","acyl","AAAAAA","amide",[-57.8,-57.8,-57.8,-57.8,-57.8,-57.8],[-47.0,-47.0,-47.0,-47.0,-47.0,-47.0],"tip3p","charmm36-jul2022", "5.1 5.1 5.1")
     
     this are the N terminus CAP 
     this are the C terminus CAP 
@@ -28,7 +24,7 @@ def create_peptide_in_solution(s_outName, s_nTerminusCAP, s_aminoacids, s_cTermi
     s_cTerminusCAP  : options: "amide", none
     l_phi           : vector with angles
     l_psi_im1       : vector with angles
-    s_solvent       : choose a water model, such as "tip3p", or put a folder containg a system with a solvent box, sucha as "octn_filledbox", making sure there are a octn_filledbox.gro and octn_filledbox.top inside that folder
+    s_solvent       : choose a water model, for example as "tip3p", or a folder, for example "octn_filledbox". The folder have to contain a system with a solvent box, in other words, it has to contain a octn_filledbox.gro and a octn.itp
     s_forceField    : one of the gromacs recognized force fields
     s_boxSize       : string with x y z sizes, for example "3 3 3"
      
@@ -90,7 +86,6 @@ def create_peptide_in_solution(s_outName, s_nTerminusCAP, s_aminoacids, s_cTermi
 
     ################################## add solvent to the system. I have 2 options here: tip3p or filled box ##############################################
 
-
     if s_solvent == "tip3p":
         #this mean the user has chosen the tip3p water model, already part of the forcefield
 
@@ -101,26 +96,32 @@ def create_peptide_in_solution(s_outName, s_nTerminusCAP, s_aminoacids, s_cTermi
         #set the the name of the system in the top file
         topContent.setSystemName(f"{s_outPathAndName}.top", f"peptide in water (tip3p)" )
 
-
-    elif filemanager.check_folder_solvent_box(s_solvent) == True:
-        #this mean the user has chosen a folder (ex: path/to/folder/octn) containing a system that is a box filled with solvent. for example octn.gro and octn.itp
+    elif filemanager.check_folder(s_solvent) == True:
+        # this mean the user has chosen a folder (ex: path/to/folder/octn)
+        # lets hope that folder contains a system that is a box filled with solvent. for example octn.gro and octn.itp
 
         #get the base name (ex: octn)
-        s_sol_base_name = os.path.basename(os.path.normpath(s_solvent))
+        s_sol_folder = os.path.basename(os.path.normpath(s_solvent))
+
+        #get the names of the top and itp files in the solvent box folder
+        s_solbox_groName = filemanager.get_single_gro(s_solvent)
+        l_itpNames = filemanager.get_all_itps(s_solvent)
 
         #edit gro to insert the solvent
-        subprocess.run(f"gmx solvate -cp {s_outPathAndName}.gro -cs {s_solvent}//{s_sol_base_name}.gro -p {s_outPathAndName}.top -o {s_outPathAndName}.gro", shell=True)
+        subprocess.run(f"gmx solvate -cp {s_outPathAndName}.gro -cs {s_solvent}/{s_solbox_groName} -p {s_outPathAndName}.top -o {s_outPathAndName}.gro", shell=True)
         subprocess.run(f"rm {s_outName}/\\#{s_outName}.gro.1\\#" , shell=True)#I chose to overwrite the old gro
         subprocess.run(f"rm {s_outName}/\\#{s_outName}.top.1\\#" , shell=True)#I chose to overwrite the old top
 
         #edit top to insert a line including a reference of the solvent itp before the [ system ] directive
-        subprocess.run(rf'''awk -v line='#include "{s_sol_base_name}.itp"' '/\[ system \]/{{print line"\n"; i=2}}i&&!--i{{next}}1' {s_outPathAndName}.top > temp.top && mv temp.top {s_outPathAndName}.top''', shell=True, check=True)
+        for s_sol_itpName in l_itpNames:
+            subprocess.run(rf'''awk -v line='#include "{s_sol_itpName}"' '/\[ system \]/{{print line"\n"; i=2}}i&&!--i{{next}}1' {s_outPathAndName}.top > temp.top && mv temp.top {s_outPathAndName}.top''', shell=True, check=True)
 
-        #make that itp file realy available in the current system
-        subprocess.run(f"cp {s_solvent}/{s_sol_base_name}.itp {s_outName}/" , shell=True)
+        #copy all the itp files from the original folder to the current system folder
+        for s_sol_itpName in l_itpNames:
+            subprocess.run(f"cp {s_solvent}/{s_sol_itpName} {s_outName}/" , shell=True)
 
         #set the the name of the system in the top file
-        topContent.setSystemName(f"{s_outPathAndName}.top", f"peptide in custom solvent" )
+        topContent.setSystemName(f"{s_outPathAndName}.top", f"peptide in custom solvent ({s_sol_folder})" )
 
     else:
         print("solvation failed")
