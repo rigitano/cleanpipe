@@ -13,16 +13,16 @@ import os
 
 def create_peptide_in_solution(s_outName, s_nTerminusCAP, s_aminoacids, s_cTerminusCAP, l_phi, l_psi_im1, s_solvent, s_forceField, s_boxSize):
     """
-    example:
-    create_peptide_in_solution("ala_in_solvent","acyl","AAAAAA","amide",[-57.8,-57.8,-57.8,-57.8,-57.8,-57.8],[-47.0,-47.0,-47.0,-47.0,-47.0,-47.0],"tip3p","charmm36-jul2022", "5.1 5.1 5.1")
+    usage example:
+    cl.create_peptide_in_solution("ala_in_solvent","acyl","AAAAAA","amide",[-57.8,-57.8,-57.8,-57.8,-57.8,-57.8],[-47.0,-47.0,-47.0,-47.0,-47.0,-47.0],"tip3p","charmm36-jul2022", "5.1 5.1 5.1")
     
-    this are the N terminus CAP 
-    this are the C terminus CAP 
+    will create the peptide and the entire system out of nowere (no input files required)
+    a folder containing the system will be created. this will be done using just the function arguments 
 
     s_outFileName   : string with the name of the system, for example "alaHW". a folder with that name will be created, and inside it, all the files, for example: alaHW.gro and alaHW.top
-    s_nTerminusCAP  : options: "acyl" , none
+    s_nTerminusCAP  : N terminus CAP. there are only the folowing options: "acyl" , none
     s_aminoacids    : string of aminoacid one letter code, for example "AAAAGGAALL"
-    s_cTerminusCAP  : options: "amide", none
+    s_cTerminusCAP  : this are the C terminus CAP. there are only the folowing options:: "amide", none
     l_phi           : vector with angles
     l_psi_im1       : vector with angles
     s_solvent       : choose a water model, for example as "tip3p", or a folder, for example "octn_filledbox". The folder have to contain a system with a solvent box, in other words, it has to contain a octn_filledbox.gro and a octn.itp

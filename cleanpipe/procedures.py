@@ -7,7 +7,8 @@ from cleanpipe import topContent
 
 def pdb2filledBox(s_pdbfile, s_forceField):
     """
-    pdb2filledBox("octn.pdb","charmm36-jul2022")
+    usage example:
+    cl.pdb2filledBox("octn.pdb","charmm36-jul2022")
 
     create a 5x5x5 box system filled with a lot of copies of the molecule
 
@@ -67,8 +68,8 @@ def pdb2filledBox(s_pdbfile, s_forceField):
 
 def pdb2molecule_in_solvent(s_pdbfile, s_outName, s_solvent, s_forceField, s_boxSize):
     """
-    example:
-    pdb2molecule_in_solvent("insulin.pdb", "insulin_in_solvent", "tip3p", "charmm36-jul2022", "3 3 3")
+    usage example:
+    cl.pdb2molecule_in_solvent("octn.pdb", "octane_in_solvent", "tip3p", "charmm36-jul2022", "3 3 3")
     
 
     s_pdbfile       : string with the pdb name. for example "insulin.pdb", this will be the main molecule in the system.
@@ -106,6 +107,11 @@ def pdb2molecule_in_solvent(s_pdbfile, s_outName, s_solvent, s_forceField, s_box
         subprocess.run(f"rm {s_outName}/\\#{s_outName}.gro.1\\#" , shell=True)#I chose to overwrite the old gro
         subprocess.run(f"rm {s_outName}/\\#{s_outName}.top.1\\#" , shell=True)#I chose to overwrite the old top
 
+        # xxx add ions, to make the box neutral
+        #subprocess.run(f"gmx grompp -f ~/mdparameters/add_ions.mdp -c coord_box_sol.gro -p topol.top -o coord_box_sol_ions.tpr" , shell=True)
+        #subprocess.run(f"printf '13' | gmx  genion -s coord_box_sol_ions.tpr -o coord_box_sol_ions.gro -p topol.top -pname NA -nname CL -neutral" , shell=True)
+        #rm tpr and created backups
+
     elif filemanager.check_folder(s_solvent) == True:
         # this mean the user has chosen a folder (ex: path/to/folder/octn)
         # lets hope that folder contains a system that is a box filled with solvent. for example octn.gro and octn.itp
@@ -131,7 +137,63 @@ def pdb2molecule_in_solvent(s_pdbfile, s_outName, s_solvent, s_forceField, s_box
     else:
         print("solvation failed")
 
+
+
+
+
     ################################### set the the name of the system in the top file #######################################
     topContent.setSystemName(f"{s_outPathAndName}.top", f"{s_outName} (molecule from {s_pdbfile}, inserted in solution made using {s_solvent})" )
+
+
+def download_and_clean_pdb(s_molecule_name):
+    """
+    usage example:
+    cl.download_and_clean_pdb("1aki")
+
+    
+    """
+
+    #get pdb from portal
+    subprocess.run(f"wget https://files.rcsb.org/download/{s_molecule_name}.pdb" , shell=True)
+
+    #remove water
+    subprocess.run(f"grep -v 'HOH' 1aki.pdb > 1aki.pdb" , shell=True)
+
+
+def make_realistic(s_folder):
+    """
+    usage example:
+    cl.make_realistic("insulin_in_water")
+
+    will perform EM NVT and NPT in a system, so to make it realistic
+    I have to give the name of a folder that contains a system
+    the function will create folders 1_EM, 2_NVT and 3_NPT inside that given folder
+    after this function is run, the .gro inside the 3_NPT will be the one to use in the future production runs, wereas the .top will remain the same
+
+    s_folder : name of a folder that contains a system. this mean inside the folder there is a gro, a top, and they contain a solvated box
+
+    
+    """
+
+    s_initialgroName = filemanager.get_single_gro(s_folder)
+    s_topName        = filemanager.get_single_gro(s_folder)
+
+    #subprocess.run(f"xxxxxxx" , shell=True)
+
+    #EM
+    subprocess.run(f"mkdir {s_folder}/1_EM" , shell=True)
+    subprocess.run(f"gmx grompp -f ~/mdparameters/em.mdp -c {s_folder}/{s_initialgroName} -p {s_folder}/{s_topName} -o {s_folder}/1_EM/em.tpr -maxwarn 3" , shell=True)
+    subprocess.run(f"gmx mdrun -deffnm {s_folder}/1_EM/em" , shell=True)
+
+    #NVT equilibration
+    subprocess.run(f"mkdir {s_folder}/2_NVT" , shell=True)
+    subprocess.run(f"gmx grompp -f ~/mdparameters/begin_mdNvt_Vr.mdp -c {s_folder}/1_EM/em.gro -r  {s_folder}/1_EM/em.gro -p {s_folder}/{s_topName} -o {s_folder}/2_NVT/nvt.tpr" , shell=True)
+    subprocess.run(f"gmx mdrun -deffnm {s_folder}/2_NVT/nvt" , shell=True)
+
+    #NPT equilibration
+    subprocess.run(f"mkdir {s_folder}/3_NPT" , shell=True)
+    subprocess.run(f"grompp -f ~/mdparameters/continue_mdNpt_Vr_PaRa.mdp -c {s_folder}/2_NVT/nvt.gro -r {s_folder}/2_NVT/nvt.gro -t {s_folder}/2_NVT/nvt.cpt -p {s_folder}/{s_topName} -o {s_folder}/3_NPT/npt.tpr" , shell=True)
+    subprocess.run(f"mdrun -deffnm {s_folder}/3_NPT/npt" , shell=True)
+
 
 
