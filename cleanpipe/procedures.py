@@ -157,7 +157,9 @@ def download_and_clean_pdb(s_molecule_name):
     subprocess.run(f"wget https://files.rcsb.org/download/{s_molecule_name}.pdb" , shell=True)
 
     #remove water
-    subprocess.run(f"grep -v 'HOH' 1aki.pdb > 1aki.pdb" , shell=True)
+    subprocess.run(f"grep -v 'HOH' {s_molecule_name}.pdb > {s_molecule_name}_temp.pdb" , shell=True)
+    subprocess.run(f"rm {s_molecule_name}.pdb" , shell=True)
+    subprocess.run(f"mv {s_molecule_name}_temp.pdb {s_molecule_name}.pdb" , shell=True)
 
 
 def make_realistic(s_folder):
@@ -176,23 +178,23 @@ def make_realistic(s_folder):
     """
 
     s_initialgroName = filemanager.get_single_gro(s_folder)
-    s_topName        = filemanager.get_single_gro(s_folder)
+    s_topName        = filemanager.get_single_top(s_folder)
 
     #subprocess.run(f"xxxxxxx" , shell=True)
 
     #EM
     subprocess.run(f"mkdir {s_folder}/1_EM" , shell=True)
-    subprocess.run(f"gmx grompp -f ~/mdparameters/em.mdp -c {s_folder}/{s_initialgroName} -p {s_folder}/{s_topName} -o {s_folder}/1_EM/em.tpr -maxwarn 3" , shell=True)
+    subprocess.run(f"gmx grompp -f ~/mdp/em.mdp -c {s_folder}/{s_initialgroName} -p {s_folder}/{s_topName} -o {s_folder}/1_EM/em.tpr -maxwarn 3" , shell=True)
     subprocess.run(f"gmx mdrun -deffnm {s_folder}/1_EM/em" , shell=True)
 
     #NVT equilibration
     subprocess.run(f"mkdir {s_folder}/2_NVT" , shell=True)
-    subprocess.run(f"gmx grompp -f ~/mdparameters/begin_mdNvt_Vr.mdp -c {s_folder}/1_EM/em.gro -r  {s_folder}/1_EM/em.gro -p {s_folder}/{s_topName} -o {s_folder}/2_NVT/nvt.tpr" , shell=True)
+    subprocess.run(f"gmx grompp -f ~/mdp/begin_mdNvt_Vr.mdp -c {s_folder}/1_EM/em.gro -r  {s_folder}/1_EM/em.gro -p {s_folder}/{s_topName} -o {s_folder}/2_NVT/nvt.tpr" , shell=True)
     subprocess.run(f"gmx mdrun -deffnm {s_folder}/2_NVT/nvt" , shell=True)
 
     #NPT equilibration
     subprocess.run(f"mkdir {s_folder}/3_NPT" , shell=True)
-    subprocess.run(f"grompp -f ~/mdparameters/continue_mdNpt_Vr_PaRa.mdp -c {s_folder}/2_NVT/nvt.gro -r {s_folder}/2_NVT/nvt.gro -t {s_folder}/2_NVT/nvt.cpt -p {s_folder}/{s_topName} -o {s_folder}/3_NPT/npt.tpr" , shell=True)
+    subprocess.run(f"grompp -f ~/mdp/continue_mdNpt_Vr_PaRa.mdp -c {s_folder}/2_NVT/nvt.gro -r {s_folder}/2_NVT/nvt.gro -t {s_folder}/2_NVT/nvt.cpt -p {s_folder}/{s_topName} -o {s_folder}/3_NPT/npt.tpr" , shell=True)
     subprocess.run(f"mdrun -deffnm {s_folder}/3_NPT/npt" , shell=True)
 
 
