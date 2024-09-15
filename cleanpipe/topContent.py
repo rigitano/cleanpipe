@@ -276,5 +276,18 @@ def remove_posres_inclusion(s_topfile):
     with open(s_topfile, 'w') as file:
         file.write(updated_contents)
 
-    
+
+
+
+def insert_text_before_directive(s_file_path, s_text_to_insert, s_directive):
+    # Read the original content of the file
+    with open(s_file_path, 'r') as file:
+        lines = file.readlines()
+
+    # Find the line with the specified directive and insert the text before it
+    with open(s_file_path, 'w') as file:
+        for line in lines:
+            if s_directive in line:
+                file.write(s_text_to_insert + '\n')
+            file.write(line)
      
