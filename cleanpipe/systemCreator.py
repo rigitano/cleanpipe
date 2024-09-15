@@ -9,10 +9,10 @@ import os
 
 
 
-def pdb2filledBox(s_pdbfile, s_forceField):
+def pdb2filled_box(s_pdbfile, s_forceField):
     """
     usage example:
-    cl.pdb2filledBox("octn.pdb","charmm36-jul2022")
+    cl.pdb2filled_box("octn.pdb","charmm36-jul2022")
 
     create a 5x5x5 box system filled with a lot of copies of the molecule
 
@@ -53,7 +53,7 @@ def pdb2filledBox(s_pdbfile, s_forceField):
     #rename the top and posres.itp files. but notice the top will have to be edited so to reflect the new molecule total. the name of the system and molecules will also be edited
     subprocess.run(f"mv {s_outPathAndName}.top {s_outPathAndName}_filledbox.top" , shell=True, check=True)
 
-    #change the ugly molecule name currently inside the TOP file. it will be changed to be the same as the residue name.
+    #change the ugly molecule name currently inside the TOP file.
     uglyMolName = topContent.getMoleculeName(f"{s_outPathAndName}_filledbox.top")
     molName = s_filename
     topContent.replaceMoleculeName(f"{s_outPathAndName}_filledbox.top", uglyMolName, molName)
@@ -63,10 +63,10 @@ def pdb2filledBox(s_pdbfile, s_forceField):
 
     #split the TOP file, into a ITP that describes the molecule and a simple TOP that contains only name of the system and the totals.
     topContent.decompose_TOP_file_into_SOCKETTOP_and_ITPs(f"{s_outPathAndName}_filledbox.top")
-    subprocess.run(f"rm {s_outPathAndName}_filledbox.top" , shell=True, check=True)
+    
 
     #give a name for the system
-    topContent.setSystemName(f"{s_outPathAndName}_filledbox.socket.top", f"box filled with {s_filename}" )
+    topContent.setSystemName(f"{s_outPathAndName}_filledbox.top", f"box filled with {s_filename}" )
 
 
 def pdb2molecule_in_solvent(s_pdbfile, s_outSytemName, s_solvent, s_forceField, s_boxSize):

@@ -19,6 +19,9 @@ def better_pdb2gmx(s_pdbfile,s_outName,s_forceField,s_boxSize):
     #check if the filename inside s_pdbfile is valid
     filemanager.check_file(s_pdbfile,['.pdb']) 
 
+    #get the pdb basename. it should be the name of the protagonist molecule
+    s_molName = s_pdbfile.replace(".pdb","")
+
     #create output folder in parael with the pdb input. we will cd into that forder and do everithing there
     subprocess.run(f"mkdir {s_outName}", shell=True, check=True)
     subprocess.run(f"cp {s_pdbfile} {s_outName}/temp.pdb", shell=True, check=True)
@@ -30,18 +33,21 @@ def better_pdb2gmx(s_pdbfile,s_outName,s_forceField,s_boxSize):
     ################################## create gro and top from pdb. then add the box size to the gro ###########################
 
     #pdb2gmx
-    subprocess.run(f"printf '8\n7\n' | gmx pdb2gmx -f temp.pdb -o {s_outName}.gro -p {s_outName}.top -i {s_outName}.posres.itp -missing -ter -ignh -water none -ff {s_forceField}", shell=True, check=True)
+    subprocess.run(f"printf '8\n7\n' | gmx pdb2gmx -f temp.pdb -o {s_outName}.gro -p {s_outName}.top -i {s_molName}.posres.itp -missing -ter -ignh -water none -ff {s_forceField}", shell=True, check=True)
     
-    #define box size. s_boxSize contains the user definition (ex: "3 3 3")
+    #pdb2gmx is stupid, so by default it and givesa wierd name to the molecule from the pdb. most times is "Other_chain_O". lets replace it by the real molecule name, that I took from the pdb file name
+    uglyMolName = topContent.getMoleculeName(f"{s_outName}.top")
+    topContent.replaceMoleculeName(f"{s_outName}.top", uglyMolName, s_molName)
+
+    #define box size inside the gro file. s_boxSize contains the user definition (ex: "3 3 3")
     subprocess.run(f"gmx editconf -f {s_outName}.gro -o {s_outName}.gro -c -box {s_boxSize} -bt cubic", shell=True, check=True)
     subprocess.run(f"rm \\#{s_outName}.gro.1\\#" , shell=True, check=True)# I chose to overwrite the old gro
 
-    #decompose top that contains 1 molecule into a socket top that contains only sytem information, and a itp to describe that 1 molecule
+    #decompose the original top into a new top and a itp. the new top will contain just sytem information, the itp will describe the protagonist molecule
     topContent.decompose_TOP_file_into_SOCKETTOP_and_ITPs(f"{s_outName}.top")
 
-    #termporary pdb is no longer necessary
+    #delete the temporary pdb used by pdb2gmx as its no longer necessary
     subprocess.run(f"rm temp.pdb", shell=True, check=True)
-
 
     #after performing the system creation, go back to the original folder python was called
     os.chdir(original_directory)
@@ -68,8 +74,6 @@ def better_solvate(s_systemFolder,s_solvent):
         subprocess.run(f"gmx solvate -cp {s_groName}.gro -p {s_topName}.top -o {s_groName}.gro", shell=True, check=True)
         subprocess.run(f"rm \\#{s_groName}.gro.1\\#" , shell=True, check=True)#I chose to overwrite the old gro
         subprocess.run(f"rm \\#{s_topName}.top.1\\#" , shell=True, check=True)#I chose to overwrite the old top
-
-
 
 
         #include necessary text in the top file

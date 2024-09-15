@@ -227,9 +227,12 @@ def decompose_TOP_file_into_SOCKETTOP_and_ITPs(top_file_path):
     # Create new files based on the parsed data
     top_dir = os.path.dirname(top_file_path)
     base_name = os.path.splitext(os.path.basename(top_file_path))[0]
+
+    #delete the original top file
+    subprocess.run(f"rm {top_file_path}" , shell=True, check=True)
     
     # Create the new system top file without molecule definitions
-    system_top_file = os.path.join(top_dir, f"{base_name}.socket.top")
+    system_top_file = os.path.join(top_dir, f"{base_name}.top")
     with open(system_top_file, 'w') as f:
         for line in system_info:
             f.write(line)
