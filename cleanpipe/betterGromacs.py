@@ -30,7 +30,7 @@ def better_pdb2gmx(s_pdbfile,s_outName,s_forceField,s_boxSize):
     ################################## create gro and top from pdb. then add the box size to the gro ###########################
 
     #pdb2gmx
-    subprocess.run(f"printf '8\n7\n' | gmx pdb2gmx -f {s_pdbfile} -o {s_outName}.gro -p {s_outName}.top -i {s_outName}.posres.itp -missing -ter -ignh -water none -ff {s_forceField}", shell=True, check=True)
+    subprocess.run(f"printf '8\n7\n' | gmx pdb2gmx -f temp.pdb -o {s_outName}.gro -p {s_outName}.top -i {s_outName}.posres.itp -missing -ter -ignh -water none -ff {s_forceField}", shell=True, check=True)
     
     #define box size. s_boxSize contains the user definition (ex: "3 3 3")
     subprocess.run(f"gmx editconf -f {s_outName}.gro -o {s_outName}.gro -c -box {s_boxSize} -bt cubic", shell=True, check=True)
