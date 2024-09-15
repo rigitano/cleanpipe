@@ -3,8 +3,23 @@ from cleanpipe import topContent
 
 import subprocess
 import os
+import functools
+
+def ensure_original_directory(func):
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        # Store the original directory
+        original_directory = os.getcwd()
+        try:
+            # Execute the function
+            return func(*args, **kwargs)
+        finally:
+            # Return to the original directory, even if an error occurred
+            os.chdir(original_directory)
+    return wrapper
 
 
+@ensure_original_directory
 def better_pdb2gmx(s_pdbfile,s_outName,s_forceField,s_boxSize):
     """
     creates a new folder with the system name. and a gro and top files inside it with that same system name
@@ -25,7 +40,7 @@ def better_pdb2gmx(s_pdbfile,s_outName,s_forceField,s_boxSize):
     #create output folder in parael with the pdb input. we will cd into that forder and do everithing there
     subprocess.run(f"mkdir {s_outName}", shell=True, check=True)
     subprocess.run(f"cp {s_pdbfile} {s_outName}/temp.pdb", shell=True, check=True)
-    original_directory = os.getcwd()#original folder is stored so I can go back to it at the very end of this function
+    #original_directory = os.getcwd()#original folder is stored so I can go back to it at the very end of this function
     os.chdir(f"{s_outName}")
 
 
@@ -50,26 +65,26 @@ def better_pdb2gmx(s_pdbfile,s_outName,s_forceField,s_boxSize):
     subprocess.run(f"rm temp.pdb", shell=True, check=True)
 
     #after performing the system creation, go back to the original folder python was called
-    os.chdir(original_directory)
+    #os.chdir(original_directory)
 
-
+@ensure_original_directory
 def better_solvate(s_systemFolder,s_solvent):
     """
     
     """
 
-    #go to system folder. the current folder is savad so to go back to it just before the end of the function
-    original_directory = os.getcwd()
-    os.chdir(f"{s_systemFolder}")
-
     #get gro basaname in system folder
-    s_groName = filemanager.get_single_gro("./").replace('.gro','')
+    s_groName = filemanager.get_single_gro(s_systemFolder).replace('.gro','')
     #get top basaname in system folder
-    s_topName = filemanager.get_single_top("./").replace('.top','')
+    s_topName = filemanager.get_single_top(s_systemFolder).replace('.top','')
 
 
     if s_solvent == "tip3p":
         #this mean the user has chosen the tip3p water model, already part of the forcefield
+
+        #go to system folder. the current folder is savad so to go back to it just before the end of the function
+        #original_directory = os.getcwd()
+        os.chdir(f"{s_systemFolder}")
 
         subprocess.run(f"gmx solvate -cp {s_groName}.gro -p {s_topName}.top -o {s_groName}.gro", shell=True, check=True)
         subprocess.run(f"rm \\#{s_groName}.gro.1\\#" , shell=True, check=True)#I chose to overwrite the old gro
@@ -78,21 +93,9 @@ def better_solvate(s_systemFolder,s_solvent):
 
         #include necessary text in the top file
 
-        s_text_to_insert ="""
-        ; Include water topology
-        #include "./charmm36-jul2022.ff/tip3p.itp"
-
-        #ifdef POSRES_WATER
-        ; Position restraint for each water oxygen
-        [ position_restraints ]
-        ;  i funct       fcx        fcy        fcz
-        1    1       1000       1000       1000
-        #endif
-        """
+        s_text_to_insert ="""\n; Include water topology\n#include "./charmm36-jul2022.ff/tip3p.itp"\n\n#ifdef POSRES_WATER\n; Position restraint for each water oxygen\n[ position_restraints ]\n;  i funct       fcx        fcy        fcz\n1    1       1000       1000       1000\n#endif\n\n"""
 
         topContent.insert_text_before_directive(f"{s_topName}.top", s_text_to_insert, "[ system ]")
-
-
 
 
         # xxx add ions, to make the box neutral
@@ -100,14 +103,23 @@ def better_solvate(s_systemFolder,s_solvent):
         #subprocess.run(f"printf '13' | gmx  genion -s coord_box_sol_ions.tpr -o coord_box_sol_ions.gro -p topol.top -pname NA -nname CL -neutral" , shell=True, check=True)
         #rm tpr and created backups and mdout
 
-    elif filemanager.check_folder(s_solvent) == True:
+        #after performing the solvation, go back to the original folder python was called
+        #os.chdir(original_directory)
+
+    elif filemanager.check_folder(full_path = os.path.abspath(s_solvent)) == True:
         # this mean the user has chosen a folder (ex: path/to/folder/octn)
-        # lets hope that folder contains a system that is a box filled with solvent. for example octn.gro and octn.itp
-        s_solventFolder = s_solvent
+        # that folder shoulrd contain a system that is a box filled with solvent. for example octn.gro and octn.itp
+
+        #get the full path
+        s_solventFolder = os.path.abspath(s_solvent)
 
         #get the names of the top and itp files in the SOLVENT BOX folder
         s_solbox_groName = filemanager.get_single_gro(s_solventFolder)
         l_solbox_itpNames = filemanager.get_all_itps(s_solventFolder)
+
+        #go to system folder. the current folder is savad so to go back to it just before the end of the function
+        #original_directory = os.getcwd()
+        os.chdir(f"{s_systemFolder}")
 
         #insert the solvent in gro. and inform quantity added in top
         subprocess.run(f"gmx solvate -cp {s_groName}.gro -cs {s_solventFolder}/{s_solbox_groName} -p {s_topName}.top -o {s_groName}.gro", shell=True, check=True)
@@ -126,11 +138,13 @@ def better_solvate(s_systemFolder,s_solvent):
         for s_sol_itpName in l_solbox_itpNames:
             subprocess.run(f"cp {s_solventFolder}/{s_sol_itpName} ./" , shell=True, check=True)
 
+        #after performing the solvation, go back to the original folder python was called
+        #os.chdir(original_directory)
+
     else:
         print("solvation failed")
 
-    #after performing the solvation, go back to the original folder python was called
-    os.chdir(original_directory)
+
 
 
 
