@@ -121,9 +121,6 @@ def void2peptide_in_solvent(s_outName, s_nTerminusCAP, s_aminoacids, s_cTerminus
     # reate temporary pdb file containing only a peptide
     pdbCreator.create_peptide("temp.pdb", s_nTerminusCAP, s_aminoacids, s_cTerminusCAP, l_phi, l_psi_im1)
    
-    # construct the entire system aroud the peptide
-    pdb2molecule_in_solvent("temp.pdb", s_outName, s_solvent, s_forceField, s_boxSize)
-
     # create gro and top from pdb. then add the box size to the gro
     betterGromacs.better_pdb2gmx("temp.pdb",s_outName,s_forceField,s_boxSize, b_addterminal = False)# this last parameter was set to False so not to add termini, as they are already present in the peptide in this case)
 

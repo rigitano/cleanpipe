@@ -57,15 +57,11 @@ def better_pdb2gmx(s_pdbfile,s_outName,s_forceField,s_boxSize,b_addterminal=True
     ################################## create gro and top from pdb. then add the box size to the gro ###########################
 
     #pdb2gmx
-    print("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
-    print(b_addterminal)
 
     if b_addterminal == True:
-        print("1")
         #standar option, that adds the correct termini in proteins
         subprocess.run(f"gmx pdb2gmx -f temp.pdb -o {s_outName}.gro -p {s_outName}.top -i {s_molName}.posres.itp -missing -ignh -water none -ff {s_forceField}", shell=True, check=True)
     elif b_addterminal == False:
-        print("2")
         #this option will leave dangling bonds. its usefull just in case I will add termini manually
         subprocess.run(f"printf '8\n7\n' | gmx pdb2gmx -f temp.pdb -o {s_outName}.gro -p {s_outName}.top -i {s_molName}.posres.itp -missing -ter -ignh -water none -ff {s_forceField}", shell=True, check=True)
     
@@ -215,5 +211,5 @@ def make_realistic(s_systemFolder,s_groups_to_monitor_separately="Protein Non-Pr
 
     #NPT equilibration
     subprocess.run(f"mkdir {s_systemFolder}/3_NPT" , shell=True, check=True)
-    subprocess.run(f"grompp -f {s_mdp_folder}/{s_mdpNameNPT} -c {s_systemFolder}/2_NVT/nvt.gro -r {s_systemFolder}/2_NVT/nvt.gro -t {s_systemFolder}/2_NVT/nvt.cpt -p {s_systemFolder}/{s_topName} -o {s_systemFolder}/3_NPT/npt.tpr -maxwarn 3" , shell=True, check=True)
+    subprocess.run(f"gmx grompp -f {s_mdp_folder}/{s_mdpNameNPT} -c {s_systemFolder}/2_NVT/nvt.gro -r {s_systemFolder}/2_NVT/nvt.gro -t {s_systemFolder}/2_NVT/nvt.cpt -p {s_systemFolder}/{s_topName} -o {s_systemFolder}/3_NPT/npt.tpr -maxwarn 3" , shell=True, check=True)
     subprocess.run(f"mdrun -deffnm {s_systemFolder}/3_NPT/npt" , shell=True, check=True)
