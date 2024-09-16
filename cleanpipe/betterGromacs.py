@@ -59,7 +59,7 @@ def better_pdb2gmx(s_pdbfile,s_outName,s_forceField,s_boxSize,b_addterminal=True
     if b_addterminal == True:
         #standar option, that adds the correct termini in proteins
         subprocess.run(f"gmx pdb2gmx -f temp.pdb -o {s_outName}.gro -p {s_outName}.top -i {s_molName}.posres.itp -missing -ignh -water none -ff {s_forceField}", shell=True, check=True)
-    else:
+    elif b_addterminal == False:
         #this option will leave dangling bonds. its usefull just in case I will add termini manually
         subprocess.run(f"printf '8\n7\n' | gmx pdb2gmx -f temp.pdb -o {s_outName}.gro -p {s_outName}.top -i {s_molName}.posres.itp -missing -ter -ignh -water none -ff {s_forceField}", shell=True, check=True)
     

@@ -73,7 +73,7 @@ def pdb2molecule_in_solvent(s_pdbfile, s_outSytemName, s_solvent, s_forceField, 
     """
     usage example:
     cl.pdb2molecule_in_solvent("octn.pdb", "octn_in_water", "tip3p", "charmm36-jul2022", "3 3 3")
-    cl.pdb2molecule_in_solvent("octn.pdb", "octn_in_octane", "octn_filledbox", "charmm36-jul2022", "3 3 3")
+    cl.pdb2molecule_in_solvent("octn.pdb", "octn_in_octane", "octn_filled_box", "charmm36-jul2022", "3 3 3")
     
 
     s_pdbfile       : string with the pdb name. for example "insulin.pdb", this will be the main molecule in the system.
@@ -125,7 +125,7 @@ def void2peptide_in_solvent(s_outName, s_nTerminusCAP, s_aminoacids, s_cTerminus
     pdb2molecule_in_solvent("temp.pdb", s_outName, s_solvent, s_forceField, s_boxSize)
 
     # create gro and top from pdb. then add the box size to the gro
-    betterGromacs.better_pdb2gmx("temp.pdb",s_outName,s_forceField,s_boxSize, False)# this last parameter was set to False so not to add termini, as they are already present in the peptide in this case)
+    betterGromacs.better_pdb2gmx("temp.pdb",s_outName,s_forceField,s_boxSize, b_addterminal = False)# this last parameter was set to False so not to add termini, as they are already present in the peptide in this case)
 
     # add solvent to the system. I have 2 options here: tip3p or filled box
     betterGromacs.better_solvate(s_outName,s_solvent)
