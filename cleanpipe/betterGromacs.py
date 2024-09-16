@@ -212,4 +212,4 @@ def make_realistic(s_systemFolder,s_groups_to_monitor_separately="Protein Non-Pr
     #NPT equilibration
     subprocess.run(f"mkdir {s_systemFolder}/3_NPT" , shell=True, check=True)
     subprocess.run(f"gmx grompp -f {s_mdp_folder}/{s_mdpNameNPT} -c {s_systemFolder}/2_NVT/nvt.gro -r {s_systemFolder}/2_NVT/nvt.gro -t {s_systemFolder}/2_NVT/nvt.cpt -p {s_systemFolder}/{s_topName} -o {s_systemFolder}/3_NPT/npt.tpr -maxwarn 3" , shell=True, check=True)
-    subprocess.run(f"mdrun -deffnm {s_systemFolder}/3_NPT/npt" , shell=True, check=True)
+    subprocess.run(f"gmx mdrun -deffnm {s_systemFolder}/3_NPT/npt" , shell=True, check=True)
