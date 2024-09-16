@@ -122,7 +122,7 @@ def void2peptide_in_solution(s_outName, s_nTerminusCAP, s_aminoacids, s_cTerminu
     pdbCreator.create_peptide("temp.pdb", s_nTerminusCAP, s_aminoacids, s_cTerminusCAP, l_phi, l_psi_im1)
    
     # construct the entire system aroud the peptide
-    pdb2molecule_in_solvent("temp.pdb", s_outName, s_solvent, s_forceField, s_boxSize)
+    pdb2molecule_in_solvent("temp.pdb", s_outName, s_solvent, s_forceField, s_boxSize, False)# this last parameter was set to False so not to add termini, as they are already present in the peptide in this case
 
     # temporary pdb of the peptide is not necessary anymore
     subprocess.run(f"rm temp.pdb" , shell=True, check=True)
