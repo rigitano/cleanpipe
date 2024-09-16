@@ -166,7 +166,8 @@ def better_solvate(s_systemFolder,s_solvent):
 def make_realistic(s_systemFolder,s_groups_to_monitor_separately="Protein Non-Protein", s_temperature="300" ):
     """
     usage example:
-    cl.make_realistic("insulin_in_water")
+    cl.make_realistic("1LZ1_in_water")
+    cl.make_realistic("octn_filledbox",s_groups_to_monitor_separately="System")
 
     will perform EM NVT and NPT in a system, so to make it realistic
     I have to give the name of a folder that contains a system
