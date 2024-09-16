@@ -107,7 +107,7 @@ def better_solvate(s_systemFolder,s_solvent):
 
         #include necessary text in the top file
 
-        s_text_to_insert ="""\n; Include water topology\n#include "./charmm36-jul2022.ff/tip3p.itp"\n\n#ifdef POSRES_WATER\n; Position restraint for each water oxygen\n[ position_restraints ]\n;  i funct       fcx        fcy        fcz\n1    1       1000       1000       1000\n#endif\n\n"""
+        s_text_to_insert ="""\n; Include water topology\n#include "charmm36-jul2022.ff/tip3p.itp"\n\n#ifdef POSRES_WATER\n; Position restraint for each water oxygen\n[ position_restraints ]\n;  i funct       fcx        fcy        fcz\n1    1       1000       1000       1000\n#endif\n\n"""
 
         topContent.insert_text_before_directive(f"{s_topName}.top", s_text_to_insert, "[ system ]")
 
@@ -120,7 +120,7 @@ def better_solvate(s_systemFolder,s_solvent):
         #after performing the solvation, go back to the original folder python was called
         #os.chdir(original_directory)
 
-    elif filemanager.check_folder(full_path = os.path.abspath(s_solvent)) == True:
+    elif filemanager.check_folder(os.path.abspath(s_solvent)) == True:
         # this mean the user has chosen a folder (ex: path/to/folder/octn)
         # that folder shoulrd contain a system that is a box filled with solvent. for example octn.gro and octn.itp
 

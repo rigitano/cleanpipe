@@ -29,8 +29,8 @@ def pdb2filled_box(s_pdbfile, s_forceField):
     s_filename = filemanager.get_filename_without_extension(s_pdbfile) 
 
 
-    subprocess.run(f"mkdir {s_filename}_filledbox", shell=True, check=True)
-    s_outPathAndName = f"{s_filename}_filledbox/{s_filename}"
+    subprocess.run(f"mkdir {s_filename}_filled_box", shell=True, check=True)
+    s_outPathAndName = f"{s_filename}_filled_box/{s_filename}"
 
 
     #create a system with 1 molecule.
@@ -41,32 +41,32 @@ def pdb2filled_box(s_pdbfile, s_forceField):
     topContent.remove_posres_inclusion(f"{s_outPathAndName}.top")
 
     #manipulate the GRO file to create a 5x5x5 box and fill it with copyes of the molecule
-    result = subprocess.run(f"gmx insert-molecules -ci {s_outPathAndName}.gro -nmol 1000 -box 5 5 5 -o {s_outPathAndName}_filledbox.gro" , shell=True, check=True, capture_output=True,text=True)
+    result = subprocess.run(f"gmx insert-molecules -ci {s_outPathAndName}.gro -nmol 1000 -box 5 5 5 -o {s_outPathAndName}_filled_box.gro" , shell=True, check=True, capture_output=True,text=True)
     print(result.stdout+result.stderr)
     subprocess.run(f"rm {s_outPathAndName}.gro" , shell=True, check=True)# now that we have the filled box gro, the 1 molecule gro can be deleted
-    print(f"gro file written: \n                      {s_outPathAndName}_filledbox.gro")
+    print(f"gro file written: \n                      {s_outPathAndName}_filled_box.gro")
 
     #get the number of molecules really added. this will be done by reading the standard output
     match = re.search(r'Added\s+(\d+)\s+molecules', result.stdout+result.stderr)
     added_molecules = int(match.group(1))
 
     #rename the top and posres.itp files. but notice the top will have to be edited so to reflect the new molecule total. the name of the system and molecules will also be edited
-    subprocess.run(f"mv {s_outPathAndName}.top {s_outPathAndName}_filledbox.top" , shell=True, check=True)
+    subprocess.run(f"mv {s_outPathAndName}.top {s_outPathAndName}_filled_box.top" , shell=True, check=True)
 
     #change the ugly molecule name currently inside the TOP file.
-    uglyMolName = topContent.getMoleculeName(f"{s_outPathAndName}_filledbox.top")
+    uglyMolName = topContent.getMoleculeName(f"{s_outPathAndName}_filled_box.top")
     molName = s_filename
-    topContent.replaceMoleculeName(f"{s_outPathAndName}_filledbox.top", uglyMolName, molName)
+    topContent.replaceMoleculeName(f"{s_outPathAndName}_filled_box.top", uglyMolName, molName)
 
     #update the TOP file with the new total the molecule
-    topContent.update_molecule_quantity(f"{s_outPathAndName}_filledbox.top", molName, added_molecules)
+    topContent.update_molecule_quantity(f"{s_outPathAndName}_filled_box.top", molName, added_molecules)
 
     #split the TOP file, into a ITP that describes the molecule and a simple TOP that contains only name of the system and the totals.
-    topContent.decompose_TOP_file_into_SOCKETTOP_and_ITPs(f"{s_outPathAndName}_filledbox.top")
+    topContent.decompose_TOP_file_into_SOCKETTOP_and_ITPs(f"{s_outPathAndName}_filled_box.top")
     
 
     #give a name for the system
-    topContent.setSystemName(f"{s_outPathAndName}_filledbox.top", f"box filled with {s_filename}" )
+    topContent.setSystemName(f"{s_outPathAndName}_filled_box.top", f"box filled with {s_filename}" )
 
 
 def pdb2molecule_in_solvent(s_pdbfile, s_outSytemName, s_solvent, s_forceField, s_boxSize):
@@ -98,10 +98,10 @@ def pdb2molecule_in_solvent(s_pdbfile, s_outSytemName, s_solvent, s_forceField, 
 
 
 
-def void2peptide_in_solution(s_outName, s_nTerminusCAP, s_aminoacids, s_cTerminusCAP, l_phi, l_psi_im1, s_solvent, s_forceField, s_boxSize):
+def void2peptide_in_solvent(s_outName, s_nTerminusCAP, s_aminoacids, s_cTerminusCAP, l_phi, l_psi_im1, s_solvent, s_forceField, s_boxSize):
     """
     usage example:
-    cl.void2peptide_in_solution("ala_in_solvent","acyl","AAAAAA","amide",[-57.8,-57.8,-57.8,-57.8,-57.8,-57.8],[-47.0,-47.0,-47.0,-47.0,-47.0,-47.0],"tip3p","charmm36-jul2022", "5.1 5.1 5.1")
+    cl.void2peptide_in_solvent("ala_in_solvent","acyl","AAAAAA","amide",[-57.8,-57.8,-57.8,-57.8,-57.8,-57.8],[-47.0,-47.0,-47.0,-47.0,-47.0,-47.0],"tip3p","charmm36-jul2022", "5.1 5.1 5.1")
     
     will create the peptide and the entire system out of nowere (no input files required)
     a folder containing the system will be created. this will be done using just the function arguments 
@@ -122,7 +122,13 @@ def void2peptide_in_solution(s_outName, s_nTerminusCAP, s_aminoacids, s_cTerminu
     pdbCreator.create_peptide("temp.pdb", s_nTerminusCAP, s_aminoacids, s_cTerminusCAP, l_phi, l_psi_im1)
    
     # construct the entire system aroud the peptide
-    pdb2molecule_in_solvent("temp.pdb", s_outName, s_solvent, s_forceField, s_boxSize, False)# this last parameter was set to False so not to add termini, as they are already present in the peptide in this case
+    pdb2molecule_in_solvent("temp.pdb", s_outName, s_solvent, s_forceField, s_boxSize)
+
+    # create gro and top from pdb. then add the box size to the gro
+    betterGromacs.better_pdb2gmx("temp.pdb",s_outName,s_forceField,s_boxSize, False)# this last parameter was set to False so not to add termini, as they are already present in the peptide in this case)
+
+    # add solvent to the system. I have 2 options here: tip3p or filled box
+    betterGromacs.better_solvate(s_outName,s_solvent)
 
     # temporary pdb of the peptide is not necessary anymore
     subprocess.run(f"rm temp.pdb" , shell=True, check=True)
