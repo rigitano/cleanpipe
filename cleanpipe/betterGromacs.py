@@ -85,11 +85,14 @@ def better_pdb2gmx(s_pdbfile,s_outName,s_forceField,s_boxSize,b_addterminal=True
 @ensure_original_directory
 def better_solvate(s_systemFolder,s_solvent):
     """
-    solvation in gromacs is a mess. there are a couple of different options:
-        "gmx solvate -cp SoluteMolecule.gro -cs preEquilibratedBoxOfSmallSolvents.gro -o outSystem.gro", 
+    solvation in gromacs is a unintuitive mess. there are a couple of different options:
+
+        "gmx solvate -cp SoluteMolecule.gro -cs preEquilibratedBoxOfSmallSolvents.gro -o outSystem.gro -p soluteMolecule.top", 
             this will insert a molecule into a box of pre equilibrated solvents. 
             after the insertion overlaping molecules will be deleted, so its not good for large molecules of solvent, such as octane. 
             but this is a great option to solvate something into a mixture of small molecules
+            I hate that the -p soluteMolecule.top will just update the solvent molecule number in the solvent top, without including the solvent itp
+            if you dont put -cs, the tool will use a spc216.gro box stored in the shared/gromacs/top folder. its not at all tip3p.itp I usually like to include in the top file.
     
         "gmx insert-molecules -f SoluteMolecule.gro -ci solventMoleculeToInsert.gro -nmol 1000 -box 5 5 5 -o outSystem.gro"
             will randomly insert solvent molecules around the solute
@@ -177,6 +180,10 @@ def make_realistic(s_systemFolder,s_groups_to_monitor_separately, s_temperature)
     cl.make_realistic("1LZ1_in_water", s_groups_to_monitor_separately="Protein Non-Protein", s_temperature="300")
     cl.make_realistic("octn_filledbox", s_groups_to_monitor_separately="System", s_temperature="300")
 
+    gromacs have a idiotic way to make a system realistic, you have to EM, and then simulate it 2 times, but holding the protein in place, and with several spetial mdp paramenters, so not to missfold the protein
+    this is a function to do all of that without having to think about it every time
+    
+
     will perform EM NVT and NPT in a system, so to make it realistic
     I have to give the name of a folder that contains a system
     the function will create folders 1_EM, 2_NVT and 3_NPT inside that given folder
@@ -212,7 +219,7 @@ def make_realistic(s_systemFolder,s_groups_to_monitor_separately, s_temperature)
     #EM
     subprocess.run(f"mkdir 1_EM" , shell=True, check=True)
     os.chdir(f"1_EM")
-    subprocess.run(f"gmx grompp -f {s_mdp_folder}/em.mdp -c {s_initialgroName} -p ../{s_topName} -o em.tpr -maxwarn 3" , shell=True, check=True)
+    subprocess.run(f"gmx grompp -f {s_mdp_folder}/em.mdp -c ../{s_initialgroName} -p ../{s_topName} -o em.tpr -maxwarn 3" , shell=True, check=True)
     subprocess.run(f"gmx mdrun -deffnm em" , shell=True, check=True)
     os.chdir(f"..")
 

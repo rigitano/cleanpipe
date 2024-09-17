@@ -41,7 +41,7 @@ def pdb2filled_box(s_pdbfile, s_forceField):
     topContent.remove_posres_inclusion(f"{s_outPathAndName}.top")
 
     #manipulate the GRO file to create a 5x5x5 box and fill it with copyes of the molecule
-    result = subprocess.run(f"gmx insert-molecules -ci {s_outPathAndName}.gro -nmol 1000 -box 5 5 5 -o {s_outPathAndName}_filled_box.gro" , shell=True, check=True, capture_output=True,text=True)
+    result = subprocess.run(f"gmx insert-molecules -ci {s_outPathAndName}.gro -nmol 1000 -box 5 5 5 -o {s_outPathAndName}_filled_box.gro" , shell=True, check=True, capture_output=True,text=True)# 
     print(result.stdout+result.stderr)
     subprocess.run(f"rm {s_outPathAndName}.gro" , shell=True, check=True)# now that we have the filled box gro, the 1 molecule gro can be deleted
     print(f"gro file written: \n                      {s_outPathAndName}_filled_box.gro")
