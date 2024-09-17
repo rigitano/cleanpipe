@@ -85,7 +85,14 @@ def better_pdb2gmx(s_pdbfile,s_outName,s_forceField,s_boxSize,b_addterminal=True
 @ensure_original_directory
 def better_solvate(s_systemFolder,s_solvent):
     """
+    solvation in gromacs is a mess. there are a couple of different options:
+        "gmx solvate -cp SoluteMolecule.gro -cs preEquilibratedBoxOfSmallSolvents.gro -o outSystem.gro", 
+            this will insert a molecule into a box of pre equilibrated solvents. 
+            after the insertion overlaping molecules will be deleted, so its not good for large molecules of solvent, such as octane. 
+            but this is a great option to solvate something into a mixture of small molecules
     
+        "gmx insert-molecules -f SoluteMolecule.gro -ci solventMoleculeToInsert.gro -nmol 1000 -box 5 5 5 -o outSystem.gro"
+            will randomly insert solvent molecules around the solute
     """
 
     #get gro basaname in system folder
@@ -205,20 +212,20 @@ def make_realistic(s_systemFolder,s_groups_to_monitor_separately, s_temperature)
     #EM
     subprocess.run(f"mkdir 1_EM" , shell=True, check=True)
     os.chdir(f"1_EM")
-    subprocess.run(f"gmx grompp -f {s_mdp_folder}/em.mdp -c {s_initialgroName} -p {s_topName} -o 1_EM/em.tpr -maxwarn 3" , shell=True, check=True)
-    subprocess.run(f"gmx mdrun -deffnm 1_EM/em" , shell=True, check=True)
+    subprocess.run(f"gmx grompp -f {s_mdp_folder}/em.mdp -c {s_initialgroName} -p ../{s_topName} -o em.tpr -maxwarn 3" , shell=True, check=True)
+    subprocess.run(f"gmx mdrun -deffnm em" , shell=True, check=True)
     os.chdir(f"..")
 
     #NVT equilibration
     subprocess.run(f"mkdir 2_NVT" , shell=True, check=True)
     os.chdir(f"2_NVT")
-    subprocess.run(f"gmx grompp -f {s_mdp_folder}/{s_mdpNameNVT} -c 1_EM/em.gro -r  1_EM/em.gro -p {s_topName} -o 2_NVT/nvt.tpr -maxwarn 3" , shell=True, check=True)
-    subprocess.run(f"gmx mdrun -deffnm 2_NVT/nvt" , shell=True, check=True)
+    subprocess.run(f"gmx grompp -f {s_mdp_folder}/{s_mdpNameNVT} -c ../1_EM/em.gro -r  ../1_EM/em.gro -p ../{s_topName} -o nvt.tpr -maxwarn 3" , shell=True, check=True)
+    subprocess.run(f"gmx mdrun -deffnm nvt" , shell=True, check=True)
     os.chdir(f"..")
 
     #NPT equilibration
     subprocess.run(f"mkdir 3_NPT" , shell=True, check=True)
     os.chdir(f"3_NPT")
-    subprocess.run(f"gmx grompp -f {s_mdp_folder}/{s_mdpNameNPT} -c 2_NVT/nvt.gro -r 2_NVT/nvt.gro -t 2_NVT/nvt.cpt -p {s_topName} -o 3_NPT/npt.tpr -maxwarn 3" , shell=True, check=True)
-    subprocess.run(f"gmx mdrun -deffnm 3_NPT/npt" , shell=True, check=True)
+    subprocess.run(f"gmx grompp -f {s_mdp_folder}/{s_mdpNameNPT} -c ../2_NVT/nvt.gro -r ../2_NVT/nvt.gro -t ../2_NVT/nvt.cpt -p ../{s_topName} -o npt.tpr -maxwarn 3" , shell=True, check=True)
+    subprocess.run(f"gmx mdrun -deffnm npt" , shell=True, check=True)
     os.chdir(f"..")
