@@ -98,14 +98,15 @@ def pdb2molecule_in_solvent(s_pdbfile, s_outSytemName, s_solvent, s_forceField, 
 
 
 
-def void2peptide_in_solvent(s_systemName, s_nTerminusCAP, s_aminoacids, s_cTerminusCAP, l_phi, l_psi_im1, s_solvent, s_forceField, s_boxSize):
+def void2peptide_in_solvent(s_peptideName, s_systemName, s_nTerminusCAP, s_aminoacids, s_cTerminusCAP, l_phi, l_psi_im1, s_solvent, s_forceField, s_boxSize):
     """
     usage example:
-    cl.void2peptide_in_solvent("ala_in_solvent","acyl","AAAAAA","amide",[-57.8,-57.8,-57.8,-57.8,-57.8,-57.8],[-47.0,-47.0,-47.0,-47.0,-47.0,-47.0],"tip3p","charmm36-jul2022", "5.1 5.1 5.1")
+    cl.void2peptide_in_solvent("poliA","poliA_in_solvent","acyl","AAAAAA","amide",[-57.8,-57.8,-57.8,-57.8,-57.8,-57.8],[-47.0,-47.0,-47.0,-47.0,-47.0,-47.0],"tip3p","charmm36-jul2022", "5.1 5.1 5.1")
     
     will create the peptide and the entire system out of nowere (no input files required)
     a folder containing the system will be created. this will be done using just the function arguments 
 
+    s_peptideName   : name of the peptide that will be created, for example alaH
     s_systemName    : string with the name of the system, for example "alaHW". a folder with that name will be created, and inside it, all the files, for example: alaHW.gro and alaHW.top
     s_nTerminusCAP  : N terminus CAP. there are only the folowing options: "acyl" , none
     s_aminoacids    : string of aminoacid one letter code, for example "AAAAGGAALL"
@@ -119,13 +120,13 @@ def void2peptide_in_solvent(s_systemName, s_nTerminusCAP, s_aminoacids, s_cTermi
     """
 
     # create  pdb file containing only a peptide. in this case the pdb will be temporary, and deleted after the conversion to top and gro
-    pdbCreator.create_peptide(f"{s_systemName}.pdb", s_nTerminusCAP, s_aminoacids, s_cTerminusCAP, l_phi, l_psi_im1)
+    pdbCreator.create_peptide(f"{s_peptideName}.pdb", s_nTerminusCAP, s_aminoacids, s_cTerminusCAP, l_phi, l_psi_im1)
    
     # create gro and top from pdb. then add the box size to the gro. this is the my improved gromacs version that create the system in a new folder
-    betterGromacs.better_pdb2gmx(f"{s_systemName}.pdb",s_systemName,s_forceField,s_boxSize, b_addterminal = False)# this last parameter was set to False so not to add termini, as they are already present in the peptide in this case)
+    betterGromacs.better_pdb2gmx(f"{s_peptideName}.pdb",s_systemName,s_forceField,s_boxSize, b_addterminal = False)# this last parameter was set to False so not to add termini, as they are already present in the peptide in this case)
 
     # temporary pdb of the peptide is not necessary anymore
-    subprocess.run(f"rm {s_systemName}.pdb" , shell=True, check=True)
+    subprocess.run(f"rm {s_peptideName}.pdb" , shell=True, check=True)
 
     # add solvent to the system. this is my improved gromacs, the imput is a folderthere are 2 possible options here: tip3p or filled box
     betterGromacs.better_solvate(s_systemName,s_solvent)
