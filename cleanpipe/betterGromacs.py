@@ -36,7 +36,6 @@ def better_pdb2gmx(s_pdbfile,s_outName,s_forceField,s_boxSize,b_addterminal=True
     b_addterminal : True to add the standard termini and avoid dangling bonds, False to use when there are already termini in the input pdb, so no extra termini addition is required
     
     """
-    print("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx")
 
 
 
@@ -164,7 +163,7 @@ def better_solvate(s_systemFolder,s_solvent):
 
 
 
-
+@ensure_original_directory
 def make_realistic(s_systemFolder,s_groups_to_monitor_separately="Protein Non-Protein", s_temperature="300" ):
     """
     usage example:
@@ -182,6 +181,10 @@ def make_realistic(s_systemFolder,s_groups_to_monitor_separately="Protein Non-Pr
     
     """
 
+    #change current folder to the system folder
+    os.chdir(f"{s_systemFolder}")
+
+
     # setup the correct mdp files to use, accorting to the groups, temperature, and force field
     s_module_folder = os.path.dirname(__file__)
     s_mdp_folder = os.path.join(s_module_folder,"mdp")
@@ -193,23 +196,23 @@ def make_realistic(s_systemFolder,s_groups_to_monitor_separately="Protein Non-Pr
         s_mdpNameNVT = "nvt_begin_Vr_1GROUP.mdp"
         s_mdpNameNPT = "npt_begin_Vr_Cr_1GROUP.mdp"  
 
+    # obtain gro and top in current folder
+    s_initialgroName = filemanager.get_single_gro(".")
+    s_topName        = filemanager.get_single_top(".")
 
-    s_initialgroName = filemanager.get_single_gro(s_systemFolder)
-    s_topName        = filemanager.get_single_top(s_systemFolder)
 
-    #subprocess.run(f"xxxxxxx" , shell=True, check=True)
 
     #EM
-    subprocess.run(f"mkdir {s_systemFolder}/1_EM" , shell=True, check=True)
-    subprocess.run(f"gmx grompp -f {s_mdp_folder}/em.mdp -c {s_systemFolder}/{s_initialgroName} -p {s_systemFolder}/{s_topName} -o {s_systemFolder}/1_EM/em.tpr -maxwarn 3" , shell=True, check=True)
-    subprocess.run(f"gmx mdrun -deffnm {s_systemFolder}/1_EM/em" , shell=True, check=True)
+    subprocess.run(f"mkdir 1_EM" , shell=True, check=True)
+    subprocess.run(f"gmx grompp -f {s_mdp_folder}/em.mdp -c {s_initialgroName} -p {s_topName} -o 1_EM/em.tpr -maxwarn 3" , shell=True, check=True)
+    subprocess.run(f"gmx mdrun -deffnm 1_EM/em" , shell=True, check=True)
 
     #NVT equilibration
-    subprocess.run(f"mkdir {s_systemFolder}/2_NVT" , shell=True, check=True)
-    subprocess.run(f"gmx grompp -f {s_mdp_folder}/{s_mdpNameNVT} -c {s_systemFolder}/1_EM/em.gro -r  {s_systemFolder}/1_EM/em.gro -p {s_systemFolder}/{s_topName} -o {s_systemFolder}/2_NVT/nvt.tpr -maxwarn 3" , shell=True, check=True)
-    subprocess.run(f"gmx mdrun -deffnm {s_systemFolder}/2_NVT/nvt" , shell=True, check=True)
+    subprocess.run(f"mkdir 2_NVT" , shell=True, check=True)
+    subprocess.run(f"gmx grompp -f {s_mdp_folder}/{s_mdpNameNVT} -c 1_EM/em.gro -r  1_EM/em.gro -p {s_topName} -o 2_NVT/nvt.tpr -maxwarn 3" , shell=True, check=True)
+    subprocess.run(f"gmx mdrun -deffnm 2_NVT/nvt" , shell=True, check=True)
 
     #NPT equilibration
-    subprocess.run(f"mkdir {s_systemFolder}/3_NPT" , shell=True, check=True)
-    subprocess.run(f"gmx grompp -f {s_mdp_folder}/{s_mdpNameNPT} -c {s_systemFolder}/2_NVT/nvt.gro -r {s_systemFolder}/2_NVT/nvt.gro -t {s_systemFolder}/2_NVT/nvt.cpt -p {s_systemFolder}/{s_topName} -o {s_systemFolder}/3_NPT/npt.tpr -maxwarn 3" , shell=True, check=True)
-    subprocess.run(f"gmx mdrun -deffnm {s_systemFolder}/3_NPT/npt" , shell=True, check=True)
+    subprocess.run(f"mkdir 3_NPT" , shell=True, check=True)
+    subprocess.run(f"gmx grompp -f {s_mdp_folder}/{s_mdpNameNPT} -c 2_NVT/nvt.gro -r 2_NVT/nvt.gro -t 2_NVT/nvt.cpt -p {s_topName} -o 3_NPT/npt.tpr -maxwarn 3" , shell=True, check=True)
+    subprocess.run(f"gmx mdrun -deffnm 3_NPT/npt" , shell=True, check=True)
