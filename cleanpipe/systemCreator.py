@@ -72,8 +72,8 @@ def pdb2filled_box(s_pdbfile, s_forceField):
 def pdb2molecule_in_solvent(s_pdbfile, s_outSytemName, s_solvent, s_forceField, s_boxSize):
     """
     usage example:
-    cl.pdb2molecule_in_solvent("octn.pdb", "octn_in_water", "tip3p", "charmm36-jul2022", "3 3 3")
-    cl.pdb2molecule_in_solvent("octn.pdb", "octn_in_octane", "octn_filled_box", "charmm36-jul2022", "3 3 3")
+    cl.pdb2molecule_in_solvent("1LZ1.pdb", "1LZ1_in_water", "tip3p", "charmm36-jul2022", "3 3 3")
+    cl.pdb2molecule_in_solvent("1LZ1.pdb", "1LZ1_in_octane", "octn_filled_box", "charmm36-jul2022", "3 3 3")
     
 
     s_pdbfile       : string with the pdb name. for example "insulin.pdb", this will be the main molecule in the system.
@@ -101,8 +101,10 @@ def pdb2molecule_in_solvent(s_pdbfile, s_outSytemName, s_solvent, s_forceField, 
 def void2peptide_in_solvent(s_peptideName, s_systemName, s_nTerminusCAP, s_aminoacids, s_cTerminusCAP, l_phi, l_psi_im1, s_solvent, s_forceField, s_boxSize):
     """
     usage example:
-    cl.void2peptide_in_solvent("poliA","poliA_in_solvent","acyl","AAAAAA","amide",[-57.8,-57.8,-57.8,-57.8,-57.8,-57.8],[-47.0,-47.0,-47.0,-47.0,-47.0,-47.0],"tip3p","charmm36-jul2022", "5.1 5.1 5.1")
-    
+    cl.void2peptide_in_solvent("poliA","poliA_in_water","acyl","AAAAAA","amide",[-57.8,-57.8,-57.8,-57.8,-57.8,-57.8],[-47.0,-47.0,-47.0,-47.0,-47.0,-47.0],"tip3p","charmm36-jul2022", "5.1 5.1 5.1")
+    cl.void2peptide_in_solvent("poliA","poliA_in_octane","acyl","AAAAAA","amide",[-57.8,-57.8,-57.8,-57.8,-57.8,-57.8],[-47.0,-47.0,-47.0,-47.0,-47.0,-47.0],"octn_filled_box","charmm36-jul2022", "5.1 5.1 5.1")
+
+
     will create the peptide and the entire system out of nowere (no input files required)
     a folder containing the system will be created. this will be done using just the function arguments 
 

@@ -164,11 +164,11 @@ def better_solvate(s_systemFolder,s_solvent):
 
 
 @ensure_original_directory
-def make_realistic(s_systemFolder,s_groups_to_monitor_separately="Protein Non-Protein", s_temperature="300" ):
+def make_realistic(s_systemFolder,s_groups_to_monitor_separately, s_temperature):
     """
     usage example:
-    cl.make_realistic("1LZ1_in_water")
-    cl.make_realistic("octn_filledbox",s_groups_to_monitor_separately="System")
+    cl.make_realistic("1LZ1_in_water", s_groups_to_monitor_separately="Protein Non-Protein", s_temperature="300")
+    cl.make_realistic("octn_filledbox", s_groups_to_monitor_separately="System", s_temperature="300")
 
     will perform EM NVT and NPT in a system, so to make it realistic
     I have to give the name of a folder that contains a system
@@ -204,15 +204,21 @@ def make_realistic(s_systemFolder,s_groups_to_monitor_separately="Protein Non-Pr
 
     #EM
     subprocess.run(f"mkdir 1_EM" , shell=True, check=True)
+    os.chdir(f"1_EM")
     subprocess.run(f"gmx grompp -f {s_mdp_folder}/em.mdp -c {s_initialgroName} -p {s_topName} -o 1_EM/em.tpr -maxwarn 3" , shell=True, check=True)
     subprocess.run(f"gmx mdrun -deffnm 1_EM/em" , shell=True, check=True)
+    os.chdir(f"..")
 
     #NVT equilibration
     subprocess.run(f"mkdir 2_NVT" , shell=True, check=True)
+    os.chdir(f"2_NVT")
     subprocess.run(f"gmx grompp -f {s_mdp_folder}/{s_mdpNameNVT} -c 1_EM/em.gro -r  1_EM/em.gro -p {s_topName} -o 2_NVT/nvt.tpr -maxwarn 3" , shell=True, check=True)
     subprocess.run(f"gmx mdrun -deffnm 2_NVT/nvt" , shell=True, check=True)
+    os.chdir(f"..")
 
     #NPT equilibration
     subprocess.run(f"mkdir 3_NPT" , shell=True, check=True)
+    os.chdir(f"3_NPT")
     subprocess.run(f"gmx grompp -f {s_mdp_folder}/{s_mdpNameNPT} -c 2_NVT/nvt.gro -r 2_NVT/nvt.gro -t 2_NVT/nvt.cpt -p {s_topName} -o 3_NPT/npt.tpr -maxwarn 3" , shell=True, check=True)
     subprocess.run(f"gmx mdrun -deffnm 3_NPT/npt" , shell=True, check=True)
+    os.chdir(f"..")
