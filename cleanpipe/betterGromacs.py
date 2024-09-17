@@ -83,19 +83,23 @@ def better_pdb2gmx(s_pdbfile,s_outName,s_forceField,s_boxSize,b_addterminal=True
     #os.chdir(original_directory)
 
 @ensure_original_directory
-def better_solvate(s_systemFolder,s_solvent):
+def better_solvate(s_systemFolder,s_solventName):
     """
-    solvation in gromacs is a unintuitive mess. there are a couple of different options:
+    there are two ways to solvate in gromacs:
 
         "gmx solvate -cp SoluteMolecule.gro -cs preEquilibratedBoxOfSmallSolvents.gro -o outSystem.gro -p soluteMolecule.top", 
-            this will insert a molecule into a box of pre equilibrated solvents. 
-            after the insertion overlaping molecules will be deleted, so its not good for large molecules of solvent, such as octane. 
+            this will insert a molecule into a box of pre equilibrated smal solvents with just one residue. 
+            after the insertion overlaping molecules will be deleted, thats why this is not a good option for large molecules of solvent, such as octane. 
             but this is a great option to solvate something into a mixture of small molecules
-            I hate that the -p soluteMolecule.top will just update the solvent molecule number in the solvent top, without including the solvent itp
-            if you dont put -cs, the tool will use a spc216.gro box stored in the shared/gromacs/top folder. its not at all tip3p.itp I usually like to include in the top file.
+            I hate that the option -p soluteMolecule.top will just update the solvent molecule number in the solvent top, without including the solvent itp. the itp inclusion has to be done manualy
+            if you dont put -cs, the tool will use a spc216.gro box stored in the shared/gromacs/top folder. this gro can be used to solvate any 3 other point water, such as the famous tip3p 
+
     
-        "gmx insert-molecules -f SoluteMolecule.gro -ci solventMoleculeToInsert.gro -nmol 1000 -box 5 5 5 -o outSystem.gro"
+        "gmx insert-molecules -f SoluteMolecule.gro -ci solventMoleculeToInsert.gro -nmol 1000 -rot -box 5 5 5 -o outSystem.gro"
             will randomly insert solvent molecules around the solute
+
+        s_systemFolder :system to be solvated, this mean the input is a system with only the protagonist solute that must be solvated
+        s_solventName : the name of the solvent. It has to be one of gromacs standard water names, or a folder containing a preequilibrated system that is a box full of something. in both cases, the function will find the necessary .gro and .itp somewere. the gro have to describe a box full of that solvent
     """
 
     #get gro basaname in system folder
@@ -104,22 +108,20 @@ def better_solvate(s_systemFolder,s_solvent):
     s_topName = filemanager.get_single_top(s_systemFolder).replace('.top','')
 
 
-    if s_solvent == "tip3p":
-        #this mean the user has chosen the tip3p water model, already part of the forcefield
+    if s_solventName in ["tip3p", "spc", "spce"]: #this is a list of 3 point water models. their respectives .gro describing a pre-equilibrated box and .itp are already in the share/gromacs/top folder
+        #this mean the user has chosen a water model, already part of gromacs standard solvents. gromacs can find the solvent box and the respective itp automaticaly
 
         #go to system folder. the current folder is savad so to go back to it just before the end of the function
         #original_directory = os.getcwd()
         os.chdir(f"{s_systemFolder}")
 
-        subprocess.run(f"gmx solvate -cp {s_groName}.gro -p {s_topName}.top -o {s_groName}.gro", shell=True, check=True)
+        subprocess.run(f"gmx solvate -cp {s_groName}.gro -cs spc216.gro -p {s_topName}.top -o {s_groName}.gro", shell=True, check=True) # spc216.gro is a pre-equilibrated box of a 3 point water model that can be used by any other 3 point model
         subprocess.run(f"rm \\#{s_groName}.gro.1\\#" , shell=True, check=True)#I chose to overwrite the old gro
         subprocess.run(f"rm \\#{s_topName}.top.1\\#" , shell=True, check=True)#I chose to overwrite the old top
 
 
         #include necessary text in the top file
-
-        s_text_to_insert ="""\n; Include water topology\n#include "charmm36-jul2022.ff/tip3p.itp"\n\n#ifdef POSRES_WATER\n; Position restraint for each water oxygen\n[ position_restraints ]\n;  i funct       fcx        fcy        fcz\n1    1       1000       1000       1000\n#endif\n\n"""
-
+        s_text_to_insert ="""\n; Include water topology\n#include "{s_solventName}.itp"\n\n#ifdef POSRES_WATER\n; Position restraint for each water oxygen\n[ position_restraints ]\n;  i funct       fcx        fcy        fcz\n1    1       1000       1000       1000\n#endif\n\n"""
         topContent.insert_text_before_directive(f"{s_topName}.top", s_text_to_insert, "[ system ]")
 
 
@@ -128,18 +130,18 @@ def better_solvate(s_systemFolder,s_solvent):
         #subprocess.run(f"printf '13' | gmx  genion -s coord_box_sol_ions.tpr -o coord_box_sol_ions.gro -p topol.top -pname NA -nname CL -neutral" , shell=True, check=True)
         #rm tpr and created backups and mdout
 
-        #after performing the solvation, go back to the original folder python was called
-        #os.chdir(original_directory)
 
-    elif filemanager.check_folder(os.path.abspath(s_solvent)) == True:
-        # this mean the user has chosen a folder (ex: path/to/folder/octn)
-        # that folder shoulrd contain a system that is a box filled with solvent. for example octn.gro and octn.itp
+    elif filemanager.check_folder(os.path.abspath(s_solventName)) == True:
+        # this mean the user has chosen a folder (ex: path/to/folder)
+        # that folder shoulrd contain a system that is a box filled with solvent. it should be pre-equilibrated 
+        # so, the solvent name is something like octn_filled_box, and that folder should contain a octn.itp and a 3_NPT/octn_filled_box.gro
+        # but dont worry about the gro and file names. the important is that they are present in the correct place. the name will be obtained
 
         #get the full path
-        s_solventFolder = os.path.abspath(s_solvent)
+        s_solventFolder = os.path.abspath(s_solventName)
 
-        #get the names of the top and itp files in the SOLVENT BOX folder
-        s_solbox_groName = filemanager.get_single_gro(s_solventFolder)
+        #obtain the names of the top and itp files in the SOLVENT BOX folder
+        s_solbox_groName = filemanager.get_single_gro(f"{s_solventFolder}/3_NPT")
         l_solbox_itpNames = filemanager.get_all_itps(s_solventFolder)
 
         #go to system folder. the current folder is savad so to go back to it just before the end of the function
@@ -147,7 +149,7 @@ def better_solvate(s_systemFolder,s_solvent):
         os.chdir(f"{s_systemFolder}")
 
         #insert the solvent in gro. and inform quantity added in top
-        subprocess.run(f"gmx solvate -cp {s_groName}.gro -cs {s_solventFolder}/{s_solbox_groName} -p {s_topName}.top -o {s_groName}.gro", shell=True, check=True)
+        subprocess.run(f"gmx solvate -cp {s_groName}.gro -cs {s_solventFolder}/3_NPT/{s_solbox_groName} -p {s_topName}.top -o {s_groName}.gro", shell=True, check=True)
         subprocess.run(f"rm \\#{s_groName}.gro.1\\#" , shell=True, check=True)#I chose to overwrite the old gro
         subprocess.run(f"rm \\#{s_topName}.top.1\\#" , shell=True, check=True)#I chose to overwrite the old top
 
@@ -163,8 +165,6 @@ def better_solvate(s_systemFolder,s_solvent):
         for s_sol_itpName in l_solbox_itpNames:
             subprocess.run(f"cp {s_solventFolder}/{s_sol_itpName} ./" , shell=True, check=True)
 
-        #after performing the solvation, go back to the original folder python was called
-        #os.chdir(original_directory)
 
     else:
         print("solvation failed")

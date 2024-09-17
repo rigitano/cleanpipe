@@ -11,6 +11,7 @@ import os
 
 def pdb2filled_box(s_pdbfile, s_forceField):
     """
+
     usage example:
     cl.pdb2filled_box("octn.pdb","charmm36-jul2022")
 
@@ -41,16 +42,16 @@ def pdb2filled_box(s_pdbfile, s_forceField):
     topContent.remove_posres_inclusion(f"{s_outPathAndName}.top")
 
     #manipulate the GRO file to create a 5x5x5 box and fill it with copyes of the molecule
-    result = subprocess.run(f"gmx insert-molecules -ci {s_outPathAndName}.gro -nmol 1000 -box 5 5 5 -o {s_outPathAndName}_filled_box.gro" , shell=True, check=True, capture_output=True,text=True)# 
+    result = subprocess.run(f"gmx insert-molecules -ci {s_outPathAndName}.gro -nmol 1000 -rot -box 5 5 5 -o {s_outPathAndName}_filled_box.gro" , shell=True, check=True, capture_output=True,text=True)# 
     print(result.stdout+result.stderr)
     subprocess.run(f"rm {s_outPathAndName}.gro" , shell=True, check=True)# now that we have the filled box gro, the 1 molecule gro can be deleted
     print(f"gro file written: \n                      {s_outPathAndName}_filled_box.gro")
 
-    #get the number of molecules really added. this will be done by reading the standard output
+    #get the number of added molecules. 
     match = re.search(r'Added\s+(\d+)\s+molecules', result.stdout+result.stderr)
     added_molecules = int(match.group(1))
 
-    #rename the top and posres.itp files. but notice the top will have to be edited so to reflect the new molecule total. the name of the system and molecules will also be edited
+    #rename the top and posres.itp files.
     subprocess.run(f"mv {s_outPathAndName}.top {s_outPathAndName}_filled_box.top" , shell=True, check=True)
 
     #change the ugly molecule name currently inside the TOP file.
