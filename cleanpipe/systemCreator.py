@@ -45,7 +45,7 @@ def pdb2filled_box(s_pdbfile, s_forceField):
     result = subprocess.run(f"gmx insert-molecules -ci {s_outPathAndName}.gro -nmol 1000 -rot -box 5 5 5 -o {s_outPathAndName}_filled_box.gro" , shell=True, check=True, capture_output=True,text=True)# 
     print(result.stdout+result.stderr)
     subprocess.run(f"rm {s_outPathAndName}.gro" , shell=True, check=True)# now that we have the filled box gro, the 1 molecule gro can be deleted
-    print(f"gro file written: \n                      {s_outPathAndName}_filled_box.gro")
+    print(f"\nCLEANPIPE MESSAGE\ngro file written: \n                      {s_outPathAndName}_filled_box.gro")
 
     #get the number of added molecules. 
     match = re.search(r'Added\s+(\d+)\s+molecules', result.stdout+result.stderr)

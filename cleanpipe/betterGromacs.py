@@ -103,6 +103,7 @@ def better_solvate(s_systemFolder,s_solventName):
         s_solventName : the name of the solvent. It has to be one of gromacs standard water names, or a folder containing a preequilibrated system that is a box full of something. in both cases,from that name the function will find the necessary .gro and .itp somewere. the gro have to describe a box full of that solvent
     """
     subprocess.run(f"echo \"called better_solvate({s_systemFolder},{s_solventName})\"" , shell=True, check=True, stdout=subprocess.PIPE, text=True)
+    print(f"\nCLEANPIPE MESSAGE\ncalled better_solvate({s_systemFolder},{s_solventName})\"")
 
     #get gro basaname in system folder
     s_groName = filemanager.get_single_gro(s_systemFolder).replace('.gro','')

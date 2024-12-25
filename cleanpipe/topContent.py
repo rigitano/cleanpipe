@@ -242,10 +242,10 @@ def decompose_TOP_file_into_SOCKETTOP_and_ITPs(top_file_path):
         molecule_name = molecule_names[cont]
         subprocess.run(rf'''awk -v line='#include "{molecule_name}.itp"' '/\[ system \]/{{print line"\n"; i=2}}i&&!--i{{next}}1' {system_top_file} > temp.top && mv temp.top {system_top_file}''', shell=True, check=True)
 
-    print(f"top file written: \n                      {system_top_file}")
+    print(f"\nCLEANPIPE MESSAGE\ntop file written: \n                      {system_top_file}")
     
     # Create separate itp files for each molecule
-    print(f"{len(molecule_names)} itp file written:")
+    print(f"\nCLEANPIPE MESSAGE\n{len(molecule_names)} itp file written:")
     for molecule_id, section_lines in molecule_sections.items():
         itp_file = os.path.join(top_dir, f"{molecule_names[molecule_id]}.itp")
         with open(itp_file, 'w') as f:
