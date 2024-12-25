@@ -132,6 +132,7 @@ def better_solvate(s_systemFolder,s_solventName):
         1    1       1000       1000       1000
         #endif
         """
+        print(s_text_to_insert)
 
         topContent.insert_text_before_directive(f"{s_topName}.top", s_text_to_insert, "[ system ]")
 
