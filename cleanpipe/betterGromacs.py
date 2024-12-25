@@ -84,7 +84,7 @@ def better_pdb2gmx(s_pdbfile,s_outName,s_forceField,s_boxSize,b_addterminal=True
     #os.chdir(original_directory)
 
 @ensure_original_directory
-def better_solvate(s_systemFolder,s_solventName):
+def better_solvate(s_systemFolder,s_solventName,s_forceField):
     """
     there are two ways to solvate in gromacs:
 
@@ -125,7 +125,7 @@ def better_solvate(s_systemFolder,s_solventName):
 
 
         #include necessary text in the top file
-        s_text_to_insert = "\n; Include water topology\n#include \""+"tip3p"+".itp\"\n\n#ifdef POSRES_WATER \n; Position restraint for each water oxygen\n[ position_restraints ]\n;  i funct       fcx        fcy        fcz\n1    1       1000       1000       1000\n#endif\n"
+        s_text_to_insert = "\n; Include water topology\n#include \""+s_forceField+"\\"+s_solventName+".itp\"\n\n#ifdef POSRES_WATER \n; Position restraint for each water oxygen\n[ position_restraints ]\n;  i funct       fcx        fcy        fcz\n1    1       1000       1000       1000\n#endif\n"
 
         topContent.insert_text_before_directive(f"{s_topName}.top", s_text_to_insert, "[ system ]")
 

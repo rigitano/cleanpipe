@@ -263,7 +263,7 @@ def remove_posres_inclusion(s_topfile):
     this function removes the inclusion of a posres.itp file 
     """
 
-    print(s_topfile)
+    print("\nCLEANPIPE MESSAGE\n\n" + s_topfile)
 
     # Create a more flexible regex pattern to match the inclusion block
     pattern_to_remove = r';\s*Include\s*Position\s*restraint\s*file\s*\n#ifdef\s*POSRES\s*\n#include\s*"posres\.itp"\s*\n#endif\s*'

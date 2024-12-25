@@ -91,7 +91,7 @@ def pdb2molecule_in_solvent(s_pdbfile, s_outSytemName, s_solvent, s_forceField, 
     betterGromacs.better_pdb2gmx(s_pdbfile,s_outSytemName,s_forceField,s_boxSize)
 
     # add solvent to the system. I have 2 options here: tip3p or filled box
-    betterGromacs.better_solvate(s_outSytemName,s_solvent)
+    betterGromacs.better_solvate(s_outSytemName,s_solvent,s_forceField)
 
     # set the the name of the system in the top file 
     topContent.setSystemName(f"{s_outSytemName}/{s_outSytemName}.top", f"{s_outSytemName} (molecule from {s_pdbfile}, inserted in solution made using {s_solvent})" )
@@ -132,7 +132,7 @@ def void2peptide_in_solvent(s_peptideName, s_systemName, s_nTerminusCAP, s_amino
     subprocess.run(f"rm {s_peptideName}.pdb" , shell=True, check=True)
 
     # add solvent to the system. this is my improved gromacs, the imput is a folderthere are 2 possible options here: tip3p or filled box
-    betterGromacs.better_solvate(s_systemName,s_solvent)
+    betterGromacs.better_solvate(s_systemName,s_solvent,s_forceField)
 
     # set the the name of the system in the top file 
     topContent.setSystemName(f"{s_systemName}/{s_systemName}.top", f"{s_systemName} (custom peptide, insterted in solution made using {s_solvent})" )
