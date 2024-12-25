@@ -122,18 +122,7 @@ def better_solvate(s_systemFolder,s_solventName):
 
 
         #include necessary text in the top file
-        s_text_to_insert = dedent(f"""
-            
-            ; Include water topology
-            #include "{s_solventName}.itp"
-
-            #ifdef POSRES_WATER 
-            ; Position restraint for each water oxygen
-            [ position_restraints ]
-            ;  i funct       fcx        fcy        fcz
-            1    1       1000       1000       1000
-            #endif
-        """)
+        s_text_to_insert = f"\n; Include water topology\n#include \"{s_solventName}.itp\"\n\n#ifdef POSRES_WATER \n; Position restraint for each water oxygen\n[ position_restraints ]\n;  i funct       fcx        fcy        fcz\n1    1       1000       1000       1000\n#endif\n"
 
         topContent.insert_text_before_directive(f"{s_topName}.top", s_text_to_insert, "[ system ]")
 
