@@ -4,6 +4,7 @@ from cleanpipe import topContent
 import subprocess
 import os
 import functools
+from textwrap import dedent
 
 def ensure_original_directory(func):
     """
@@ -121,18 +122,18 @@ def better_solvate(s_systemFolder,s_solventName):
 
 
         #include necessary text in the top file
-        s_text_to_insert = f"""
-        ; Include water topology
-        #include "{s_solventName}.itp"
+        s_text_to_insert = dedent(f"""
+            
+            ; Include water topology
+            #include "{s_solventName}.itp"
 
-        #ifdef POSRES_WATER 
-        ; Position restraint for each water oxygen
-        [ position_restraints ]
-        ;  i funct       fcx        fcy        fcz
-        1    1       1000       1000       1000
-        #endif
-        """
-        print(s_text_to_insert)
+            #ifdef POSRES_WATER 
+            ; Position restraint for each water oxygen
+            [ position_restraints ]
+            ;  i funct       fcx        fcy        fcz
+            1    1       1000       1000       1000
+            #endif
+        """)
 
         topContent.insert_text_before_directive(f"{s_topName}.top", s_text_to_insert, "[ system ]")
 
