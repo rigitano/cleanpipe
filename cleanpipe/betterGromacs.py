@@ -99,7 +99,7 @@ def better_solvate(s_systemFolder,s_solventName):
             will randomly insert solvent molecules around the solute
 
         s_systemFolder :system to be solvated, this mean the input is a system with only the protagonist solute that must be solvated
-        s_solventName : the name of the solvent. It has to be one of gromacs standard water names, or a folder containing a preequilibrated system that is a box full of something. in both cases, the function will find the necessary .gro and .itp somewere. the gro have to describe a box full of that solvent
+        s_solventName : the name of the solvent. It has to be one of gromacs standard water names, or a folder containing a preequilibrated system that is a box full of something. in both cases,from that name the function will find the necessary .gro and .itp somewere. the gro have to describe a box full of that solvent
     """
 
     #get gro basaname in system folder
@@ -121,7 +121,7 @@ def better_solvate(s_systemFolder,s_solventName):
 
 
         #include necessary text in the top file
-        s_text_to_insert ="""\n; Include water topology\n#include "{s_solventName}.itp"\n\n#ifdef POSRES_WATER\n; Position restraint for each water oxygen\n[ position_restraints ]\n;  i funct       fcx        fcy        fcz\n1    1       1000       1000       1000\n#endif\n\n"""
+        s_text_to_insert =f"""\n; Include water topology\n#include "{s_solventName}.itp"\n\n#ifdef POSRES_WATER\n; Position restraint for each water oxygen\n[ position_restraints ]\n;  i funct       fcx        fcy        fcz\n1    1       1000       1000       1000\n#endif\n\n"""
         topContent.insert_text_before_directive(f"{s_topName}.top", s_text_to_insert, "[ system ]")
 
 
