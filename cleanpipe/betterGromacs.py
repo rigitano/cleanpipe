@@ -125,7 +125,7 @@ def better_solvate(s_systemFolder,s_solventName):
         ; Include water topology
         #include "{s_solventName}.itp"
 
-        #ifdef POSRES_WATER
+        #ifdef POSRES_WATER 
         ; Position restraint for each water oxygen
         [ position_restraints ]
         ;  i funct       fcx        fcy        fcz
