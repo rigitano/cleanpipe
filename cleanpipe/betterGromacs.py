@@ -102,6 +102,7 @@ def better_solvate(s_systemFolder,s_solventName):
         s_systemFolder :system to be solvated, this mean the input is a system with only the protagonist solute that must be solvated
         s_solventName : the name of the solvent. It has to be one of gromacs standard water names, or a folder containing a preequilibrated system that is a box full of something. in both cases,from that name the function will find the necessary .gro and .itp somewere. the gro have to describe a box full of that solvent
     """
+    subprocess.run(f"echo called better_solvate({s_systemFolder},{s_solventName})" , shell=True, check=True)
 
     #get gro basaname in system folder
     s_groName = filemanager.get_single_gro(s_systemFolder).replace('.gro','')
@@ -110,6 +111,7 @@ def better_solvate(s_systemFolder,s_solventName):
 
 
     if s_solventName in ["tip3p", "spc", "spce"]: #this is a list of 3 point water models. their respectives .gro describing a pre-equilibrated box and .itp are already in the share/gromacs/top folder
+        subprocess.run("echo \"used chose one of standard water models\"" , shell=True, check=True)
         #this mean the user has chosen a water model, already part of gromacs standard solvents. gromacs can find the solvent box and the respective itp automaticaly
 
         #go to system folder. the current folder is savad so to go back to it just before the end of the function
