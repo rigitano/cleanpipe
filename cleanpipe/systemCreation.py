@@ -44,7 +44,7 @@ def pdb2box_full_of_that(s_pdbfile, s_forceField):
     #manipulate the GRO file to create a 5x5x5 box and fill it with copyes of the molecule
     #this will be done in a way to see in the jupyter and also be able to capure the results
     result = subprocess.Popen(
-        f"gmx insert-molecules -ci {s_outPathAndName}.gro -nmol 1000 -rot -box 5 5 5 -o {s_outPathAndName}.gro", 
+        f"gmx insert-molecules -ci {s_outPathAndName}.gro -nmol 1000 -rot xyz -box 5 5 5 -o {s_outPathAndName}.gro", 
         shell=True, 
         stdout=subprocess.PIPE, 
         stderr=subprocess.PIPE, 
