@@ -103,7 +103,11 @@ def run_and_capture(command):
     """
     this funcion will run commands in cmd in a way whats printable in juyter and storable in the output
     """
+
+    print(f"\nCLEANPIPE: executing command {command}\n")
+
     captured_output = ""
+    captured_error = ""
 
     # Start the subprocess
     process = subprocess.Popen(
@@ -126,8 +130,12 @@ def run_and_capture(command):
                 # End of stream and process has exited
                 break
             if line:
-                sys.stdout.write(line)  # Print to notebook's standard output in real-time
-                captured_output += line  # Store the line for later use
+                if stream == process.stdout:
+                    sys.stdout.write(line)  # Print stdout to notebook in real-time
+                    captured_output += line  # Store the stdout line
+                elif stream == process.stderr:
+                    sys.stderr.write(line)  # Print stderr to notebook in real-time
+                    captured_error += line  # Store the stderr line
 
         # Break out of the loop if the process is finished
         if process.poll() is not None:
@@ -137,6 +145,8 @@ def run_and_capture(command):
     process.wait()
 
     if process.returncode != 0:
-        print(f"Command failed with return code {process.returncode}")
+        print(f"CLEAN PIPE: Command failed with return code {process.returncode}")
+        if captured_error:
+            print(f"CLEAN PIPE: Standard Error Output:\n{captured_error}")
     
-    return captured_output
+    return captured_output + captured_error
