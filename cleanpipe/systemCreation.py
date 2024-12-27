@@ -1,7 +1,7 @@
-from cleanpipe import pdbCreator
-from cleanpipe import filemanager
-from cleanpipe import topContent
-from cleanpipe import betterGromacs
+from cleanpipe import bricksChem
+from cleanpipe import bricksFileSystem
+from cleanpipe import bricksTopEdit
+from cleanpipe import bricksMD
 
 import subprocess
 import re
@@ -9,11 +9,11 @@ import os
 
 
 
-def pdb2filled_box(s_pdbfile, s_forceField):
+def pdb2box_full_of_that(s_pdbfile, s_forceField):
     """
 
     usage example:
-    cl.pdb2filled_box("octn.pdb","charmm36-jul2022")
+    cl.pdb2box_full_of_that("octn.pdb","charmm36-jul2022")
 
     create a 5x5x5 box system filled with a lot of copies of the molecule
 
@@ -25,56 +25,56 @@ def pdb2filled_box(s_pdbfile, s_forceField):
     """
 
     #check if the filename inside s_pdbfile is valid
-    filemanager.check_file(s_pdbfile,['.pdb']) 
+    bricksFileSystem.check_extention(s_pdbfile,['.pdb']) 
     #obtein just the file name. ex: blabla/blabla/filename.bla
-    s_filename = filemanager.get_filename_without_extension(s_pdbfile) 
+    s_filename = bricksFileSystem.get_filename_without_extension(s_pdbfile) 
 
 
-    subprocess.run(f"mkdir {s_filename}_filled_box", shell=True, check=True)
-    s_outPathAndName = f"{s_filename}_filled_box/{s_filename}"
+    subprocess.run(f"mkdir box_full_of_{s_filename}", shell=True, check=True)
+    s_outPathAndName = f"box_full_of_{s_filename}/{s_filename}"
 
 
     #create a system with 1 molecule.
     subprocess.run(f"gmx pdb2gmx -f {s_filename}.pdb -o {s_outPathAndName}.gro -p {s_outPathAndName}.top -i posres.itp -water none -ff {s_forceField}" , shell=True, check=True)
     
     #pdb2gmx generates a useless posres.itp with useless posres for 1 molecule. so I delete the posres.itp and the inclusion in the top
-    subprocess.run(f"rm posres.itp" , shell=True, check=True) 
-    topContent.remove_posres_inclusion(f"{s_outPathAndName}.top")
+    bricksFileSystem.delete("posres.itp")
+    bricksTopEdit.remove_posres_inclusion(f"{s_outPathAndName}.top")
 
     #manipulate the GRO file to create a 5x5x5 box and fill it with copyes of the molecule
-    result = subprocess.run(f"gmx insert-molecules -ci {s_outPathAndName}.gro -nmol 1000 -rot -box 5 5 5 -o {s_outPathAndName}_filled_box.gro" , shell=True, check=True, capture_output=True,text=True)# 
+    result = subprocess.run(f"gmx insert-molecules -ci {s_outPathAndName}.gro -nmol 1000 -rot -box 5 5 5 -o box_full_of_{s_outPathAndName}.gro" , shell=True, check=True, capture_output=True,text=True)# 
     print(result.stdout+result.stderr)
-    subprocess.run(f"rm {s_outPathAndName}.gro" , shell=True, check=True)# now that we have the filled box gro, the 1 molecule gro can be deleted
-    print(f"\nCLEANPIPE MESSAGE\ngro file written: \n                      {s_outPathAndName}_filled_box.gro")
+    bricksFileSystem.delete(f"{s_outPathAndName}.gro")# now that we have the filled box gro, the 1 molecule gro can be deleted
+    print(f"\nCLEANPIPE MESSAGE\ngro file written: \n                      box_full_of_{s_outPathAndName}.gro")
 
     #get the number of added molecules. 
     match = re.search(r'Added\s+(\d+)\s+molecules', result.stdout+result.stderr)
     added_molecules = int(match.group(1))
 
     #rename the top and posres.itp files.
-    subprocess.run(f"mv {s_outPathAndName}.top {s_outPathAndName}_filled_box.top" , shell=True, check=True)
+    subprocess.run(f"mv {s_outPathAndName}.top box_full_of_{s_outPathAndName}.top" , shell=True, check=True)
 
     #change the ugly molecule name currently inside the TOP file.
-    uglyMolName = topContent.getMoleculeName(f"{s_outPathAndName}_filled_box.top")
+    uglyMolName = bricksTopEdit.getMoleculeName(f"box_full_of_{s_outPathAndName}.top")
     molName = s_filename
-    topContent.replaceMoleculeName(f"{s_outPathAndName}_filled_box.top", uglyMolName, molName)
+    bricksTopEdit.replaceMoleculeName(f"box_full_of_{s_outPathAndName}.top", uglyMolName, molName)
 
     #update the TOP file with the new total the molecule
-    topContent.update_molecule_quantity(f"{s_outPathAndName}_filled_box.top", molName, added_molecules)
+    bricksTopEdit.update_molecule_quantity(f"box_full_of_{s_outPathAndName}.top", molName, added_molecules)
 
     #split the TOP file, into a ITP that describes the molecule and a simple TOP that contains only name of the system and the totals.
-    topContent.decompose_TOP_file_into_SOCKETTOP_and_ITPs(f"{s_outPathAndName}_filled_box.top")
+    bricksTopEdit.decompose_TOP_file_into_TOP_and_ITPs(f"box_full_of_{s_outPathAndName}.top")
     
 
     #give a name for the system
-    topContent.setSystemName(f"{s_outPathAndName}_filled_box.top", f"box filled with {s_filename}" )
+    bricksTopEdit.setSystemName(f"box_full_of_{s_outPathAndName}.top", f"box filled with {s_filename}" )
 
 
 def pdb2molecule_in_solvent(s_pdbfile, s_outSytemName, s_solvent, s_forceField, s_boxSize):
     """
     usage example:
     cl.pdb2molecule_in_solvent("1LZ1.pdb", "1LZ1_in_water", "tip3p", "charmm36-jul2022", "3 3 3")
-    cl.pdb2molecule_in_solvent("1LZ1.pdb", "1LZ1_in_octane", "octn_filled_box", "charmm36-jul2022", "3 3 3")
+    cl.pdb2molecule_in_solvent("1LZ1.pdb", "1LZ1_in_octane", "box_full_of_octn", "charmm36-jul2022", "3 3 3")
     
 
     s_pdbfile       : string with the pdb name. for example "insulin.pdb", this will be the main molecule in the system.
@@ -85,16 +85,16 @@ def pdb2molecule_in_solvent(s_pdbfile, s_outSytemName, s_solvent, s_forceField, 
     """
 
     # check if the filename inside s_pdbfile is valid
-    filemanager.check_file(s_pdbfile,['.pdb']) 
+    bricksFileSystem.check_extention(s_pdbfile,['.pdb']) 
 
     # create gro and top from pdb. then add the box size to the gro
-    betterGromacs.better_pdb2gmx(s_pdbfile,s_outSytemName,s_forceField,s_boxSize)
+    bricksMD.pdb2system(s_pdbfile,s_outSytemName,s_forceField,s_boxSize)
 
     # add solvent to the system. I have 2 options here: tip3p or filled box
-    betterGromacs.better_solvate(s_outSytemName,s_solvent,s_forceField)
+    bricksMD.solvate_and_neutralize(s_outSytemName,s_solvent,s_forceField)
 
     # set the the name of the system in the top file 
-    topContent.setSystemName(f"{s_outSytemName}/{s_outSytemName}.top", f"{s_outSytemName} (molecule from {s_pdbfile}, inserted in solution made using {s_solvent})" )
+    bricksTopEdit.setSystemName(f"{s_outSytemName}/{s_outSytemName}.top", f"{s_outSytemName} (molecule from {s_pdbfile}, inserted in solution made using {s_solvent})" )
 
 
 
@@ -103,7 +103,7 @@ def void2peptide_in_solvent(s_peptideName, s_systemName, s_nTerminusCAP, s_amino
     """
     usage example:
     cl.void2peptide_in_solvent("poliA","poliA_in_water","acyl","AAAAAA","amide",[-57.8,-57.8,-57.8,-57.8,-57.8,-57.8],[-47.0,-47.0,-47.0,-47.0,-47.0,-47.0],"tip3p","charmm36-jul2022", "5.1 5.1 5.1")
-    cl.void2peptide_in_solvent("poliA","poliA_in_octane","acyl","AAAAAA","amide",[-57.8,-57.8,-57.8,-57.8,-57.8,-57.8],[-47.0,-47.0,-47.0,-47.0,-47.0,-47.0],"octn_filled_box","charmm36-jul2022", "5.1 5.1 5.1")
+    cl.void2peptide_in_solvent("poliA","poliA_in_octane","acyl","AAAAAA","amide",[-57.8,-57.8,-57.8,-57.8,-57.8,-57.8],[-47.0,-47.0,-47.0,-47.0,-47.0,-47.0],"box_full_of_octn","charmm36-jul2022", "5.1 5.1 5.1")
 
 
     will create the peptide and the entire system out of nowere (no input files required)
@@ -123,16 +123,16 @@ def void2peptide_in_solvent(s_peptideName, s_systemName, s_nTerminusCAP, s_amino
     """
 
     # create  pdb file containing only a peptide. in this case the pdb will be temporary, and deleted after the conversion to top and gro
-    pdbCreator.create_peptide(f"{s_peptideName}.pdb", s_nTerminusCAP, s_aminoacids, s_cTerminusCAP, l_phi, l_psi_im1)
+    bricksChem.create_peptide(f"{s_peptideName}.pdb", s_nTerminusCAP, s_aminoacids, s_cTerminusCAP, l_phi, l_psi_im1)
    
     # create gro and top from pdb. then add the box size to the gro. this is the my improved gromacs version that create the system in a new folder
-    betterGromacs.better_pdb2gmx(f"{s_peptideName}.pdb",s_systemName,s_forceField,s_boxSize, b_addterminal = False)# this last parameter was set to False so not to add termini, as they are already present in the peptide in this case)
+    bricksMD.pdb2system(f"{s_peptideName}.pdb",s_systemName,s_forceField,s_boxSize, b_addterminal = False)# this last parameter was set to False so not to add termini, as they are already present in the peptide in this case)
 
     # temporary pdb of the peptide is not necessary anymore
-    subprocess.run(f"rm {s_peptideName}.pdb" , shell=True, check=True)
+    bricksFileSystem.delete(f"{s_peptideName}.pdb")
 
     # add solvent to the system. this is my improved gromacs, the imput is a folderthere are 2 possible options here: tip3p or filled box
-    betterGromacs.better_solvate(s_systemName,s_solvent,s_forceField)
+    bricksMD.solvate_and_neutralize(s_systemName,s_solvent,s_forceField)
 
     # set the the name of the system in the top file 
-    topContent.setSystemName(f"{s_systemName}/{s_systemName}.top", f"{s_systemName} (custom peptide, insterted in solution made using {s_solvent})" )
+    bricksTopEdit.setSystemName(f"{s_systemName}/{s_systemName}.top", f"{s_systemName} (custom peptide, insterted in solution made using {s_solvent})" )

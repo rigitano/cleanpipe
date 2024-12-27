@@ -1,6 +1,7 @@
 import os
+import subprocess
 
-def check_file(file_path,v_alowedExtentions):
+def check_extention(file_path,v_alowedExtentions):
     '''
     given the name of the file, and the alowed extentions, the function will check if the file is valid
     '''
@@ -85,3 +86,10 @@ def get_all_itps(s_folder_path):
     l_files = get_all_files_with_certain_extention(s_folder_path,".itp")
 
     return l_files
+
+def delete(s_filename):
+    """
+    example
+    delete("posres.itp")
+    """
+    subprocess.run(f"rm {s_filename}" , shell=True, check=True) 

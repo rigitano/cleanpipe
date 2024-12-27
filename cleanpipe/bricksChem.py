@@ -1,13 +1,9 @@
 import PeptideBuilder
 from Bio.PDB import PDBIO
 import Geometry
-from io import StringIO
-from cleanpipe import topContent
-from cleanpipe import filemanager
-from cleanpipe import procedures
-from cleanpipe import atomisticContruction
+from cleanpipe import bricksFileSystem
+from cleanpipe import bricksAtoms
 import subprocess
-import os
 
 
 def download_and_clean_pdb(s_molecule_name):
@@ -23,7 +19,7 @@ def download_and_clean_pdb(s_molecule_name):
 
     #remove water
     subprocess.run(f"grep -v 'HOH' {s_molecule_name}.pdb > {s_molecule_name}_temp.pdb" , shell=True, check=True)
-    subprocess.run(f"rm {s_molecule_name}.pdb" , shell=True, check=True)
+    bricksFileSystem.delete(f"{s_molecule_name}.pdb")
     subprocess.run(f"mv {s_molecule_name}_temp.pdb {s_molecule_name}.pdb" , shell=True, check=True)
 
 
@@ -53,10 +49,10 @@ def create_peptide(s_outName, s_nTerminusCAP, s_aminoacids, s_cTerminusCAP, l_ph
 
     #################################### add termini ###################################
     if s_nTerminusCAP == "acyl":
-        atomisticContruction.add_acetyl_to_Nterminus(peptide)
+        bricksAtoms.add_acetyl_to_Nterminus(peptide)
 
     if s_cTerminusCAP == "amide":
-        atomisticContruction.add_amide_to_Cterminus(peptide)
+        bricksAtoms.add_amide_to_Cterminus(peptide)
 
 
     #################################### create system. (ps this will add hydrogens) ###################################

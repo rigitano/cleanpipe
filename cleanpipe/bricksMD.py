@@ -1,5 +1,5 @@
-from cleanpipe import filemanager
-from cleanpipe import topContent
+from cleanpipe import bricksFileSystem
+from cleanpipe import bricksTopEdit
 
 import subprocess
 import os
@@ -27,7 +27,7 @@ def ensure_original_directory(func):
 
 
 @ensure_original_directory
-def better_pdb2gmx(s_pdbfile,s_outName,s_forceField,s_boxSize,b_addterminal=True):
+def pdb2system(s_pdbfile,s_outName,s_forceField,s_boxSize,b_addterminal=True):
     """
     creates a new folder with the system name. and a gro and top files inside it with that same system name
     the top will be a socked top, all the molecules will be outside
@@ -41,7 +41,7 @@ def better_pdb2gmx(s_pdbfile,s_outName,s_forceField,s_boxSize,b_addterminal=True
 
 
     #check if the filename inside s_pdbfile is valid
-    filemanager.check_file(s_pdbfile,['.pdb']) 
+    bricksFileSystem.check_extention(s_pdbfile,['.pdb']) 
 
     #get the pdb basename. it should be the name of the protagonist molecule
     s_molName = s_pdbfile.replace(".pdb","")
@@ -67,24 +67,24 @@ def better_pdb2gmx(s_pdbfile,s_outName,s_forceField,s_boxSize,b_addterminal=True
     
 
     #pdb2gmx is stupid, so by default it and givesa wierd name to the molecule from the pdb. most times is "Other_chain_O". lets replace it by the real molecule name, that I took from the pdb file name
-    uglyMolName = topContent.getMoleculeName(f"{s_outName}.top")
-    topContent.replaceMoleculeName(f"{s_outName}.top", uglyMolName, s_molName)
+    uglyMolName = bricksTopEdit.getMoleculeName(f"{s_outName}.top")
+    bricksTopEdit.replaceMoleculeName(f"{s_outName}.top", uglyMolName, s_molName)
 
     #define box size inside the gro file. s_boxSize contains the user definition (ex: "3 3 3")
     subprocess.run(f"gmx editconf -f {s_outName}.gro -o {s_outName}.gro -c -box {s_boxSize} -bt cubic", shell=True, check=True)
-    subprocess.run(f"rm \\#{s_outName}.gro.1\\#" , shell=True, check=True)# I chose to overwrite the old gro
+    bricksFileSystem.delete(f"\\#{s_outName}.gro.1\\#")# I chose to overwrite the old gro
 
     #decompose the original top into a new top and a itp. the new top will contain just sytem information, the itp will describe the protagonist molecule
-    topContent.decompose_TOP_file_into_SOCKETTOP_and_ITPs(f"{s_outName}.top")
+    bricksTopEdit.decompose_TOP_file_into_TOP_and_ITPs(f"{s_outName}.top")
 
     #delete the temporary pdb used by pdb2gmx as its no longer necessary
-    subprocess.run(f"rm temp.pdb", shell=True, check=True)
+    bricksFileSystem.delete(f"temp.pdb")
 
     #after performing the system creation, go back to the original folder python was called
     #os.chdir(original_directory)
 
 @ensure_original_directory
-def better_solvate(s_systemFolder,s_solventName,s_forceField):
+def solvate_and_neutralize(s_systemFolder,s_solventName,s_forceField):
     """
     there are two ways to solvate in gromacs:
 
@@ -102,13 +102,13 @@ def better_solvate(s_systemFolder,s_solventName,s_forceField):
         s_systemFolder :system to be solvated, this mean the input is a system with only the protagonist solute that must be solvated
         s_solventName : the name of the solvent. It has to be one of gromacs standard water names, or a folder containing a preequilibrated system that is a box full of something. in both cases,from that name the function will find the necessary .gro and .itp somewere. the gro have to describe a box full of that solvent
     """
-    subprocess.run(f"echo \"called better_solvate({s_systemFolder},{s_solventName})\"" , shell=True, check=True, stdout=subprocess.PIPE, text=True)
-    print(f"\nCLEANPIPE MESSAGE\ncalled better_solvate({s_systemFolder},{s_solventName})\"")
+    subprocess.run(f"echo \"called solvate_and_neutralize({s_systemFolder},{s_solventName})\"" , shell=True, check=True, stdout=subprocess.PIPE, text=True)
+    print(f"\nCLEANPIPE MESSAGE\ncalled solvate_and_neutralize({s_systemFolder},{s_solventName})\"")
 
     #get gro basaname in system folder
-    s_groName = filemanager.get_single_gro(s_systemFolder).replace('.gro','')
+    s_groName = bricksFileSystem.get_single_gro(s_systemFolder).replace('.gro','')
     #get top basaname in system folder
-    s_topName = filemanager.get_single_top(s_systemFolder).replace('.top','')
+    s_topName = bricksFileSystem.get_single_top(s_systemFolder).replace('.top','')
 
 
     if s_solventName in ["tip3p", "spc", "spce"]: #this is a list of 3 point water models. their respectives .gro describing a pre-equilibrated box and .itp are already in the share/gromacs/top folder
@@ -120,14 +120,15 @@ def better_solvate(s_systemFolder,s_solventName,s_forceField):
         os.chdir(f"{s_systemFolder}")
 
         subprocess.run(f"gmx solvate -cp {s_groName}.gro -cs spc216.gro -p {s_topName}.top -o {s_groName}.gro", shell=True, check=True) # spc216.gro is a pre-equilibrated box of a 3 point water model that can be used by any other 3 point model
-        subprocess.run(f"rm \\#{s_groName}.gro.1\\#" , shell=True, check=True)#I chose to overwrite the old gro
-        subprocess.run(f"rm \\#{s_topName}.top.1\\#" , shell=True, check=True)#I chose to overwrite the old top
+        bricksFileSystem.delete(f"\\#{s_groName}.gro.1\\#")#I choose to overwrite the old gro
+        bricksFileSystem.delete(f"\\#{s_topName}.top.1\\#")#I choose to overwrite the old top
+
 
 
         #include necessary text in the top file
         s_text_to_insert = "\n; Include water topology\n#include \""+s_forceField+".ff/"+s_solventName+".itp\"\n\n#ifdef POSRES_WATER \n; Position restraint for each water oxygen\n[ position_restraints ]\n;  i funct       fcx        fcy        fcz\n1    1       1000       1000       1000\n#endif\n"
 
-        topContent.insert_text_before_directive(f"{s_topName}.top", s_text_to_insert, "[ system ]")
+        bricksTopEdit.insert_text_before_directive(f"{s_topName}.top", s_text_to_insert, "[ system ]")
 
 
         # xxx add ions, to make the box neutral
@@ -136,18 +137,18 @@ def better_solvate(s_systemFolder,s_solventName,s_forceField):
         #rm tpr and created backups and mdout
 
 
-    elif filemanager.check_folder(os.path.abspath(s_solventName)) == True:
+    elif bricksFileSystem.check_folder(os.path.abspath(s_solventName)) == True:
         # this mean the user has chosen a folder (ex: path/to/folder)
         # that folder shoulrd contain a system that is a box filled with solvent. it should be pre-equilibrated 
-        # so, the solvent name is something like octn_filled_box, and that folder should contain a octn.itp and a 3_NPT/octn_filled_box.gro
+        # so, the solvent name is something like box_full_of_octn, and that folder should contain a octn.itp and a 3_NPT/box_full_of_octn.gro
         # but dont worry about the gro and file names. the important is that they are present in the correct place. the name will be obtained
 
         #get the full path
         s_solventFolder = os.path.abspath(s_solventName)
 
         #obtain the names of the top and itp files in the SOLVENT BOX folder
-        s_solbox_groName = filemanager.get_single_gro(f"{s_solventFolder}/3_NPT")
-        l_solbox_itpNames = filemanager.get_all_itps(s_solventFolder)
+        s_solbox_groName = bricksFileSystem.get_single_gro(f"{s_solventFolder}/3_NPT")
+        l_solbox_itpNames = bricksFileSystem.get_all_itps(s_solventFolder)
 
         #go to system folder. the current folder is savad so to go back to it just before the end of the function
         #original_directory = os.getcwd()
@@ -155,12 +156,12 @@ def better_solvate(s_systemFolder,s_solventName,s_forceField):
 
         #insert the solvent in gro. and inform quantity added in top
         subprocess.run(f"gmx solvate -cp {s_groName}.gro -cs {s_solventFolder}/3_NPT/{s_solbox_groName} -p {s_topName}.top -o {s_groName}.gro", shell=True, check=True)
-        subprocess.run(f"rm \\#{s_groName}.gro.1\\#" , shell=True, check=True)#I chose to overwrite the old gro
-        subprocess.run(f"rm \\#{s_topName}.top.1\\#" , shell=True, check=True)#I chose to overwrite the old top
+        bricksFileSystem.delete(f"\\#{s_groName}.gro.1\\#")#I choose to overwrite the old gro
+        bricksFileSystem.delete(f"\\#{s_topName}.top.1\\#")#I choose to overwrite the old top
 
         #when gmx solvate inform the quantity added in the top, its possible that it chooses a weird name. lets make sure its the name of the itp file
-        badmolName = topContent.getMoleculeName(f"{s_topName}.top", order=-1)#get name of the last molecule in the directive [ molecules ]
-        topContent.replaceWordInsideDirective(f"{s_topName}.top", "[ molecules ]", badmolName, l_solbox_itpNames[0].replace(".itp", ""))# xxx this is not preparet to deal with a solvent box with several different molecules
+        badmolName = bricksTopEdit.getMoleculeName(f"{s_topName}.top", order=-1)#get name of the last molecule in the directive [ molecules ]
+        bricksTopEdit.replaceWordInsideDirective(f"{s_topName}.top", "[ molecules ]", badmolName, l_solbox_itpNames[0].replace(".itp", ""))# xxx this is not preparet to deal with a solvent box with several different molecules
 
         #edit top to insert a line including a reference of the solvent itp before the [ system ] directive
         for s_sol_itpName in l_solbox_itpNames:
@@ -216,8 +217,8 @@ def make_realistic(s_systemFolder,s_groups_to_monitor_separately, s_temperature)
         s_mdpNameNPT = "npt_begin_Vr_Cr_1GROUP.mdp"  
 
     # obtain gro and top in current folder
-    s_initialgroName = filemanager.get_single_gro(".")
-    s_topName        = filemanager.get_single_top(".")
+    s_initialgroName = bricksFileSystem.get_single_gro(".")
+    s_topName        = bricksFileSystem.get_single_top(".")
 
 
 

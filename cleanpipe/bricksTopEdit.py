@@ -173,7 +173,7 @@ def update_molecule_quantity(top_file, molecule_name, new_quantity):
         file.writelines(new_lines)
 
 
-def decompose_TOP_file_into_SOCKETTOP_and_ITPs(top_file_path):
+def decompose_TOP_file_into_TOP_and_ITPs(top_file_path):
 
     # Read the content of the original top file
     with open(top_file_path, 'r') as f:
@@ -229,7 +229,7 @@ def decompose_TOP_file_into_SOCKETTOP_and_ITPs(top_file_path):
     base_name = os.path.splitext(os.path.basename(top_file_path))[0]
 
     #delete the original top file
-    subprocess.run(f"rm {top_file_path}" , shell=True, check=True)
+    bricksFileSystem.delete(f"{top_file_path}")
     
     # Create the new system top file without molecule definitions
     system_top_file = os.path.join(top_dir, f"{base_name}.top")
