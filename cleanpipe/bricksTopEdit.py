@@ -1,6 +1,7 @@
 import os
 import subprocess
 import re
+import bricksFileSystem
 
 def getMoleculeName(top_file_path, order=1):
     """
