@@ -31,7 +31,7 @@ def pdb2box_full_of_that(s_pdbfile, s_forceField):
 
 
     subprocess.run(f"mkdir box_full_of_{s_filename}", shell=True, check=True)
-    s_outPathAndName = f"box_full_of_{s_filename}/ box_full_of_{s_filename}"
+    s_outPathAndName = f"box_full_of_{s_filename}/box_full_of_{s_filename}"
 
 
     #create a system with 1 molecule.
