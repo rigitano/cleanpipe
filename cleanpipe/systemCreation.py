@@ -42,21 +42,31 @@ def pdb2box_full_of_that(s_pdbfile, s_forceField):
     bricksTopEdit.remove_posres_inclusion(f"{s_outPathAndName}.top")
 
     #manipulate the GRO file to create a 5x5x5 box and fill it with copyes of the molecule
-    command = f"gmx insert-molecules -ci {s_outPathAndName}.gro -nmol 1000 -rot -box 5 5 5 -o box_full_of_{s_outPathAndName}.gro"
-    #this will be done in a way to capure 
+    #this will be done in a way to see in the jupyter and also be able to capure the results
     result = subprocess.Popen(
-        command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True
+        f"gmx insert-molecules -ci {s_outPathAndName}.gro -nmol 1000 -rot -box 5 5 5 -o box_full_of_{s_outPathAndName}.gro", 
+        shell=True, 
+        stdout=subprocess.PIPE, 
+        stderr=subprocess.PIPE, 
+        text=True
     )
-    # Wait for the process to complete
-    result.wait()
+    # Read the output line by line, display it, and store it
+    captured_output =""
+    for line in result.stdout:
+        sys.stdout.write(line)  # Print to notebook's standard output in real-time
+        captured_output += line  # Store the line for later use
 
-    print(result.stdout+result.stderr)
+    for line in result.stderr:
+        sys.stdout.write(line)  # Print to notebook's standard output in real-time
+        captured_output += line  # Store the line for later use
+    result.wait()# Wait for the process to complete
+
 
     bricksFileSystem.delete(f"{s_outPathAndName}.gro")# now that we have the filled box gro, the 1 molecule gro can be deleted
     print(f"\nCLEANPIPE MESSAGE\ngro file written: \n                      box_full_of_{s_outPathAndName}.gro")
 
     #get the number of added molecules. 
-    match = re.search(r'Added\s+(\d+)\s+molecules', result.stdout+result.stderr)
+    match = re.search(r'Added\s+(\d+)\s+molecules', captured_output)
     added_molecules = int(match.group(1))
 
     #rename the top and posres.itp files.
