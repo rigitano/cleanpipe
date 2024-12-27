@@ -1,5 +1,8 @@
 import os
 import subprocess
+import sys
+import select
+
 
 def check_extention(file_path,v_alowedExtentions):
     '''
@@ -93,3 +96,47 @@ def delete(s_filename):
     delete("posres.itp")
     """
     subprocess.run(f"rm {s_filename}" , shell=True, check=True) 
+
+
+
+def run_and_capture(command):
+    """
+    this funcion will run commands in cmd in a way whats printable in juyter and storable in the output
+    """
+    captured_output = ""
+
+    # Start the subprocess
+    process = subprocess.Popen(
+        command,
+        shell=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True
+    )
+
+    # Monitor the stdout and stderr streams
+    while True:
+        # Use select to check for available output
+        readable, _, _ = select.select([process.stdout, process.stderr], [], [])
+
+        for stream in readable:
+            # Read a single line from the stream
+            line = stream.readline()
+            if line == "" and process.poll() is not None:
+                # End of stream and process has exited
+                break
+            if line:
+                sys.stdout.write(line)  # Print to notebook's standard output in real-time
+                captured_output += line  # Store the line for later use
+
+        # Break out of the loop if the process is finished
+        if process.poll() is not None:
+            break
+
+    # Wait for the process to finish and get the return code
+    process.wait()
+
+    if process.returncode != 0:
+        print(f"Command failed with return code {process.returncode}")
+    
+    return captured_output
