@@ -47,8 +47,8 @@ def pdb2system(s_pdbfile,s_outName,s_forceField,s_boxSize,b_addterminal=True):
     s_molName = s_pdbfile.replace(".pdb","")
 
     #create output folder in parael with the pdb input. we will cd into that forder and do everithing there
-    subprocess.run(f"mkdir {s_outName}", shell=True, check=True)
-    subprocess.run(f"cp {s_pdbfile} {s_outName}/temp.pdb", shell=True, check=True)
+    bricksFileSystem.run_and_capture(f"mkdir {s_outName}")
+    bricksFileSystem.run_and_capture(f"cp {s_pdbfile} {s_outName}/temp.pdb")
     #original_directory = os.getcwd()#original folder is stored so I can go back to it at the very end of this function
     os.chdir(f"{s_outName}")
 
@@ -102,8 +102,7 @@ def solvate_and_neutralize(s_systemFolder,s_solventName,s_forceField):
         s_systemFolder :system to be solvated, this mean the input is a system with only the protagonist solute that must be solvated
         s_solventName : the name of the solvent. It has to be one of gromacs standard water names, or a folder containing a preequilibrated system that is a box full of something. in both cases,from that name the function will find the necessary .gro and .itp somewere. the gro have to describe a box full of that solvent
     """
-    subprocess.run(f"echo \"called solvate_and_neutralize({s_systemFolder},{s_solventName})\"" , shell=True, check=True, stdout=subprocess.PIPE, text=True)
-    print(f"\nCLEANPIPE MESSAGE\ncalled solvate_and_neutralize({s_systemFolder},{s_solventName})\"")
+    print(f"\nCLEANPIPE MESSAGE called solvate_and_neutralize({s_systemFolder},{s_solventName},{s_forceField})\n")
 
     #get gro basaname in system folder
     s_groName = bricksFileSystem.get_single_gro(s_systemFolder).replace('.gro','')
@@ -112,7 +111,7 @@ def solvate_and_neutralize(s_systemFolder,s_solventName,s_forceField):
 
 
     if s_solventName in ["tip3p", "spc", "spce"]: #this is a list of 3 point water models. their respectives .gro describing a pre-equilibrated box and .itp are already in the share/gromacs/top folder
-        print("CLEANPIPE MESSAGE\nuser chose one of the standard water models ({s_solventName})\n")
+        print(f"\nCLEANPIPE MESSAGE user chose one of the standard water models ({s_solventName})\n")
         #this mean the user has chosen a water model, already part of gromacs standard solvents. gromacs can find the solvent box and the respective itp automaticaly
 
         #go to system folder. the current folder is savad so to go back to it just before the end of the function
@@ -155,7 +154,7 @@ def solvate_and_neutralize(s_systemFolder,s_solventName,s_forceField):
         os.chdir(f"{s_systemFolder}")
 
         #insert the solvent in gro. and inform quantity added in top
-        subprocess.run(f"gmx solvate -cp {s_groName}.gro -cs {s_solventFolder}/3_NPT/{s_solbox_groName} -p {s_topName}.top -o {s_groName}.gro", shell=True, check=True)
+        bricksFileSystem.run_and_capture(f"gmx solvate -cp {s_groName}.gro -cs {s_solventFolder}/3_NPT/{s_solbox_groName} -p {s_topName}.top -o {s_groName}.gro")
         bricksFileSystem.delete(f"\\#{s_groName}.gro.1\\#")#I choose to overwrite the old gro
         bricksFileSystem.delete(f"\\#{s_topName}.top.1\\#")#I choose to overwrite the old top
 
@@ -200,6 +199,8 @@ def make_realistic(s_systemFolder,s_groups_to_monitor_separately, s_temperature)
     s_temperature: temerature in kelvin to be set during NVT, and kept during NPT, for example "300"
     
     """
+    print(f"\nCLEANPIPE MESSAGE called make_realistic({s_systemFolder},{s_groups_to_monitor_separately}, {s_temperature})\n")
+
 
     #change current folder to the system folder
     os.chdir(f"{s_systemFolder}")
@@ -223,22 +224,22 @@ def make_realistic(s_systemFolder,s_groups_to_monitor_separately, s_temperature)
 
 
     #EM
-    subprocess.run(f"mkdir 1_EM" , shell=True, check=True)
+    bricksFileSystem.run_and_capture(f"mkdir 1_EM")
     os.chdir(f"1_EM")
-    subprocess.run(f"gmx grompp -f {s_mdp_folder}/em.mdp -c ../{s_initialgroName} -p ../{s_topName} -o em.tpr -maxwarn 3" , shell=True, check=True)
-    subprocess.run(f"gmx mdrun -deffnm em" , shell=True, check=True)
+    bricksFileSystem.run_and_capture(f"gmx grompp -f {s_mdp_folder}/em.mdp -c ../{s_initialgroName} -p ../{s_topName} -o em.tpr -maxwarn 3" )
+    bricksFileSystem.run_and_capture(f"gmx mdrun -deffnm em" )
     os.chdir(f"..")
 
     #NVT equilibration
-    subprocess.run(f"mkdir 2_NVT" , shell=True, check=True)
+    bricksFileSystem.run_and_capture(f"mkdir 2_NVT")
     os.chdir(f"2_NVT")
-    subprocess.run(f"gmx grompp -f {s_mdp_folder}/{s_mdpNameNVT} -c ../1_EM/em.gro -r  ../1_EM/em.gro -p ../{s_topName} -o nvt.tpr -maxwarn 3" , shell=True, check=True)
-    subprocess.run(f"gmx mdrun -deffnm nvt" , shell=True, check=True)
+    bricksFileSystem.run_and_capture(f"gmx grompp -f {s_mdp_folder}/{s_mdpNameNVT} -c ../1_EM/em.gro -r  ../1_EM/em.gro -p ../{s_topName} -o nvt.tpr -maxwarn 3")
+    bricksFileSystem.run_and_capture(f"gmx mdrun -deffnm nvt")
     os.chdir(f"..")
 
     #NPT equilibration
-    subprocess.run(f"mkdir 3_NPT" , shell=True, check=True)
+    bricksFileSystem.run_and_capture(f"mkdir 3_NPT")
     os.chdir(f"3_NPT")
-    subprocess.run(f"gmx grompp -f {s_mdp_folder}/{s_mdpNameNPT} -c ../2_NVT/nvt.gro -r ../2_NVT/nvt.gro -t ../2_NVT/nvt.cpt -p ../{s_topName} -o npt.tpr -maxwarn 3" , shell=True, check=True)
-    subprocess.run(f"gmx mdrun -deffnm npt" , shell=True, check=True)
+    bricksFileSystem.run_and_capture(f"gmx grompp -f {s_mdp_folder}/{s_mdpNameNPT} -c ../2_NVT/nvt.gro -r ../2_NVT/nvt.gro -t ../2_NVT/nvt.cpt -p ../{s_topName} -o npt.tpr -maxwarn 3")
+    bricksFileSystem.run_and_capture(f"gmx mdrun -deffnm npt")
     os.chdir(f"..")

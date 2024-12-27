@@ -104,7 +104,7 @@ def run_and_capture(command):
     this funcion will run commands in cmd in a way whats printable in juyter and storable in the output
     """
 
-    print(f"\nCLEANPIPE MESSAGE\nexecuting command:\n{command}\n")
+    print(f"\nCLEANPIPE MESSAGE executing command:\n{command}\n")
 
     captured_output = ""
     captured_error = ""
@@ -145,8 +145,8 @@ def run_and_capture(command):
     process.wait()
 
     if process.returncode != 0:
-        print(f"CLEANPIPE MESSAGE\nCommand failed with return code {process.returncode}")
+        print(f"\nCLEANPIPE MESSAGE command failed with return code {process.returncode}")
         if captured_error:
-            print(f"CLEANPIPE MESSAGE\nStandard Error Output:\n{captured_error}")
+            print(f"\nCLEANPIPE MESSAGE standard error output:\n{captured_error}")
     
     return captured_output + captured_error

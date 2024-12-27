@@ -26,11 +26,11 @@ def pdb2box_full_of_that(s_pdbfile, s_forceField):
 
     #check if the filename inside s_pdbfile is valid
     bricksFileSystem.check_extention(s_pdbfile,['.pdb']) 
-    #obtein just the file name. ex: blabla/blabla/filename.bla
+    #obtain just the file name. ex: blabla/blabla/filename.bla
     s_filename = bricksFileSystem.get_filename_without_extension(s_pdbfile) 
 
 
-    subprocess.run(f"mkdir box_full_of_{s_filename}", shell=True, check=True)
+    bricksFileSystem.run_and_capture(f"mkdir box_full_of_{s_filename}")
     s_outPathAndName = f"box_full_of_{s_filename}/box_full_of_{s_filename}"
 
 
@@ -42,8 +42,7 @@ def pdb2box_full_of_that(s_pdbfile, s_forceField):
     bricksTopEdit.remove_posres_inclusion(f"{s_outPathAndName}.top")
 
     #manipulate the GRO file to create a 5x5x5 box and fill it with copyes of the molecule
-    command = f"gmx insert-molecules -ci {s_outPathAndName}_just1mol.gro -nmol 1000 -rot xyz -box 5 5 5 -o {s_outPathAndName}.gro"
-    captured_output = bricksFileSystem.run_and_capture(command)
+    captured_output = bricksFileSystem.run_and_capture(f"gmx insert-molecules -ci {s_outPathAndName}_just1mol.gro -nmol 1000 -rot xyz -box 5 5 5 -o {s_outPathAndName}.gro")
     print(f"\nCLEANPIPE MESSAGE\ngro file written: \n                     {s_outPathAndName}.gro")
 
     #now we have the final gro with a lot of molecules. its time to delete the initial one
