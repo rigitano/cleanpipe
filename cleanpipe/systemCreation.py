@@ -5,7 +5,7 @@ from cleanpipe import bricksMD
 
 import subprocess
 import re
-import os
+import sys
 
 
 
@@ -42,8 +42,16 @@ def pdb2box_full_of_that(s_pdbfile, s_forceField):
     bricksTopEdit.remove_posres_inclusion(f"{s_outPathAndName}.top")
 
     #manipulate the GRO file to create a 5x5x5 box and fill it with copyes of the molecule
-    result = subprocess.run(f"gmx insert-molecules -ci {s_outPathAndName}.gro -nmol 1000 -rot -box 5 5 5 -o box_full_of_{s_outPathAndName}.gro" , shell=True, check=True, capture_output=True,text=True)# 
+    command = f"gmx insert-molecules -ci {s_outPathAndName}.gro -nmol 1000 -rot -box 5 5 5 -o box_full_of_{s_outPathAndName}.gro"
+    #this will be done in a way to capure 
+    result = subprocess.Popen(
+        command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True
+    )
+    # Wait for the process to complete
+    result.wait()
+
     print(result.stdout+result.stderr)
+
     bricksFileSystem.delete(f"{s_outPathAndName}.gro")# now that we have the filled box gro, the 1 molecule gro can be deleted
     print(f"\nCLEANPIPE MESSAGE\ngro file written: \n                      box_full_of_{s_outPathAndName}.gro")
 
