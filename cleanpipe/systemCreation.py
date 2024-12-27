@@ -35,15 +35,16 @@ def pdb2box_full_of_that(s_pdbfile, s_forceField):
 
 
     #create a system with 1 molecule.
-    bricksFileSystem.run_and_capture(f"gmx pdb2gmx -f {s_filename}.pdb -o {s_outPathAndName}.gro -p {s_outPathAndName}.top -i posres.itp -water none -ff {s_forceField}")
+    bricksFileSystem.run_and_capture(f"gmx pdb2gmx -f {s_filename}.pdb -o {s_outPathAndName}_just1mol.gro -p {s_outPathAndName}.top -i posres.itp -water none -ff {s_forceField}")
     
     #pdb2gmx generates a useless posres.itp with useless posres for 1 molecule. so I delete the posres.itp and the inclusion in the top
     bricksFileSystem.delete("posres.itp")
     bricksTopEdit.remove_posres_inclusion(f"{s_outPathAndName}.top")
 
     #manipulate the GRO file to create a 5x5x5 box and fill it with copyes of the molecule
-    command = f"gmx insert-molecules -ci {s_outPathAndName}.gro -nmol 1000 -rot xyz -box 5 5 5 -o {s_outPathAndName}.gro"
+    command = f"gmx insert-molecules -ci {s_outPathAndName}_just1mol.gro -nmol 1000 -rot xyz -box 5 5 5 -o {s_outPathAndName}.gro"
     captured_output = bricksFileSystem.run_and_capture(command)
+    bricksFileSystem.delete("{s_outPathAndName}_just1mol.gro")#now we have the final gro with a lot of molecules. its time to delete the initial one
 
 
     bricksFileSystem.delete(f"{s_outPathAndName}.gro")# now that we have the filled box gro, the 1 molecule gro can be deleted
