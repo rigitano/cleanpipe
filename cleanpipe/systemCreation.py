@@ -35,7 +35,7 @@ def pdb2box_full_of_that(s_pdbfile, s_forceField):
 
 
     #create a system with 1 molecule.
-    subprocess.run(f"gmx pdb2gmx -f {s_filename}.pdb -o {s_outPathAndName}.gro -p {s_outPathAndName}.top -i posres.itp -water none -ff {s_forceField}" , shell=True, check=True)
+    bricksFileSystem.run_and_capture(f"gmx pdb2gmx -f {s_filename}.pdb -o {s_outPathAndName}.gro -p {s_outPathAndName}.top -i posres.itp -water none -ff {s_forceField}")
     
     #pdb2gmx generates a useless posres.itp with useless posres for 1 molecule. so I delete the posres.itp and the inclusion in the top
     bricksFileSystem.delete("posres.itp")
