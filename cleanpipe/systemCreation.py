@@ -53,9 +53,6 @@ def pdb2box_full_of_that(s_pdbfile, s_forceField):
     match = re.search(r'Added\s+(\d+)\s+molecules', captured_output)
     added_molecules = int(match.group(1))
 
-    #rename the top and posres.itp files.
-    subprocess.run(f"mv {s_outPathAndName}.top {s_outPathAndName}.top" , shell=True, check=True)
-
     #change the ugly molecule name currently inside the TOP file.
     uglyMolName = bricksTopEdit.getMoleculeName(f"{s_outPathAndName}.top")
     molName = s_filename
