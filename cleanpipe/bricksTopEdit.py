@@ -1,7 +1,7 @@
 import os
 import subprocess
 import re
-import bricksFileSystem
+from cleanpipe import bricksFileSystem
 
 def getMoleculeName(top_file_path, order=1):
     """
