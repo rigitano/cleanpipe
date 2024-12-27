@@ -31,7 +31,7 @@ def pdb2box_full_of_that(s_pdbfile, s_forceField):
 
 
     subprocess.run(f"mkdir box_full_of_{s_filename}", shell=True, check=True)
-    s_outPathAndName = f"box_full_of_{s_filename}/{s_filename}"
+    s_outPathAndName = f"box_full_of_{s_filename}/ box_full_of_{s_filename}"
 
 
     #create a system with 1 molecule.
@@ -44,7 +44,7 @@ def pdb2box_full_of_that(s_pdbfile, s_forceField):
     #manipulate the GRO file to create a 5x5x5 box and fill it with copyes of the molecule
     #this will be done in a way to see in the jupyter and also be able to capure the results
     result = subprocess.Popen(
-        f"gmx insert-molecules -ci {s_outPathAndName}.gro -nmol 1000 -rot -box 5 5 5 -o box_full_of_{s_outPathAndName}.gro", 
+        f"gmx insert-molecules -ci {s_outPathAndName}.gro -nmol 1000 -rot -box 5 5 5 -o {s_outPathAndName}.gro", 
         shell=True, 
         stdout=subprocess.PIPE, 
         stderr=subprocess.PIPE, 
@@ -63,29 +63,29 @@ def pdb2box_full_of_that(s_pdbfile, s_forceField):
 
 
     bricksFileSystem.delete(f"{s_outPathAndName}.gro")# now that we have the filled box gro, the 1 molecule gro can be deleted
-    print(f"\nCLEANPIPE MESSAGE\ngro file written: \n                      box_full_of_{s_outPathAndName}.gro")
+    print(f"\nCLEANPIPE MESSAGE\ngro file written: \n                     {s_outPathAndName}.gro")
 
     #get the number of added molecules. 
     match = re.search(r'Added\s+(\d+)\s+molecules', captured_output)
     added_molecules = int(match.group(1))
 
     #rename the top and posres.itp files.
-    subprocess.run(f"mv {s_outPathAndName}.top box_full_of_{s_outPathAndName}.top" , shell=True, check=True)
+    subprocess.run(f"mv {s_outPathAndName}.top {s_outPathAndName}.top" , shell=True, check=True)
 
     #change the ugly molecule name currently inside the TOP file.
-    uglyMolName = bricksTopEdit.getMoleculeName(f"box_full_of_{s_outPathAndName}.top")
+    uglyMolName = bricksTopEdit.getMoleculeName(f"{s_outPathAndName}.top")
     molName = s_filename
-    bricksTopEdit.replaceMoleculeName(f"box_full_of_{s_outPathAndName}.top", uglyMolName, molName)
+    bricksTopEdit.replaceMoleculeName(f"{s_outPathAndName}.top", uglyMolName, molName)
 
     #update the TOP file with the new total the molecule
-    bricksTopEdit.update_molecule_quantity(f"box_full_of_{s_outPathAndName}.top", molName, added_molecules)
+    bricksTopEdit.update_molecule_quantity(f"{s_outPathAndName}.top", molName, added_molecules)
 
     #split the TOP file, into a ITP that describes the molecule and a simple TOP that contains only name of the system and the totals.
-    bricksTopEdit.decompose_TOP_file_into_TOP_and_ITPs(f"box_full_of_{s_outPathAndName}.top")
+    bricksTopEdit.decompose_TOP_file_into_TOP_and_ITPs(f"{s_outPathAndName}.top")
     
 
     #give a name for the system
-    bricksTopEdit.setSystemName(f"box_full_of_{s_outPathAndName}.top", f"box filled with {s_filename}" )
+    bricksTopEdit.setSystemName(f"{s_outPathAndName}.top", f"box filled with {s_filename}" )
 
 
 def pdb2molecule_in_solvent(s_pdbfile, s_outSytemName, s_solvent, s_forceField, s_boxSize):
