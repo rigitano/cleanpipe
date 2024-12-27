@@ -42,7 +42,7 @@ def pdb2box_full_of_that(s_pdbfile, s_forceField):
     bricksTopEdit.remove_posres_inclusion(f"{s_outPathAndName}.top")
 
     #manipulate the GRO file to create a 5x5x5 box and fill it with copyes of the molecule
-    command = f"gmx insert-molecules -ci {s_outPathAndName}.gro -nmol 1000 -rot -box 5 5 5 -o box_full_of_{s_outPathAndName}.gro"
+    command = f"gmx insert-molecules -ci {s_outPathAndName}.gro -nmol 1000 -rot xyz -box 5 5 5 -o box_full_of_{s_outPathAndName}.gro"
     captured_output = bricksFileSystem.run_and_capture(command)
 
 

@@ -60,10 +60,10 @@ def pdb2system(s_pdbfile,s_outName,s_forceField,s_boxSize,b_addterminal=True):
 
     if b_addterminal == True:
         #standar option, that adds the correct termini in proteins
-        subprocess.run(f"gmx pdb2gmx -f temp.pdb -o {s_outName}.gro -p {s_outName}.top -i {s_molName}.posres.itp -missing -ignh -water none -ff {s_forceField}", shell=True, check=True)
+        bricksFileSystem.run_and_capture(f"gmx pdb2gmx -f temp.pdb -o {s_outName}.gro -p {s_outName}.top -i {s_molName}.posres.itp -missing -ignh -water none -ff {s_forceField}")
     elif b_addterminal == False:
         #this option will leave dangling bonds. its usefull just in case I will add termini manually
-        subprocess.run(f"printf '8\n7\n' | gmx pdb2gmx -f temp.pdb -o {s_outName}.gro -p {s_outName}.top -i {s_molName}.posres.itp -missing -ter -ignh -water none -ff {s_forceField}", shell=True, check=True)
+        bricksFileSystem.run_and_capture(f"printf '8\n7\n' | gmx pdb2gmx -f temp.pdb -o {s_outName}.gro -p {s_outName}.top -i {s_molName}.posres.itp -missing -ter -ignh -water none -ff {s_forceField}")
     
 
     #pdb2gmx is stupid, so by default it and givesa wierd name to the molecule from the pdb. most times is "Other_chain_O". lets replace it by the real molecule name, that I took from the pdb file name
@@ -71,7 +71,7 @@ def pdb2system(s_pdbfile,s_outName,s_forceField,s_boxSize,b_addterminal=True):
     bricksTopEdit.replaceMoleculeName(f"{s_outName}.top", uglyMolName, s_molName)
 
     #define box size inside the gro file. s_boxSize contains the user definition (ex: "3 3 3")
-    subprocess.run(f"gmx editconf -f {s_outName}.gro -o {s_outName}.gro -c -box {s_boxSize} -bt cubic", shell=True, check=True)
+    bricksFileSystem.run_and_capture(f"gmx editconf -f {s_outName}.gro -o {s_outName}.gro -c -box {s_boxSize} -bt cubic")
     bricksFileSystem.delete(f"\\#{s_outName}.gro.1\\#")# I chose to overwrite the old gro
 
     #decompose the original top into a new top and a itp. the new top will contain just sytem information, the itp will describe the protagonist molecule
@@ -112,14 +112,14 @@ def solvate_and_neutralize(s_systemFolder,s_solventName,s_forceField):
 
 
     if s_solventName in ["tip3p", "spc", "spce"]: #this is a list of 3 point water models. their respectives .gro describing a pre-equilibrated box and .itp are already in the share/gromacs/top folder
-        subprocess.run("echo \"used chose one of standard water models\"" , shell=True, check=True, stdout=subprocess.PIPE, text=True)
+        print("CLEANPIPE MESSAGE\nuser chose one of the standard water models ({s_solventName})\n")
         #this mean the user has chosen a water model, already part of gromacs standard solvents. gromacs can find the solvent box and the respective itp automaticaly
 
         #go to system folder. the current folder is savad so to go back to it just before the end of the function
         #original_directory = os.getcwd()
         os.chdir(f"{s_systemFolder}")
 
-        subprocess.run(f"gmx solvate -cp {s_groName}.gro -cs spc216.gro -p {s_topName}.top -o {s_groName}.gro", shell=True, check=True) # spc216.gro is a pre-equilibrated box of a 3 point water model that can be used by any other 3 point model
+        bricksFileSystem.run_and_capture(f"gmx solvate -cp {s_groName}.gro -cs spc216.gro -p {s_topName}.top -o {s_groName}.gro") # spc216.gro is a pre-equilibrated box of a 3 point water model that can be used by any other 3 point model
         bricksFileSystem.delete(f"\\#{s_groName}.gro.1\\#")#I choose to overwrite the old gro
         bricksFileSystem.delete(f"\\#{s_topName}.top.1\\#")#I choose to overwrite the old top
 
