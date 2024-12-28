@@ -1,10 +1,17 @@
 import pandas as pd
-import matplotlib.pyplot as plt
 from io import StringIO
-from matplotlib.ticker import ScalarFormatter, LogLocator
-import seaborn as sns
 import pandas as pd
 import numpy as np
+
+import matplotlib.pyplot as plt
+from matplotlib.ticker import ScalarFormatter, LogLocator
+import matplotlib.colors as mcolors
+import matplotlib.patches as mpatches
+from matplotlib.colors import BoundaryNorm
+
+
+import seaborn as sns
+
 
 
 
@@ -138,6 +145,9 @@ def plot_sasa(s_file,s_subtitle):
 
 
 def plot_ramachandran(s_rama_file,s_subtitle):
+    """
+    cl.plot_ramachandran("rama.csv","hello")
+    """
     
     # Load the data
     data = pd.read_csv(s_rama_file, header=None, names=['phi', 'psi'])
@@ -178,5 +188,117 @@ def plot_ramachandran(s_rama_file,s_subtitle):
     # Show plot
     plt.show()
 
-plot_ramachandran("rama.csv","hello")
+
+def plot_dssp(s_dssp_file,s_subtitle):
+
+    """
+    cl.plot_dssp('dssp.dat','hello')
+    """
+
+    with open(s_dssp_file, 'r') as file:
+        # Read all lines from the file
+        lines = file.readlines()
+    
+    char_to_index = {
+        'H': 0,  # alpha-helix
+        'B': 1,  # beta-bridge
+        'E': 2,  # extended beta-ladder
+        'G': 3,  # 3_10-helix
+        'I': 4,  # pi-helix
+        'P': 5,  # kappa-helix (poly-proline II)
+        'S': 6,  # bend
+        'T': 7,  # hydrogen-bonded turn
+        '=': 8,  # break
+        '~': 9   # coil/loop (no structure)
+    }
+    labels = ['alpha-helix', 
+              'beta-bridge', 
+              'extended beta-ladder', 
+              '3_10-helix', 
+              'pi-helix', 
+              'kappa-helix', 
+              'bend', 
+              'hydrogen-bonded turn', 
+              'break', 
+              'coil/loop (no structure)']
+
+
+    #colors = ['black','red', 'green', 'blue', 'yellow', 'orange', 'purple', 'brown', 'pink', 'white', 'gray']
+
+    colors = [
+    'black',
+    'red',        # alpha-helix
+    'orange',     # beta-bridge
+    'yellow',     # extended beta-ladder
+    'darkred',    # 3_10-helix
+    'magenta',    # pi-helix
+    'pink',       # kappa-helix
+    'cyan',       # bend
+    'blue',       # hydrogen-bonded turn
+    'purple',       # break
+    'grey'       # coil/loop (no structure)
+]
+    
+    
+    # Strip newline characters and create a 2D list where each sublist is a list of characters from each line
+    data = [list(line.strip()) for line in lines]
+    
+    # Transpose the data to switch rows and columns
+    data_transposed = list(zip(*data))
+    
+    # Map characters to numbers using the provided dictionary
+    mapped_data = [[char_to_index.get(char, -1) for char in row] for row in data_transposed]
+    
+    # Convert the mapped data into a NumPy array
+    data_indices = np.array(mapped_data)
+    
+    # Add a row of -1 at the beginning and a column of -1 at the beginning of each row, shifting the data, so now indexes of real data start at 1 instead of zero
+    data_indices = np.pad(data_indices, ((1, 0), (1, 0)), mode='constant', constant_values=-1)
+    #print(data_indices)
+    
+    # Define colors for each type
+
+    cmap = mcolors.ListedColormap(colors)
+    bounds = np.arange(-1.5, 10, 1)  # This sets bounds at midpoints between integers from -1 to 9
+    
+    # Create a BoundaryNorm which will use the specified bounds
+    norm = BoundaryNorm(bounds, cmap.N)
+    
+    # Read the data from the file
+    
+    
+    # Create the heatmap
+    fig, ax = plt.subplots(figsize=(12, 3))
+                                   
+    #heatmap = ax.imshow(data_indices, aspect='auto', cmap=cmap, norm=norm)
+    # Get the dimensions of the matrix
+    num_rows, num_cols = data_indices.shape
+    heatmap = ax.imshow(data_indices[1:,1:], aspect='auto', cmap=cmap, interpolation='nearest',norm=norm, extent=[0.5, num_cols-0.5, num_rows-0.5, 0.5])
+    
+    
+    # Create colorbar with labels
+    #colorbar = plt.colorbar(heatmap, ticks=np.arange(len(colors)))
+    #colorbar.set_ticklabels([
+    #    'alpha-helix', 'isolated beta-bridge', 'extended strand in beta-ladder',
+    #    '3_10-helix', 'pi-helix', 'kappa-helix', 'bend', 'hydrogen-bonded turn', 'break', 'loop'
+    #])
+    
+    
+
+    legend_handles = [mpatches.Patch(color=colors[i+1], label=labels[i]) for i in range(len(labels))] # be carefull, there are more colors than labels, because there is black for -1, and that shouldnt have any label
+    legend = plt.legend(handles=legend_handles, bbox_to_anchor=(1.05, 1), loc='upper left')
+    
+    # Set axis labels
+    ax.set_xlabel('Time (ns)', fontsize=13)
+    ax.set_ylabel('Residue Position', fontsize=13)
+    ax.set_title('Secondary Structure Over Time (DSSP Algorithm)\n' + s_subtitle, fontsize=13)
+    plt.grid(False)
+    
+    # Optionally save the mapped data to a file
+    #np.savetxt('transposed_data_indices.dat', data_indices, fmt='%d', delimiter=',', header='Transposed Data Indices')
+
+    # Show the plot
+    plt.show()
+
+
 
