@@ -243,3 +243,66 @@ def make_realistic(s_systemFolder,s_groups_to_monitor_separately, s_temperature)
     bricksFileSystem.run_and_capture(f"gmx grompp -f {s_mdp_folder}/{s_mdpNameNPT} -c ../2_NVT/nvt.gro -r ../2_NVT/nvt.gro -t ../2_NVT/nvt.cpt -p ../{s_topName} -o npt.tpr -maxwarn 3")
     bricksFileSystem.run_and_capture(f"gmx mdrun -deffnm npt")
     os.chdir(f"..")
+
+
+
+#def benchmark():
+
+#def benchmark_rome():
+
+#def run_traj():
+
+#def run_traj_rome():
+
+#def run_fep():
+
+#def run_fep_rome():
+
+
+
+
+def hbonds(s_xtc,s_tpr):
+    """
+    it will run 3 hydrogen bond calculations: solvent, solvent, protein-solvent and protein-protein
+    for that, a choice will have to be made in the prompt xxx but I dont know if those choices change from system to system!
+    
+    example
+    cl.hbonds("alaEW_prod_298_00.all.fitted.xtc","alaEW_prod_298_00.tpr")
+    """
+
+    bricksFileSystem.run_and_capture(f"mkdir")
+
+    #protein to solvent
+    bricksFileSystem.run_and_capture(f"printf \"1\n13\n\" | gmx hbond -f alaEW_prod_298_00.all.fitted.xtc -s alaEW_prod_298_00.tpr -num hb_ps.xvg")
+    #protein to protein
+    bricksFileSystem.run_and_capture(f"printf \"1\n1\n\" | gmx hbond -f alaEW_prod_298_00.all.fitted.xtc -s alaEW_prod_298_00.tpr -num hb_pp.xvg")
+    #solvent to solvent
+    bricksFileSystem.run_and_capture(f"printf \"13\n13\n\" | gmx hbond -f alaEW_prod_298_00.all.fitted.xtc -s alaEW_prod_298_00.tpr -num hb_ss.xvg")
+
+def sasa(s_xtc,s_tpr):
+    """
+    
+    example
+    cl.sasa("alaEW_prod_298_00.all.fitted.xtc","alaEW_prod_298_00.tpr")
+    """
+
+    bricksFileSystem.run_and_capture(f"printf \"1\n\" | gmx sasa -f alaEW_prod_298_00.all.fitted.xtc -s alaEW_prod_298_00.tpr -o sasa.xvg")
+
+def rama(s_xtc,s_tpr):
+    """
+    
+    example
+    cl.rama("alaEW_prod_298_00.all.fitted.xtc","alaEW_prod_298_00.tpr")
+    """
+
+    bricksFileSystem.run_and_capture(f"gmx rama -f alaEW_prod_298_00.all.fitted.xtc -s alaEW_prod_298_00.tpr -o rama.xvg")
+    bricksFileSystem.run_and_capture(r"awk '/@|#/ {next} {print $1\",\"$2}' rama.xvg > rama.csv")
+
+def dssp(s_xtc,s_gro):
+    """
+    
+    example
+    cl.dssp("alaEW_prod_298_00.all.fitted.xtc","alaEW_npt.gro")
+    """
+
+    bricksFileSystem.run_and_capture(f"gmx dssp -f alaEW_prod_298_00.all.fitted.xtc -s alaEW_npt.gro -o dssp.dat -hmode dssp")
