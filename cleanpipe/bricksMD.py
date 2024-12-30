@@ -270,17 +270,18 @@ def hbonds(s_xtc,s_tpr):
     cl.hbonds("alaEW_prod_298_00.all.fitted.xtc","alaEW_prod_298_00.tpr")
     """
 
-    s_dirname = bricksFileSystem.get_file_location(s_xtc)
-    bricksFileSystem.create_folder(s_dirname + 'analysis')
+    s_xtc_folder = bricksFileSystem.get_file_location(s_xtc)
+    bricksFileSystem.create_folder(s_xtc_folder + '/analysis')
+    s_out_folder = s_xtc_folder + '/analysis'
 
     
 
     #protein to solvent
-    bricksFileSystem.run_and_capture(f"printf \"1\n13\n\" | gmx hbond -f {s_xtc} -s {s_tpr} -num analysis/hb_ps.xvg")
+    bricksFileSystem.run_and_capture(f"printf \"1\n13\n\" | gmx hbond -f {s_xtc} -s {s_tpr} -num {s_out_folder}/hb_ps.xvg")
     #protein to protein
-    bricksFileSystem.run_and_capture(f"printf \"1\n1\n\" | gmx hbond -f {s_xtc} -s {s_tpr} -num analysis/hb_pp.xvg")
+    bricksFileSystem.run_and_capture(f"printf \"1\n1\n\" | gmx hbond -f {s_xtc} -s {s_tpr} -num {s_out_folder}/hb_pp.xvg")
     #solvent to solvent
-    bricksFileSystem.run_and_capture(f"printf \"13\n13\n\" | gmx hbond -f {s_xtc} -s {s_tpr} -num analysis/hb_ss.xvg")
+    bricksFileSystem.run_and_capture(f"printf \"13\n13\n\" | gmx hbond -f {s_xtc} -s {s_tpr} -num {s_out_folder}/hb_ss.xvg")
 
 def sasa(s_xtc,s_tpr):
     """
@@ -289,10 +290,11 @@ def sasa(s_xtc,s_tpr):
     cl.sasa("alaEW_prod_298_00.all.fitted.xtc","alaEW_prod_298_00.tpr")
     """
 
-    s_dirname = bricksFileSystem.get_file_location(s_xtc)
-    bricksFileSystem.create_folder(s_dirname + 'analysis')
+    s_xtc_folder = bricksFileSystem.get_file_location(s_xtc)
+    bricksFileSystem.create_folder(s_xtc_folder + '/analysis')
+    s_out_folder = s_xtc_folder + '/analysis'
 
-    bricksFileSystem.run_and_capture(f"printf \"1\n\" | gmx sasa -f {s_xtc} -s {s_tpr} -o analysis/sasa.xvg")
+    bricksFileSystem.run_and_capture(f"printf \"1\n\" | gmx sasa -f {s_xtc} -s {s_tpr} -o {s_out_folder}/sasa.xvg")
 
 def rama(s_xtc,s_tpr):
     """
@@ -301,11 +303,12 @@ def rama(s_xtc,s_tpr):
     cl.rama("alaEW_prod_298_00.all.fitted.xtc","alaEW_prod_298_00.tpr")
     """
 
-    s_dirname = bricksFileSystem.get_file_location(s_xtc)
-    bricksFileSystem.create_folder(s_dirname + 'analysis')
+    s_xtc_folder = bricksFileSystem.get_file_location(s_xtc)
+    bricksFileSystem.create_folder(s_xtc_folder + '/analysis')
+    s_out_folder = s_xtc_folder + '/analysis'
 
-    bricksFileSystem.run_and_capture(f"gmx rama -f {s_xtc} -s {s_tpr} -o analysis/rama.xvg")
-    bricksFileSystem.run_and_capture(r"awk '/@|#/ {next} {print $1\",\"$2}' analysis/rama.xvg > analysis/rama.csv")
+    bricksFileSystem.run_and_capture(f"gmx rama -f {s_xtc} -s {s_tpr} -o {s_out_folder}/rama.xvg")
+    bricksFileSystem.run_and_capture(r"awk '/@|#/ {next\} {print $1\",\"$2}' "+s_out_folder+"/rama.xvg > analysis/rama.csv")
 
 def dssp(s_xtc,s_gro):
     """
@@ -314,7 +317,8 @@ def dssp(s_xtc,s_gro):
     cl.dssp("alaEW_prod_298_00.all.fitted.xtc","alaEW_npt.gro")
     """
 
-    s_dirname = bricksFileSystem.get_file_location(s_xtc)
-    bricksFileSystem.create_folder(s_dirname + 'analysis')
+    s_xtc_folder = bricksFileSystem.get_file_location(s_xtc)
+    bricksFileSystem.create_folder(s_xtc_folder + '/analysis')
+    s_out_folder = s_xtc_folder + '/analysis'
 
-    bricksFileSystem.run_and_capture(f"gmx dssp -f {s_xtc} -s {s_gro} -o analysis/dssp.dat -hmode dssp")
+    bricksFileSystem.run_and_capture(f"gmx dssp -f {s_xtc} -s {s_gro} -o {s_out_folder}/dssp.dat -hmode dssp")
