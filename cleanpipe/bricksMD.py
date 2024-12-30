@@ -210,6 +210,13 @@ def make_realistic(s_systemFolder,s_groups_to_monitor_separately, s_temperature)
     s_module_folder = os.path.dirname(__file__)
     s_mdp_folder = os.path.join(s_module_folder,"mdp")
 
+
+    #file_em_mdp="em.mdp"
+    #file_nvt_mdp="nvt_begin_Vr.mdp"
+    #file_npt_mdp="npt_continuation_Vr_Cr.mdp"
+    #file_prod_mdp="prod_continuation_Vr_Cr.mdp"
+
+
     if s_groups_to_monitor_separately == "Protein Non-Protein":
         s_mdpNameNVT = "begin_mdNvt_Vr.mdp"
         s_mdpNameNPT = "continue_mdNpt_Vr_PaRa.mdp"
@@ -250,9 +257,31 @@ def make_realistic(s_systemFolder,s_groups_to_monitor_separately, s_temperature)
 
 #def benchmark_rome():
 
-#def run_traj():
+def run(s_systemFolder,n_nanoseconds):
 
-#def run_traj_rome():
+
+    # setup mdp
+    s_module_folder = os.path.dirname(__file__)
+    s_mdp_folder = os.path.join(s_module_folder,"mdp")
+
+    # go inside the system folder and create 4_PROD
+    os.chdir(f"{s_systemFolder}")#change current folder to the system folder
+    s_topName = bricksFileSystem.get_single_top(".") #get top name on the system folder
+    bricksFileSystem.create_folder("4_PROD")#create folder
+    os.chdir(f"4_PROD")#go to created folder
+
+    #simulation
+    bricksFileSystem.run_and_capture(f"gmx grompp -f {s_mdp_folder}/prod_continuation_Vr_Cr.mdp -c ../3_NPT/npt.gro -p ../{s_topName} -o prod.tpr -maxwarn 3")
+    bricksFileSystem.run_and_capture(f"gmx mdrun -v -deffnm prod -nt 8")
+
+    #recenter (dont go to edges) and fit (appear to just jitter standing still)
+    bricksFileSystem.run_and_capture(f"printf '1\n0' | gmx trjconv -s prod.tpr -f prod.xtc -o prod_centered.xtc -center -pbc mol")
+    bricksFileSystem.run_and_capture(f"printf '1\n0' | gmx trjconv -s prod.tpr -f prod_centered.xtc -o prod_fitted.xtc -fit progressive")
+
+
+    os.chdir(f"..")
+
+#def run_rome():
 
 #def run_fep():
 
@@ -308,7 +337,7 @@ def rama(s_xtc,s_tpr):
     s_out_folder = s_xtc_folder + '/analysis'
 
     bricksFileSystem.run_and_capture(f"gmx rama -f {s_xtc} -s {s_tpr} -o {s_out_folder}/rama.xvg")
-    
+
     # Read the rama.xvg file and filter out lines containing @ or #, then write the first and second columns to a CSV file.
     with open(f"{s_out_folder}/rama.xvg", "r") as infile, open(f"{s_out_folder}/rama.csv", "w") as outfile:
         for line in infile:

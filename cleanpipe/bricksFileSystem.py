@@ -166,4 +166,4 @@ def create_folder(s_folder_name):
         os.makedirs(s_folder_name)
         print(f"CLEANPIPE MESSAGE: Folder '{s_folder_name}' created.")
     else:
-        print(f"CLEANPIPE MESSAGE: Folder '{s_folder_name}' already exists.")
+        print(f"CLEANPIPE MESSAGE: Using '{s_folder_name}' previouly created.")
