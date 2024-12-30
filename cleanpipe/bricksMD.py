@@ -308,7 +308,7 @@ def rama(s_xtc,s_tpr):
     s_out_folder = s_xtc_folder + '/analysis'
 
     bricksFileSystem.run_and_capture(f"gmx rama -f {s_xtc} -s {s_tpr} -o {s_out_folder}/rama.xvg")
-    bricksFileSystem.run_and_capture(r"awk '/@|#/ {next\} {print $1\",\"$2}' "+s_out_folder+"/rama.xvg > "+s_out_folder+"/rama.csv")
+    bricksFileSystem.run_and_capture(r"awk '/@|#/ {next} {print $1\",\"$2}' "+s_out_folder+"/rama.xvg > "+s_out_folder+"/rama.csv")
 
 def dssp(s_xtc,s_gro):
     """
