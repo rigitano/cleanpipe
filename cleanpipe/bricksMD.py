@@ -308,8 +308,13 @@ def rama(s_xtc,s_tpr):
     s_out_folder = s_xtc_folder + '/analysis'
 
     bricksFileSystem.run_and_capture(f"gmx rama -f {s_xtc} -s {s_tpr} -o {s_out_folder}/rama.xvg")
-    # filters out lines containing @ or # and prints the first and second columns separated by a comma.
-    bricksFileSystem.run_and_capture("awk '/@|#/ {next} {print $1\",\"$2}' "+s_out_folder+"/rama.xvg > "+s_out_folder+"/rama.csv")
+    
+    # Read the rama.xvg file and filter out lines containing @ or #, then write the first and second columns to a CSV file.
+    with open(f"{s_out_folder}/rama.xvg", "r") as infile, open(f"{s_out_folder}/rama.csv", "w") as outfile:
+        for line in infile:
+            if not line.startswith(("@", "#")):
+                columns = line.split()
+                outfile.write(f"{columns[0]},{columns[1]}\n")
 
 def dssp(s_xtc,s_gro):
     """
