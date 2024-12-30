@@ -23,7 +23,7 @@ def plot_hbonds(s_ss_file,s_ps_file,s_pp_file,s_subtitle=""):
     the last option input is a subtitle
 
     example:
-    cl.plot_hbonds("hb_ss.xvg","hb_ps.xvg","hb_pp.xvg","hello")
+    cl.plot_hbonds("analysis/hb_ss.xvg","analysis/hb_ps.xvg","analysis/hb_pp.xvg","hello")
     """
    
 

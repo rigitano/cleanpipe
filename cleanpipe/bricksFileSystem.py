@@ -25,6 +25,9 @@ def get_filename_without_extension(file_path):
     file_name, _ = os.path.splitext(file_path)
     return os.path.basename(file_name)  # os.path.basename ensures we only get the filename, not the full path
 
+def get_file_location(file_path):
+    return os.path.dirname(file_path)
+
 def check_folder(folder_path):
     # Check if the path is a valid folder
     if not os.path.isdir(folder_path):
@@ -150,3 +153,17 @@ def run_and_capture(command):
             print(f"\nCLEANPIPE MESSAGE standard error output:\n{captured_error}")
     
     return captured_output + captured_error
+
+
+def create_folder(s_folder_name):
+    """
+    Check if a folder exists, and create it if it doesn't.
+
+    Parameters:
+    folder_name (str): The name of the folder to check/create.
+    """
+    if not os.path.exists(s_folder_name):
+        os.makedirs(s_folder_name)
+        print(f"CLEANPIPE MESSAGE: Folder '{s_folder_name}' created.")
+    else:
+        print(f"CLEANPIPE MESSAGE: Folder '{s_folder_name}' already exists.")
