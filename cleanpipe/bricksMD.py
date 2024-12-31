@@ -4,7 +4,7 @@ from cleanpipe import bricksTopEdit
 import subprocess
 import os
 import functools
-from textwrap import dedent
+import multiprocessing
 
 def ensure_original_directory(func):
     """
@@ -254,7 +254,7 @@ def make_realistic(s_systemFolder,s_groups_to_monitor_separately, s_temperature)
 
 
 @ensure_original_directory
-def run_md(s_systemFolder):
+def fuck_you(s_systemFolder):
     """
     Runs molecular dynamics simulation for the given system folder.
 
@@ -275,9 +275,7 @@ def run_md(s_systemFolder):
 
     #simulation
     bricksFileSystem.run_and_capture(f"gmx grompp -f {s_mdp_folder}/prod_continuation_Vr_Cr.mdp -c ../3_NPT/npt.gro -p ../{s_topName} -o prod.tpr -maxwarn 3")
-    import multiprocessing
-    num_cores = multiprocessing.cpu_count()
-    bricksFileSystem.run_and_capture(f"gmx mdrun -v -deffnm prod -nt {num_cores}")
+    bricksFileSystem.run_and_capture(f"gmx mdrun -v -deffnm prod -nt {multiprocessing.cpu_count()}")
 
     #recenter (dont go to edges) and fit (appear to just jitter standing still)
     bricksFileSystem.run_and_capture(f"printf '1\n0' | gmx trjconv -s prod.tpr -f prod.xtc -o prod_centered.xtc -center -pbc mol")
