@@ -253,10 +253,17 @@ def make_realistic(s_systemFolder,s_groups_to_monitor_separately, s_temperature)
 
 
 
-
+def hi():
+    return 'hi'
 
 @ensure_original_directory
-def run_md(s_systemFolder,n_nanoseconds):
+def run_md(s_systemFolder):
+    """
+    Runs molecular dynamics simulation for the given system folder.
+
+    Parameters:
+    s_systemFolder (str): The folder containing the system files for the simulation.
+    """
 
 
     # setup mdp
@@ -271,17 +278,24 @@ def run_md(s_systemFolder,n_nanoseconds):
 
     #simulation
     bricksFileSystem.run_and_capture(f"gmx grompp -f {s_mdp_folder}/prod_continuation_Vr_Cr.mdp -c ../3_NPT/npt.gro -p ../{s_topName} -o prod.tpr -maxwarn 3")
-    bricksFileSystem.run_and_capture(f"gmx mdrun -v -deffnm prod -nt 8")
+    import multiprocessing
+    num_cores = multiprocessing.cpu_count()
+    bricksFileSystem.run_and_capture(f"gmx mdrun -v -deffnm prod -nt {num_cores}")
 
     #recenter (dont go to edges) and fit (appear to just jitter standing still)
     bricksFileSystem.run_and_capture(f"printf '1\n0' | gmx trjconv -s prod.tpr -f prod.xtc -o prod_centered.xtc -center -pbc mol")
     bricksFileSystem.run_and_capture(f"printf '1\n0' | gmx trjconv -s prod.tpr -f prod_centered.xtc -o prod_fitted.xtc -fit progressive")
 
+    
+    #  fool proff alternative
+    #subprocess.run(["gmx", "trjconv", "-s", "prod.tpr", "-f", "prod.xtc", "-o", "prod_centered.xtc", "-center", "-pbc", "mol"], input="1\n0\n", text=True)
+    #subprocess.run(["gmx", "trjconv", "-s", "prod.tpr", "-f", "prod_centered.xtc", "-o", "prod_fitted.xtc", "-fit", "progressive"], input="1\n0\n", text=True)
 
     os.chdir(f"..")
 
 
-
+def hello():
+    return 'hello'
 
 #def run_rome():
 

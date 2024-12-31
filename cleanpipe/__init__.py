@@ -2,7 +2,6 @@ from .algelin import *
 from .bricksAtoms import *
 from .bricksFileSystem import *
 from .bricksMD import *
-from .bricksMD import run_md
 from .bricksChem import *
 from .bricksTopEdit import *
 from .systemCreation import *
