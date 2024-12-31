@@ -253,10 +253,9 @@ def make_realistic(s_systemFolder,s_groups_to_monitor_separately, s_temperature)
 
 
 
-#def benchmark():
 
-#def benchmark_rome():
 
+@ensure_original_directory
 def run(s_systemFolder,n_nanoseconds):
 
 
@@ -281,7 +280,15 @@ def run(s_systemFolder,n_nanoseconds):
 
     os.chdir(f"..")
 
+
+
+
 #def run_rome():
+
+
+#def benchmark():
+
+#def benchmark_rome():
 
 #def run_fep():
 
