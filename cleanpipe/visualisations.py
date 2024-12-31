@@ -20,7 +20,7 @@ def visualize_molecule(s_coord):
     view.add_representation('licorice', selection='SOL', color='blue', opacity=0.2)
     view.add_representation('ball+stick', selection='CL', color='yellow', aspectRatio=10)
     view.add_representation('ball+stick', selection='NA', color='green', aspectRatio=10)
-    view
+    return view
 
 
 
@@ -33,7 +33,7 @@ def visualize_trajctory(s_xtc,s_gro):
     view.add_representation('ball+stick', selection='CL', color='yellow', aspectRatio=10)
     view.add_representation('ball+stick', selection='NA', color='green', aspectRatio=10)
     view.add_spacefill('not protein', opacity=0.1)
-    view
+    return view
 
 
 
