@@ -15,7 +15,7 @@ import mdtraj as md
 import seaborn as sns
 
 
-def visualize_molecule(s_coord):
+def visualize_coordinates(s_coord):
     view = nv.show_file(s_coord)
     view.add_representation('licorice', selection='SOL', color='blue', opacity=0.2)
     view.add_representation('ball+stick', selection='CL', color='yellow', aspectRatio=10)
@@ -24,7 +24,7 @@ def visualize_molecule(s_coord):
 
 
 
-def visualize_trajctory(s_xtc,s_gro):
+def visualize_trajectory(s_xtc,s_gro):
     trajectory  = md.load(s_xtc, top=s_gro)
     view = nv.show_mdtraj(trajectory)
     view.clear()
