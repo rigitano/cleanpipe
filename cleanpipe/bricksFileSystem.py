@@ -2,6 +2,8 @@ import os
 import subprocess
 import sys
 import select
+import platform
+import multiprocessing
 
 
 def check_extention(file_path,v_alowedExtentions):
@@ -167,3 +169,13 @@ def create_folder(s_folder_name):
         print(f"CLEANPIPE MESSAGE: Folder '{s_folder_name}' created.")
     else:
         print(f"CLEANPIPE MESSAGE: Using '{s_folder_name}' previouly created.")
+
+def diagnostics():
+    """
+    cores
+    threads
+    cluster
+    """
+    print(f"Number of processors: {multiprocessing.cpu_count()}")
+    print(f"Number of threads: {os.cpu_count()}")
+    print(f"Cluster: {platform.node()}")

@@ -1,6 +1,6 @@
 from .algelin import find_new_atom_coord
 from .bricksAtoms import add_acetyl_to_Nterminus, add_amide_to_Cterminus
-from .bricksFileSystem import check_extention, get_filename_without_extension, get_file_location, check_folder, get_all_files_with_certain_extention, get_single_gro, get_single_top, get_all_itps, delete, run_and_capture, create_folder
+from .bricksFileSystem import check_extention, get_filename_without_extension, get_file_location, check_folder, get_all_files_with_certain_extention, get_single_gro, get_single_top, get_all_itps, delete, run_and_capture, create_folder, diagnostics
 from .bricksMD import (
 	ensure_original_directory,
 	pdb2system,

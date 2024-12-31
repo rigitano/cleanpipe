@@ -4,8 +4,6 @@ from cleanpipe import bricksTopEdit
 import subprocess
 import os
 import functools
-import multiprocessing
-import platform
 
 def ensure_original_directory(func):
     """
@@ -252,15 +250,7 @@ def make_realistic(s_systemFolder,s_groups_to_monitor_separately, s_temperature)
     bricksFileSystem.run_and_capture(f"gmx mdrun -deffnm npt")
     os.chdir(f"..")
 
-def processor_diagnistics():
-    """
-    cores
-    threads
-    cluster
-    """
-    print(f"Number of processors: {multiprocessing.cpu_count()}")
-    print(f"Number of threads: {os.cpu_count()}")
-    print(f"Cluster: {platform.node()}")
+
 
 #def benchmark():
 
