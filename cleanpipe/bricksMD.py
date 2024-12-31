@@ -239,7 +239,7 @@ def make_realistic(s_systemFolder,s_groups_to_monitor_separately, s_temperature)
     #NVT equilibration
     bricksFileSystem.run_and_capture(f"mkdir 2_NVT")
     os.chdir(f"2_NVT")
-    bricksFileSystem.run_and_capture(f"gmx grompp -f {s_mdp_folder}/{s_mdpNameNVT} -c ../1_EM/em.gro -r  ../1_EM/em.gro -p ../{s_topName} -o nvt.tpr -maxwarn 3")
+    bricksFileSystem.run_and_capture(f"gmx grompp -f {s_mdp_folder}/{s_mdpNameNVT} -c ../1_EM/em.gro -r ../1_EM/em.gro -p ../{s_topName} -o nvt.tpr -maxwarn 3")
     bricksFileSystem.run_and_capture(f"gmx mdrun -deffnm nvt")
     os.chdir(f"..")
 
@@ -283,18 +283,18 @@ def production(s_systemFolder,n_nanoseconds):
     os.chdir(f"4_PROD")#go to created folder
 
     #initial simulation
-    bricksFileSystem.run_and_capture(f"gmx grompp -f {s_mdp_folder}/prod_continuation_Vr_Cr.mdp -c ../3_NPT/npt.gro -p ../{s_topName} -o prod0001ns.tpr -maxwarn 3")
-    bricksFileSystem.run_and_capture(f"gmx mdrun -deffnm prod0001ns")
+    bricksFileSystem.run_and_capture(f"gmx grompp -f {s_mdp_folder}/prod_continuation_Vr_Cr.mdp -c ../3_NPT/npt.gro -p ../{s_topName} -o prod_0001_ns.tpr -maxwarn 3")
+    bricksFileSystem.run_and_capture(f"gmx mdrun -deffnm prod_0001_ns")
 
     #extend the simulation, use the tpbconv tool to extend the .tpr file
-    bricksFileSystem.run_and_capture(f"gmx convert-tpr -s prod0001ns.tpr -extend {str(n_nanoseconds*1000-1)} -o prod{n_nanoseconds:04d}ns.tpr")
-    bricksFileSystem.run_and_capture(f"gmx mdrun -deffnm prod{n_nanoseconds:04d}ns -cpi prod0001ns.cpt")  # Continue the simulation from the checkpoint file
+    bricksFileSystem.run_and_capture(f"gmx convert-tpr -s prod_0001_ns.tpr -extend {str(n_nanoseconds*1000-1)} -o prod_{n_nanoseconds:04d}_ns.tpr")
+    bricksFileSystem.run_and_capture(f"gmx mdrun -deffnm prod_{n_nanoseconds:04d}_ns -cpi prod_0001_ns.cpt")  # Continue the simulation from the checkpoint file
 
     #xxx room for improvement in the processing configurations, for example -nt 8
 
     #recenter (dont go to edges) and fit (appear to just jitter standing still)
-    bricksFileSystem.run_and_capture(f"printf '1\n0' | gmx trjconv -s prod{n_nanoseconds:04d}ns.tpr -f prod{n_nanoseconds:04d}ns.xtc -o prod{n_nanoseconds:04d}ns_centered.xtc -center -pbc mol")
-    bricksFileSystem.run_and_capture(f"printf '1\n0' | gmx trjconv -s prod{n_nanoseconds:04d}ns.tpr -f prod{n_nanoseconds:04d}ns_centered.xtc -o prod{n_nanoseconds:04d}ns_fitted.xtc -fit progressive")
+    bricksFileSystem.run_and_capture(f"printf '1\n0' | gmx trjconv -s prod_{n_nanoseconds:04d}_ns.tpr -f prod_{n_nanoseconds:04d}_ns.xtc -o prod_{n_nanoseconds:04d}_ns_centered.xtc -center -pbc mol")
+    bricksFileSystem.run_and_capture(f"printf '1\n0' | gmx trjconv -s prod_{n_nanoseconds:04d}_ns.tpr -f prod_{n_nanoseconds:04d}_ns_centered.xtc -o prod_{n_nanoseconds:04d}_ns_fitted.xtc -fit progressive")
 
     
     #  fool proff alternative

@@ -9,9 +9,19 @@ import matplotlib.colors as mcolors
 import matplotlib.patches as mpatches
 from matplotlib.colors import BoundaryNorm
 
+import nglview as nv
+import mdtraj as md
 
 import seaborn as sns
 
+
+def visualize(s_xtc,s_gro):
+    trajectory  = md.load(s_xtc, top=s_gro)
+    view = nv.show_mdtraj(trajectory)
+    view.clear()
+    view.add_representation('ball+stick', selection='protein')
+    view.add_representation('cartoon', selection='protein')
+    view
 
 
 
