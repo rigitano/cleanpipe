@@ -6,7 +6,7 @@ from .bricksMD import (
 	pdb2system,
 	solvate_and_neutralize,
 	make_realistic,
-	fuck_you,
+	run_md_simulation,
 	hbonds,
 	sasa,
 	rama,

@@ -252,58 +252,6 @@ def make_realistic(s_systemFolder,s_groups_to_monitor_separately, s_temperature)
     os.chdir(f"..")
 
 
-
-@ensure_original_directory
-def fuck_you(s_systemFolder):
-    """
-    Runs molecular dynamics simulation for the given system folder.
-
-    Parameters:
-    s_systemFolder (str): The folder containing the system files for the simulation.
-    """
-
-
-    # setup mdp
-    s_module_folder = os.path.dirname(__file__)
-    s_mdp_folder = os.path.join(s_module_folder,"mdp")
-
-    # go inside the system folder and create 4_PROD
-    os.chdir(f"{s_systemFolder}")#change current folder to the system folder
-    s_topName = bricksFileSystem.get_single_top(".") #get top name on the system folder
-    bricksFileSystem.create_folder("4_PROD")#create folder
-    os.chdir(f"4_PROD")#go to created folder
-
-    #simulation
-    bricksFileSystem.run_and_capture(f"gmx grompp -f {s_mdp_folder}/prod_continuation_Vr_Cr.mdp -c ../3_NPT/npt.gro -p ../{s_topName} -o prod.tpr -maxwarn 3")
-    bricksFileSystem.run_and_capture(f"gmx mdrun -v -deffnm prod -nt {multiprocessing.cpu_count()}")
-
-    #recenter (dont go to edges) and fit (appear to just jitter standing still)
-    bricksFileSystem.run_and_capture(f"printf '1\n0' | gmx trjconv -s prod.tpr -f prod.xtc -o prod_centered.xtc -center -pbc mol")
-    bricksFileSystem.run_and_capture(f"printf '1\n0' | gmx trjconv -s prod.tpr -f prod_centered.xtc -o prod_fitted.xtc -fit progressive")
-
-    
-    #  fool proff alternative
-    #subprocess.run(["gmx", "trjconv", "-s", "prod.tpr", "-f", "prod.xtc", "-o", "prod_centered.xtc", "-center", "-pbc", "mol"], input="1\n0\n", text=True)
-    #subprocess.run(["gmx", "trjconv", "-s", "prod.tpr", "-f", "prod_centered.xtc", "-o", "prod_fitted.xtc", "-fit", "progressive"], input="1\n0\n", text=True)
-
-    os.chdir(f"..")
-
-
-
-#def run_rome():
-
-
-#def benchmark():
-
-#def benchmark_rome():
-
-#def run_fep():
-
-#def run_fep_rome():
-
-
-
-
 def hbonds(s_xtc,s_tpr):
     """
     it will run 3 hydrogen bond calculations: solvent, solvent, protein-solvent and protein-protein
@@ -371,3 +319,52 @@ def dssp(s_xtc,s_gro):
     s_out_folder = s_xtc_folder + '/analysis'
 
     bricksFileSystem.run_and_capture(f"gmx dssp -f {s_xtc} -s {s_gro} -o {s_out_folder}/dssp.dat -hmode dssp")
+
+    
+@ensure_original_directory
+def run_md_simulation(s_systemFolder):
+    """
+    Runs molecular dynamics simulation for the given system folder.
+
+    Parameters:
+    s_systemFolder (str): The folder containing the system files for the simulation.
+    """
+
+
+    # setup mdp
+    s_module_folder = os.path.dirname(__file__)
+    s_mdp_folder = os.path.join(s_module_folder,"mdp")
+
+    # go inside the system folder and create 4_PROD
+    os.chdir(f"{s_systemFolder}")#change current folder to the system folder
+    s_topName = bricksFileSystem.get_single_top(".") #get top name on the system folder
+    bricksFileSystem.create_folder("4_PROD")#create folder
+    os.chdir(f"4_PROD")#go to created folder
+
+    #simulation
+    bricksFileSystem.run_and_capture(f"gmx grompp -f {s_mdp_folder}/prod_continuation_Vr_Cr.mdp -c ../3_NPT/npt.gro -p ../{s_topName} -o prod.tpr -maxwarn 3")
+    bricksFileSystem.run_and_capture(f"gmx mdrun -v -deffnm prod -nt {multiprocessing.cpu_count()}")
+
+    #recenter (dont go to edges) and fit (appear to just jitter standing still)
+    bricksFileSystem.run_and_capture(f"printf '1\n0' | gmx trjconv -s prod.tpr -f prod.xtc -o prod_centered.xtc -center -pbc mol")
+    bricksFileSystem.run_and_capture(f"printf '1\n0' | gmx trjconv -s prod.tpr -f prod_centered.xtc -o prod_fitted.xtc -fit progressive")
+
+    
+    #  fool proff alternative
+    #subprocess.run(["gmx", "trjconv", "-s", "prod.tpr", "-f", "prod.xtc", "-o", "prod_centered.xtc", "-center", "-pbc", "mol"], input="1\n0\n", text=True)
+    #subprocess.run(["gmx", "trjconv", "-s", "prod.tpr", "-f", "prod_centered.xtc", "-o", "prod_fitted.xtc", "-fit", "progressive"], input="1\n0\n", text=True)
+
+    os.chdir(f"..")
+
+
+
+#def run_rome():
+
+
+#def benchmark():
+
+#def benchmark_rome():
+
+#def run_fep():
+
+#def run_fep_rome():
