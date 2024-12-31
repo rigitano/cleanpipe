@@ -4,6 +4,9 @@ import sys
 import select
 import platform
 import multiprocessing
+import psutil
+
+
 
 
 def check_extention(file_path,v_alowedExtentions):
@@ -179,3 +182,6 @@ def diagnostics():
     print(f"Number of processors: {multiprocessing.cpu_count()}")
     print(f"Number of threads: {os.cpu_count()}")
     print(f"Cluster: {platform.node()}")
+    # Get the available RAM in GB
+    free_ram_gb = psutil.virtual_memory().available / (1024**3)
+    print(f"Available RAM: {free_ram_gb:.2f} GB")
