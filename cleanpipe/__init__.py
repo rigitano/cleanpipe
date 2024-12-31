@@ -6,11 +6,11 @@ from .bricksMD import (
 	pdb2system,
 	solvate_and_neutralize,
 	make_realistic,
-	run_md_simulation,
 	hbonds,
 	sasa,
 	rama,
-	dssp
+	dssp,
+    run_md_simulation
 )
 from .bricksChem import download_and_clean_pdb, create_peptide
 from .bricksTopEdit import getMoleculeName, getSystemName, replaceWordInsideDirective, replaceMoleculeName, setSystemName, update_molecule_quantity, decompose_TOP_file_into_TOP_and_ITPs, remove_posres_inclusion, insert_text_before_directive
