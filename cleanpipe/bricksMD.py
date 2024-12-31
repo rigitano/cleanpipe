@@ -256,7 +256,7 @@ def make_realistic(s_systemFolder,s_groups_to_monitor_separately, s_temperature)
 
 
 @ensure_original_directory
-def run(s_systemFolder,n_nanoseconds):
+def run_md(s_systemFolder,n_nanoseconds):
 
 
     # setup mdp
