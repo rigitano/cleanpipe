@@ -253,9 +253,6 @@ def make_realistic(s_systemFolder,s_groups_to_monitor_separately, s_temperature)
 
 
 
-def hi():
-    return 'hi'
-
 @ensure_original_directory
 def run_md(s_systemFolder):
     """
@@ -294,8 +291,6 @@ def run_md(s_systemFolder):
     os.chdir(f"..")
 
 
-def hello():
-    return 'hello'
 
 #def run_rome():
 
