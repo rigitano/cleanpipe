@@ -23,7 +23,13 @@ def download_and_clean_pdb(s_molecule_name):
     subprocess.run(f"mv {s_molecule_name}_temp.pdb {s_molecule_name}.pdb" , shell=True, check=True)
 
 
-def create_peptide(s_outName, s_nTerminusCAP, s_aminoacids, s_cTerminusCAP, l_phi, l_psi_im1):
+def create_peptide(s_outName, s_aminoacids, l_phi, l_psi_im1, s_nTerminusCAP, s_cTerminusCAP, ):
+
+    """
+    
+    example:
+    cl.create_peptide("pepticat2.pdb","AAAAAA", [-57.8,-57.8,-57.8,-57.8,-57.8,-57.8], [-47.0,-47.0,-47.0,-47.0,-47.0,-47.0], "","" )
+    """
 
      #################################### create aminoacid chain ###################################
 

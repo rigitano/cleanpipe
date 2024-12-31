@@ -16,6 +16,13 @@ import seaborn as sns
 
 
 def visualize_coordinates(s_coord):
+    """
+    
+    example:
+    cl.visualize_coordinates("pepticat.pdb")
+    """
+
+
     view = nv.show_file(s_coord)
     view.add_representation('licorice', selection='SOL', color='blue', opacity=0.2)
     view.add_representation('ball+stick', selection='CL', color='yellow', aspectRatio=10)
@@ -25,6 +32,11 @@ def visualize_coordinates(s_coord):
 
 
 def visualize_trajectory(s_xtc,s_gro):
+    """
+    
+    example:
+    cl.visualize_trajectory("pepticat2_in_water/3_NPT/npt.trr","pepticat2_in_water/2_NVT/nvt.gro")
+    """
     trajectory  = md.load(s_xtc, top=s_gro)
     view = nv.show_mdtraj(trajectory)
     view.clear()
