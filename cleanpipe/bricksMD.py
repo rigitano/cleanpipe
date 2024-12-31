@@ -293,18 +293,18 @@ def production(s_systemFolder,n_nanoseconds):
     os.chdir(f"4_PROD")#go to created folder
 
     #initial simulation
-    bricksFileSystem.run_and_capture(f"gmx grompp -f {s_mdp_folder}/prod_continuation_Vr_Cr.mdp -c ../3_NPT/npt.gro -p ../{s_topName} -o prod_0000to0001.tpr -maxwarn 3")
-    bricksFileSystem.run_and_capture(f"gmx mdrun -v -deffnm prod_0000to0001")
+    bricksFileSystem.run_and_capture(f"gmx grompp -f {s_mdp_folder}/prod_continuation_Vr_Cr.mdp -c ../3_NPT/npt.gro -p ../{s_topName} -o prod0001ns.tpr -maxwarn 3")
+    bricksFileSystem.run_and_capture(f"gmx mdrun -deffnm prod0001ns")
 
     #extend the simulation, use the tpbconv tool to extend the .tpr file
-    bricksFileSystem.run_and_capture(f"gmx convert-tpr -s prod_0000to0001.tpr -extend {str(n_nanoseconds*1000-1)} -o prod_0001to{n_nanoseconds:04d}.tpr")
-    bricksFileSystem.run_and_capture(f"gmx mdrun -v -deffnm prod_0001to{n_nanoseconds:04d} -cpi prod_0000to0001.cpt")  # Continue the simulation from the checkpoint file
+    bricksFileSystem.run_and_capture(f"gmx convert-tpr -s prod0001ns.tpr -extend {str(n_nanoseconds*1000-1)} -o prod{n_nanoseconds:04d}ns.tpr")
+    bricksFileSystem.run_and_capture(f"gmx mdrun -deffnm prod{n_nanoseconds:04d}ns -cpi prod0001ns.cpt")  # Continue the simulation from the checkpoint file
 
     #xxx room for improvement in the processing configurations, for example -nt 8
 
     #recenter (dont go to edges) and fit (appear to just jitter standing still)
-    bricksFileSystem.run_and_capture(f"printf '1\n0' | gmx trjconv -s prod.tpr -f prod.xtc -o prod_centered.xtc -center -pbc mol")
-    bricksFileSystem.run_and_capture(f"printf '1\n0' | gmx trjconv -s prod.tpr -f prod_centered.xtc -o prod_fitted.xtc -fit progressive")
+    bricksFileSystem.run_and_capture(f"printf '1\n0' | gmx trjconv -s prod{n_nanoseconds:04d}ns.tpr -f prod{n_nanoseconds:04d}ns.xtc -o prod{n_nanoseconds:04d}ns_centered.xtc -center -pbc mol")
+    bricksFileSystem.run_and_capture(f"printf '1\n0' | gmx trjconv -s prod{n_nanoseconds:04d}ns.tpr -f prod{n_nanoseconds:04d}ns_centered.xtc -o prod{n_nanoseconds:04d}ns_fitted.xtc -fit progressive")
 
     
     #  fool proff alternative
