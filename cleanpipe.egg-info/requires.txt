@@ -1,0 +1,11 @@
+PeptideBuilder
+Bio
+Geometry
+mdtraj
+pandas
+numpy
+requests
+matplotlib
+seaborn
+MDAnalysis
+nglview

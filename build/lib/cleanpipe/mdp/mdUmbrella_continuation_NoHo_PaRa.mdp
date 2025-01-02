@@ -1,0 +1,81 @@
+
+Integrator              = 	md
+nsteps                  =	250000
+dt                      =	0.002
+tinit                   =   0
+nstcomm                 =   10
+
+
+; output control	
+; TRR	
+nstxout                 = 	0
+nstvout                 = 	0
+nstfout                 = 	0
+; EDR	
+nstenergy               = 	5000
+; XTC
+nstxout-compressed      =   5000
+compressed-x-grps       =   System 
+
+;box configuration	
+pbc                     = 	xyz
+
+
+; Bond parameters	
+define                  =   -DPOSRES_B ; chain A will move, I want chain B to stand still
+constraint_algorithm    = 	lincs
+constraints             = 	all-bonds
+lincs_iter              = 	1
+lincs_order             = 	4
+
+; non bonded neigbour interactions	
+nstlist                 = 	20
+cutoff-scheme           = 	Verlet
+ns_type                 = 	grid
+	
+coulombtype             = 	PME
+pme_order               = 	4
+fourierspacing          = 	0.12
+rcoulomb                = 	1.4
+	
+rvdw                    = 	1.4
+DispCorr                = 	EnerPres
+
+
+; Gereral dynamic setup
+continuation            = 	yes
+gen_vel                 = 	no
+
+; Temperature coupling	
+tcoupl                  = 	Nose-Hoover 
+tc-grps                 = 	Protein Non-Protein
+tau_t                   = 	1     1
+ref_t                   = 	310     310
+
+; Pressure coupling	
+pcoupl                  = 	Parrinello-Rahman
+pcoupltype              = 	isotropic
+tau_p                   = 	1.0
+ref_p                   = 	1.0
+compressibility         = 	4.5e-5
+refcoord_scaling        = 	com
+
+
+
+; put my hands inside the simulation
+pull                    = 	yes
+pull_ncoords            = 	1
+pull_ngroups            = 	2
+	
+pull_group1_name        = 	Chain_A
+pull_group2_name        = 	Chain_B
+	
+pull_coord1_type        = 	umbrella
+pull_coord1_geometry    = 	distance
+pull_coord1_dim         = 	N N Y
+pull_coord1_groups      = 	1 2
+pull_coord1_start       = 	yes
+	
+pull_coord1_rate        = 	0.00 ; this is the parameter that diferentiantes an "umbrella sampling" from a "pull"
+pull_coord1_k           = 	1000
+

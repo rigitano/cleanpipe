@@ -1,0 +1,15 @@
+
+;box configuration	
+pbc            = xyz
+	
+; non bonded neigbour interactions	
+nstlist	       = 1
+cutoff-scheme  = Verlet
+ns_type        = grid
+	
+coulombtype	   = cutoff
+rcoulomb       = 1.0
+	
+rvdw           = 1.0
+
+

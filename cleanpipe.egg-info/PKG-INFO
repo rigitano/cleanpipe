@@ -1,0 +1,18 @@
+Metadata-Version: 2.1
+Name: cleanpipe
+Version: 0.1
+Summary: A custom package for clean code
+Home-page: https://github.com/rigitano/cleanpipe
+Author: Henrique Rigitano
+Author-email: henrique.rigitano@gmail.com
+Requires-Dist: PeptideBuilder
+Requires-Dist: Bio
+Requires-Dist: Geometry
+Requires-Dist: mdtraj
+Requires-Dist: pandas
+Requires-Dist: numpy
+Requires-Dist: requests
+Requires-Dist: matplotlib
+Requires-Dist: seaborn
+Requires-Dist: MDAnalysis
+Requires-Dist: nglview
