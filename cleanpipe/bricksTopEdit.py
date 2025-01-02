@@ -2,6 +2,7 @@ import os
 import subprocess
 import re
 from cleanpipe import bricksFileSystem
+from cleanpipe import bricksStorage
 
 def getMoleculeName(top_file_path, order=1):
     """
@@ -295,3 +296,30 @@ def insert_text_before_directive(s_file_path, s_text_to_insert, s_directive):
                 file.write(s_text_to_insert + '\n')
             file.write(line)
      
+
+def get_two_columns_in_directives(s_top_file,s_directive_name, n_col1, n_col2):
+    """
+    directives like [ bonds] [ angles ] [ pairs ] etc have several columns, 
+    this function returns a list with the values of two of those columns 
+    this will be usefull to find the atoms in the tips of a cilinder to show that they are bonded or constrained
+    the outut is a list of tuples. iach item in the list comes from a line. each item in the tuple comes from a column. 
+    here is an example [(1,2),(2,3)]
+    
+
+    """
+    listOfTuples = []
+    with open(s_top_file, 'r') as file:
+        lines = file.readlines()
+        inside_constraints = False
+        for line in lines:
+            if line.strip() == s_directive_name:
+                inside_constraints = True
+                continue
+            if inside_constraints:
+                if line.startswith('['):
+                    break
+                parts_of_line = line.split()
+                if len(parts_of_line) >= 2 and parts_of_line[0][0] != ";":
+                    listOfTuples.append((int(parts_of_line[n_col1]), int(parts_of_line[n_col1])))
+                    #print(f"{int(parts[0])}-{int(parts[1])}") 
+    return listOfTuples
