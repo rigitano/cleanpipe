@@ -1,3 +1,4 @@
+from .bricksStorage import *
 from .algelin import *
 from .bricksAtoms import *
 from .bricksFileSystem import *
