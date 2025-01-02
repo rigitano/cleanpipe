@@ -375,7 +375,7 @@ def open_vmd_with_socket():
 
     try:
         # Call VMD with the temporary script
-        subprocess.run(["vmd", "-e", temp_script_path], check=True)
+        subprocess.run(["C:\\Program Files\\VMD\\vmd", "-e", temp_script_path], check=True)
     finally:
         # Ensure the temporary file is deleted
         if os.path.exists(temp_script_path):
