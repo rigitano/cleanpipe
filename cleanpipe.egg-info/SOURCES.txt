@@ -4,6 +4,7 @@ cleanpipe/algelin.py
 cleanpipe/bricksAtoms.py
 cleanpipe/bricksChem.py
 cleanpipe/bricksFileSystem.py
+cleanpipe/bricksGroEdit.py
 cleanpipe/bricksMD.py
 cleanpipe/bricksStorage.py
 cleanpipe/bricksTopEdit.py

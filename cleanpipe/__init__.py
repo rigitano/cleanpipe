@@ -5,6 +5,7 @@ from .bricksFileSystem import *
 from .bricksMD import *
 from .bricksChem import *
 from .bricksTopEdit import *
+from .bricksGroEdit import *
 from .systemCreation import *
 from .visualisations import *
 

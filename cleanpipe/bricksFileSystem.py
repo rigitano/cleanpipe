@@ -185,3 +185,28 @@ def diagnostics():
     # Get the available RAM in GB
     free_ram_gb = psutil.virtual_memory().available / (1024**3)
     print(f"Available RAM: {free_ram_gb:.2f} GB")
+
+
+def concatenate_files(s_file1, s_file2, s_out_file):
+    """
+    this have the same result as the bas code:
+    cat a.txt b.txt > out.txt
+
+
+    #example
+    cl.concatenate_files('a.txt', 'b.txt', 'out.top')   
+    
+    """
+
+
+    with open(s_out_file, 'w') as outfile:
+        # Write the content of file1 to the output file
+        with open(s_file1, 'r') as infile1:
+            outfile.write(infile1.read())
+    
+    with open(s_out_file, 'a') as outfile:
+        # Append the content of file2 to the output file
+        with open(s_file2, 'r') as infile2:
+            outfile.write(infile2.read())
+
+

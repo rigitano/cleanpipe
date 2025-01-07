@@ -431,7 +431,8 @@ def open_vmd_with_socket2():
     finally:
         # Ensure the temporary file is deleted
         if os.path.exists(temp_script_path):
-            os.remove(temp_script_path)
+            #os.remove(temp_script_path)
+            print("ok")
 
 
 
@@ -439,10 +440,16 @@ def send_command_to_vmd(s_command):
     """"
     xxx this should be used in the app
 
+
+    ex: 
+    cl.send_command_to_vmd("graphics top cylinder {0 0 0} {10 10 10} radius 0.1") # this command creates a cilinder: 
     """
 
+    print("CLEAN PIPE command sent to vmd:\n" + s_command)
+
+    send_command_to_vmd
     with socket.create_connection(("localhost", 5555)) as sock:
-        command = "graphics top cylinder {0 0 0} {10 10 10} radius 0.1"
+        command = s_command 
         sock.sendall(command.encode('utf-8') + b'\n')
         response = sock.recv(1024)
         print("Response:", response.decode('utf-8'))

@@ -134,3 +134,41 @@ def void2peptide_in_solvent(s_peptideName, s_systemName, s_nTerminusCAP, s_amino
 
     # set the the name of the system in the top file 
     bricksTopEdit.setSystemName(f"{s_systemName}/{s_systemName}.top", f"{s_systemName} (custom peptide, insterted in solution made using {s_solvent})" )
+
+
+def create_lipid_cylinder(lipidsList, s_radius, s_thickness, s_box, s_outSysName, s_ff_location):
+    """
+
+    example:
+    cl.create_lipid_cylinder([[DOPC,0.98,0.98,0.68],[TO,0.02,0.02,0.68]], s_radius= "18", s_thickness="2", s_box="75 50 75", s_outSysName="hiout", "/home/bioinformatician/repositories/lipid_sorting/TS2CG-Setup-Pipeline/top/Martini3+NLs.LIB") 
+    
+    """
+
+
+    bricksFileSystem.run_and_capture(f"mkdir {s_outSysName}")
+    s_outPathAndName = f"{s_outSysName}/{s_outSysName}"
+
+    description_content = f"""
+[Lipids List]
+Domain 0
+{lipidsList[0][0]}     {lipidsList[0][1]}     {lipidsList[0][2]}     {lipidsList[0][3]}
+{lipidsList[1][0]}     {lipidsList[1][1]}     {lipidsList[1][2]}     {lipidsList[1][3]}
+End
+
+[Shape Data]
+ShapeType Cylinder
+Radius {s_radius}
+Thickness {s_thickness}
+Box {s_box}
+End
+    """
+
+    # Save the description content to a temporary file
+    with open("description.str", "w") as temp_file:
+        temp_file.write(description_content)
+
+    s_tool = "/home/bioinformatician/repositories/lipid_sorting/TS2CG-Setup-Pipeline/PCG"
+    bricksFileSystem.run_and_capture(f"{s_tool} -str description.str -Bondlength 0.2 -LLIB {s_ff_location} -function analytical_shape -defout {s_outPathAndName}")
+
+    # Delete the temporary file
+    #bricksFileSystem.delete("description.str")

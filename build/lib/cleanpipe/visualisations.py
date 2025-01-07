@@ -7,6 +7,7 @@ import subprocess
 import tempfile
 import os
 
+
 import matplotlib.pyplot as plt
 from matplotlib.ticker import ScalarFormatter, LogLocator
 import matplotlib.colors as mcolors
@@ -382,14 +383,73 @@ def open_vmd_with_socket():
             os.remove(temp_script_path)
 
 
+
+
+
+
+def open_vmd_with_socket2():
+    """
+    Launches VMD with a Tcl script for a socket server without blocking the Jupyter cell.
+    """
+
+    # Define the Tcl script as a string
+    tcl_script = """
+    proc start_server {port} {
+        set server [socket -server handle_connection $port]
+        puts "Server started on port $port"
+        return $server
+    }
+
+    proc handle_connection {sock addr port} {
+        puts "Connection from $addr:$port"
+        fconfigure $sock -buffering line
+        while {[gets $sock line] >= 0} {
+            puts "Received command: $line"
+            catch {eval $line} result
+            puts $sock $result
+            flush $sock
+        }
+        close $sock
+    }
+
+    start_server 5555
+    """
+
+    # Create a temporary file for the script
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".tcl") as temp_script:
+        temp_script.write(tcl_script.encode('utf-8'))
+        temp_script_path = temp_script.name
+
+    try:
+        # Call VMD with the temporary script in a separate process
+        subprocess.Popen(
+            ["C:\\Program Files\\VMD\\vmd", "-e", temp_script_path],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            close_fds=True
+        )
+    finally:
+        # Ensure the temporary file is deleted
+        if os.path.exists(temp_script_path):
+            #os.remove(temp_script_path)
+            print("ok")
+
+
+
 def send_command_to_vmd(s_command):
     """"
     xxx this should be used in the app
 
+
+    ex: 
+    cl.send_command_to_vmd("graphics top cylinder {0 0 0} {10 10 10} radius 0.1") # this command creates a cilinder: 
     """
 
+    print("CLEAN PIPE command sent to vmd:\n" + s_command)
+
+    send_command_to_vmd
     with socket.create_connection(("localhost", 5555)) as sock:
-        command = "graphics top cylinder {0 0 0} {10 10 10} radius 0.1"
+        command = s_command 
         sock.sendall(command.encode('utf-8') + b'\n')
         response = sock.recv(1024)
         print("Response:", response.decode('utf-8'))
