@@ -6,6 +6,7 @@ from cleanpipe import bricksMD
 import subprocess
 import re
 import sys
+import os
 
 
 
@@ -140,19 +141,25 @@ def create_lipid_cylinder(lipidsList, s_radius, s_thickness, s_box, s_outSysName
     """
 
     example:
-    cl.create_lipid_cylinder([[DOPC,0.98,0.98,0.68],[TO,0.02,0.02,0.68]], s_radius= "18", s_thickness="2", s_box="75 50 75", s_outSysName="hiout", "/home/bioinformatician/repositories/lipid_sorting/TS2CG-Setup-Pipeline/top/Martini3+NLs.LIB") 
-    
+    cl.create_lipid_cylinder([["DOPC","0.98","0.98","0.68"],["TO","0.02","0.02","0.68"]], s_radius= "18", s_thickness="2", s_box="50 50 50", s_outSysName="hiout", s_ff_location="/home/bioinformatician/repositories/lipid_sorting/TS2CG-Setup-Pipeline/top/Martini3+NLs.LIB")    
     """
 
-
+    # Create a folder to store the output system
     bricksFileSystem.run_and_capture(f"mkdir {s_outSysName}")
     s_outPathAndName = f"{s_outSysName}/{s_outSysName}"
+
+    #copy the forcefiled to the system folder, and uptate the forcefield location
+    bricksFileSystem.run_and_capture(f"cp -r \"{s_ff_location}\" \"{s_outSysName}\"")
+    s_ff_location = os.path.basename(s_ff_location)
+    s_ff_location = f"{s_outSysName}/{s_ff_location}"
+
+    # Read the lipids list and format it so it can be pasted in the description file
+    lipids_list_ready_to_paste = "\n".join(["     ".join(map(str, lipid)) for lipid in lipidsList])
 
     description_content = f"""
 [Lipids List]
 Domain 0
-{lipidsList[0][0]}     {lipidsList[0][1]}     {lipidsList[0][2]}     {lipidsList[0][3]}
-{lipidsList[1][0]}     {lipidsList[1][1]}     {lipidsList[1][2]}     {lipidsList[1][3]}
+{lipids_list_ready_to_paste}
 End
 
 [Shape Data]
