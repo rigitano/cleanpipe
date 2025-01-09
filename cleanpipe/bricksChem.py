@@ -126,25 +126,38 @@ def insert_new_molecule_into_pdb(input_pdb_file, output_pdb_file, new_molecule_a
 
 
     for current_atom in new_molecule_atoms:
+
+        #get residue name and ensure that it is at most 3 characters to fit PDB conventions
         residue_name = current_atom['residue_name']
+        residue_name = residue_name.ljust(3)[:3] 
 
-        # Ensure that residue_name is at most 3 characters to fit PDB conventions
-        residue_name = residue_name.ljust(3)[:3]
-
-  
         # Determine if the residue is a heteroatom based on its name
         isHeteroatom = residue_name not in ['ALA', 'CYS', 'ASP', 'GLU', 'PHE', 'GLY', 'HIS', 'ILE', 'LYS', 'LEU', 'MET', 'ASN', 'PRO', 'GLN', 'ARG', 'SER', 'THR', 'VAL', 'TRP', 'TYR']
 
-        #define residue info (het_flag, resseq, icode)
-        if isHeteroatom:
-            residue_id = ('H_', int(current_atom['residue_id']), ' ')  
+        #check if the residue is alrealdy defined before
+        #if not, add it to the chain
+        #if yes, get the residue id
+        # Check if the residue is already defined
+        existing_residue = new_chain.get_residue(residue_id)
+        if existing_residue is None:
+            # Create and add a new residue
+
+            #define residue info (het_flag, resseq, icode)
+            if isHeteroatom:
+                residue_id = ('H_', int(current_atom['residue_id']), ' ')  
+            else:
+                residue_id = (' ', int(current_atom['residue_id']), ' ')
+
+            #create and add residue
+            residue = Residue.Residue(residue_id, residue_name, '')
+            new_chain.add(residue)
         else:
-            residue_id = (' ', int(current_atom['residue_id']), ' ')
+            residue = existing_residue
 
 
-        # Create and add a new residue
-        residue = Residue.Residue(residue_id, residue_name, '')
-        new_chain.add(residue)
+
+
+
 
         # Ensure atom name is 4 characters (padded or truncated)
         structural_name = f"{current_atom['structural_name']:<4}"
