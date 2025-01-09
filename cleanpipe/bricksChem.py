@@ -134,15 +134,18 @@ def insert_new_molecule_into_pdb(input_pdb_file, output_pdb_file, new_molecule_a
         # Determine if the residue is a heteroatom based on its name
         isHeteroatom = residue_name not in ['ALA', 'CYS', 'ASP', 'GLU', 'PHE', 'GLY', 'HIS', 'ILE', 'LYS', 'LEU', 'MET', 'ASN', 'PRO', 'GLN', 'ARG', 'SER', 'THR', 'VAL', 'TRP', 'TYR']
 
-        #check if the residue is alrealdy defined before
+        #check if the residue is already defined before
         #if not, add it to the chain
         #if yes, get the residue id
         # Check if the residue is already defined
         existing_residue = None
         for residue in new_chain.get_residues():
-            if residue.id == current_atom['residue_id']:
+            if residue.id[1] == current_atom['residue_id']:
+                print(f"Residue {residue.id} already exists")
                 existing_residue = residue
                 break
+
+
         if existing_residue is None:
             # Create and add a new residue
 
@@ -185,6 +188,7 @@ def insert_new_molecule_into_pdb(input_pdb_file, output_pdb_file, new_molecule_a
 
         # Increment residue ID for the next residue
         current_serial_number += 1
+        # Increment residue ID for the next residue
 
     # Write the modified structure to the output file
     io = PDBIO()
