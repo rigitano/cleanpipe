@@ -76,7 +76,7 @@ def create_peptide(s_outName, s_aminoacids, l_phi, l_psi_im1, s_nTerminusCAP, s_
 from Bio.PDB import PDBParser, PDBIO, Atom, Residue, Chain, Model, Structure
 import numpy as np
 
-def insert_new_molecule_into_pdb(input_pdb_file, output_pdb_file, new_molecule_atoms, new_chain_id='Z'):
+def insert_new_molecule_into_pdb(input_pdb_file, output_pdb_file, new_molecule_atoms, isHeteroatom = False, new_chain_id='Z'):
     """
     Insert a new molecule into a pre-existing PDB file as a new chain.
 
@@ -111,7 +111,8 @@ def insert_new_molecule_into_pdb(input_pdb_file, output_pdb_file, new_molecule_a
     model = structure[0] if len(structure) > 0 else Model.Model(0)
 
     # Add a new chain for the molecule
-    new_chain = Chain.Chain(new_chain_id)
+
+    new_chain = Chain.Chain(new_chain_id[0])#assure its a single character, so it will be the first of the given string
     model.add(new_chain)
 
     # Determine the maximum residue ID in the whole structure to avoid collisions
@@ -130,13 +131,11 @@ def insert_new_molecule_into_pdb(input_pdb_file, output_pdb_file, new_molecule_a
         residue_name = residue_name[:3] if len(residue_name) > 3 else residue_name
 
         # Automatically assign residue IDs sequentially
-        residue_id = (' ', int(current_residue_id), ' ')  # (het_flag, resseq, icode)
+        if isHeteroatom:
+            residue_id = ('H_', int(current_residue_id), ' ')  # (het_flag, resseq, icode)
+        else:
+            residue_id = (' ', int(current_residue_id), ' ')  # (het_flag, resseq, icode)
 
-        # Ensure that the het_flag and icode are single characters
-        het_flag = residue_id[0] if isinstance(residue_id[0], str) and len(residue_id[0]) == 1 else ' '
-        icode = residue_id[2] if isinstance(residue_id[2], str) and len(residue_id[2]) == 1 else ' '
-
-        residue_id = (het_flag, int(current_residue_id), icode)
 
         # Create and add a new residue
         residue = Residue.Residue(residue_id, residue_name, ' ')
@@ -155,6 +154,7 @@ def insert_new_molecule_into_pdb(input_pdb_file, output_pdb_file, new_molecule_a
             atom_name,  # Full atom name
             int(current_serial_number)  # Automatically assigned serial number
         )
+        print(atom)
 
         # Add atom to the residue
         residue.add(atom)
@@ -246,7 +246,7 @@ def add_truss2(s_pdb_file, p1, p2):
     new_molecule_atoms = []
     for i in range(len(vertices)):
         new_molecule_atoms.append({'name': f"X{i}", 'position': vertices[i], 'residue_name': 'TRS'})#example: {'name': 'X1', 'position': [15.0, 12.3, 10.7], 'residue_name': 'TRS'}
-        print(new_molecule_atoms)
+        #print(new_molecule_atoms)
 
     #at last, we insert the new molecule in the pdb
     insert_new_molecule_into_pdb(s_pdb_file, "hahaha.pdb", new_molecule_atoms, new_chain_id='T')
