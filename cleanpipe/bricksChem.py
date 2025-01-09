@@ -147,14 +147,13 @@ def insert_new_molecule_into_pdb(input_pdb_file, output_pdb_file, new_molecule_a
 
         # Create new atom
         atom = Atom.Atom(
-            atom_name,  # Atom name (e.g., 'C1', 'N1', 'O1')
-            tuple(atom_info['position']),  # Coordinates as a tuple (x, y, z)
+            str(atom_name).strip(),  # Atom name (e.g., 'C1', 'N1', 'O1')
+            tuple(['position']),  # Coordinates as a tuple (x, y, z)
             1.0,  # B-factor (optional, default 1.0)
             1.0,  # Occupancy (optional, default 1.0)
             '',  # Alternate location indicator
             atom_name,  # Full atom name
-            element=atom_name[0].upper() if atom_name[0].isalpha() else 'X',  # Guess element or default to 'X'
-            serial_number=current_serial_number  # Automatically assigned serial number
+            int(current_serial_number)  # Automatically assigned serial number
         )
 
         # Add atom to the residue
