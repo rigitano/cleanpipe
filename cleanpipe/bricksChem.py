@@ -148,7 +148,7 @@ def insert_new_molecule_into_pdb(input_pdb_file, output_pdb_file, new_molecule_a
         # Create new atom
         atom = Atom.Atom(
             str(atom_name).strip(),  # Atom name (e.g., 'C1', 'N1', 'O1')
-            tuple(['position']),  # Coordinates as a tuple (x, y, z)
+            tuple(atom_info['position']),  # Coordinates as a tuple (x, y, z)
             1.0,  # B-factor (optional, default 1.0)
             1.0,  # Occupancy (optional, default 1.0)
             '',  # Alternate location indicator
