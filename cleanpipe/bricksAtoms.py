@@ -1,7 +1,11 @@
 from cleanpipe import algelin
 import Bio
+from Bio.PDB import PDBParser, PDBIO
+import numpy as np
+import PeptideBuilder
+import Geometry
 
-
+# xxx change name to bricksPeptide
 
 def add_acetyl_to_Nterminus(peptide):
     
@@ -77,3 +81,100 @@ def add_amide_to_Cterminus(peptide):
 
     # Insert the NME residue
     chain.add(nme_residue)
+
+
+
+
+
+
+
+
+
+def add_truss(peptide, p1, p2):
+    """
+
+    vertices, edges = add_truss(peptide,[0, 0, 0], [1, 1, 1])
+    print(vertices)
+    print(edges)
+    """
+
+    #define the number of equidistant points between the atips, and the size of the square
+    n = 6
+    square_size = 6
+
+    # Calculate the direction vector and the step size
+    direction = np.array(p2, dtype=float) - np.array(p1, dtype=float)
+    step = direction / (n + 1)
+    
+    # Normalize the direction vector
+    direction = direction / np.linalg.norm(direction)
+    
+    # Generate the equidistant points
+    points = [np.array(p1, dtype=float) + i * step for i in range(n + 2)]
+    
+    # Calculate two perpendicular vectors to the direction
+    if direction[0] != 0 or direction[1] != 0:
+        perp_vector1 = np.cross(direction, [0, 0, 1])
+    else:
+        perp_vector1 = np.cross(direction, [0, 1, 0])
+    perp_vector1 = perp_vector1 / np.linalg.norm(perp_vector1)
+    perp_vector2 = np.cross(direction, perp_vector1)
+    
+    # Generate the squares
+    squares = []
+    for point in points:
+        # Create the square's vertices centered at the point
+        square_vertices = []
+        for dx, dy in [(-1, -1), (1, -1), (1, 1), (-1, 1)]:
+            vertex = point + (dx * square_size / 2) * perp_vector1 + (dy * square_size / 2) * perp_vector2
+            square_vertices.append(vertex)
+        squares.append(square_vertices)
+    
+    # Collect vertices and edges
+    vertices = []
+    edges = []
+    
+    # Flatten the list of squares and generate vertices
+    for square in squares:
+        for vertex in square:
+            vertices.append(vertex.tolist())
+    
+    # Generate edges within each square and between consecutive squares
+    num_vertices_per_square = 4
+    for i in range(len(squares)):
+        # Edges within the square
+        for j in range(num_vertices_per_square):
+            edges.append([i * num_vertices_per_square + j, i * num_vertices_per_square + (j + 1) % num_vertices_per_square])
+        
+        # Edges between consecutive squares
+        if i < len(squares) - 1:
+            for j in range(num_vertices_per_square):
+                for k in range(num_vertices_per_square):
+                    edges.append([i * num_vertices_per_square + j, (i + 1) * num_vertices_per_square + k])
+    
+    # Calculate distances for each edge
+    distances = []
+    for edge in edges:
+        v1 = np.array(vertices[edge[0]])
+        v2 = np.array(vertices[edge[1]])
+        distance = np.linalg.norm(v1 - v2)
+        truncated_distance = int(distance * 1000) / 1000.0 #make it 3 decimal
+        distances.append((edge[0], edge[1], truncated_distance))
+
+
+
+
+
+    #add all that truss to the fisrt residue of the peptide
+    chain = peptide[0]['A']
+    l_residues = list(chain.get_residues())
+    residue1 = l_residues[1]
+
+    idvert = 1
+    for vertice in vertices:
+        residue1.add(Bio.PDB.Atom.Atom("X"+str(idvert), vertice, 0.0, 1.0, ' ', "X"+str(idvert), 100+idvert, ''))
+        idvert += 1
+
+
+    #in addition to the inplace modification of the peptide object, I will return the vertices and the distances
+    return vertices, distances
