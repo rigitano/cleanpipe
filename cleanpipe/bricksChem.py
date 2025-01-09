@@ -76,7 +76,7 @@ def create_peptide(s_outName, s_aminoacids, l_phi, l_psi_im1, s_nTerminusCAP, s_
 from Bio.PDB import PDBParser, PDBIO, Atom, Residue, Chain, Model, Structure
 import numpy as np
 
-def insert_new_molecule_into_pdb(input_pdb_file, output_pdb_file, new_molecule_atoms, isHeteroatom = False, new_chain_id='Z'):
+def insert_new_molecule_into_pdb(input_pdb_file, output_pdb_file, new_molecule_atoms):
     """
     Insert a new molecule into a pre-existing PDB file as a new chain.
 
@@ -84,15 +84,12 @@ def insert_new_molecule_into_pdb(input_pdb_file, output_pdb_file, new_molecule_a
         input_pdb_file (str): Path to the input PDB file.
         output_pdb_file (str): Path to save the modified PDB file.
         new_molecule_atoms (list of dict): Each dict contains 'name', 'position', and 'residue_name'.
-        new_chain_id (str): The ID of the new chain to create.
-
-
 
     # Example 
     new_molecule_atoms = [
-        {'name': 'C1', 'position': [15.0, 12.3, 10.7], 'residue_name': 'X01'},
-        {'name': 'N1', 'position': [15.5, 13.0, 11.2], 'residue_name': 'X01'},
-        {'name': 'O1', 'position': [16.0, 14.0, 12.1], 'residue_name': 'X02'},
+        {'name': 'C1', 'position': [15.0, 12.3, 10.7], 'residue_name': 'ALA'},
+        {'name': 'N1', 'position': [15.5, 13.0, 11.2], 'residue_name': 'ALA'},
+        {'name': 'O1', 'position': [16.0, 14.0, 12.1], 'residue_name': 'ALA'},
         {'name': 'H1', 'position': [14.5, 11.5, 9.9], 'residue_name': 'H2O'}
     ]
 
@@ -100,7 +97,6 @@ def insert_new_molecule_into_pdb(input_pdb_file, output_pdb_file, new_molecule_a
     """
 
     print("IN FUNCTION insert_new_molecule_into_pdb")
-    print(f"Inserting new molecule into PDB file {input_pdb_file} as chain {new_chain_id}")
     print(new_molecule_atoms)
 
     # Parse the existing PDB structure
@@ -110,9 +106,16 @@ def insert_new_molecule_into_pdb(input_pdb_file, output_pdb_file, new_molecule_a
     # Get the first model or create a new one if needed
     model = structure[0] if len(structure) > 0 else Model.Model(0)
 
-    # Add a new chain for the molecule
+    # Determine existing chain IDs to avoid collisions
+    existing_chain_ids = {chain.id for chain in model.get_chains()}
 
-    new_chain = Chain.Chain(new_chain_id[0])#assure its a single character, so it will be the first of the given string
+    # Determine the chain ID for the new molecule
+    new_chain_id = next((char for char in string.ascii_uppercase if char not in existing_chain_ids), None)
+    if new_chain_id is None:
+        raise ValueError("No unique chain ID available.")
+
+    # Add a new chain for the molecule
+    new_chain = Chain.Chain(new_chain_id)
     model.add(new_chain)
 
     # Determine the maximum residue ID in the whole structure to avoid collisions
@@ -131,10 +134,17 @@ def insert_new_molecule_into_pdb(input_pdb_file, output_pdb_file, new_molecule_a
         residue_name = residue_name[:3] if len(residue_name) > 3 else residue_name
 
         # Automatically assign residue IDs sequentially
+
+
+
+        # Determine if the residue is a heteroatom based on its name
+        isHeteroatom = residue_name not in ['ALA', 'CYS', 'ASP', 'GLU', 'PHE', 'GLY', 'HIS', 'ILE', 'LYS', 'LEU', 'MET', 'ASN', 'PRO', 'GLN', 'ARG', 'SER', 'THR', 'VAL', 'TRP', 'TYR']
+
+        #define residue info (het_flag, resseq, icode)
         if isHeteroatom:
-            residue_id = ('H_', int(current_residue_id), ' ')  # (het_flag, resseq, icode)
+            residue_id = ('H_', int(current_residue_id), ' ')  
         else:
-            residue_id = (' ', int(current_residue_id), ' ')  # (het_flag, resseq, icode)
+            residue_id = (' ', int(current_residue_id), ' ')
 
 
         # Create and add a new residue
@@ -146,15 +156,15 @@ def insert_new_molecule_into_pdb(input_pdb_file, output_pdb_file, new_molecule_a
 
         # Create new atom
         atom = Atom.Atom(
-            str(atom_name).strip(),  # Atom name (e.g., 'C1', 'N1', 'O1')
-            tuple(atom_info['position']),  # Coordinates as a tuple (x, y, z)
-            1.0,  # B-factor (optional, default 1.0)
-            1.0,  # Occupancy (optional, default 1.0)
-            '',  # Alternate location indicator
-            atom_name,  # Full atom name
-            int(current_serial_number)  # Automatically assigned serial number
+            name=str(atom_name).strip(),  # Atom name (e.g., 'C1', 'N1', 'O1')
+            coord=np.array(atom_info['position'], dtype=float),  # Coordinates as a numpy array
+            bfactor=1.0,  # B-factor (optional, default 1.0)
+            occupancy=1.0,  # Occupancy (optional, default 1.0)
+            altloc='',  # Alternate location indicator
+            fullname=atom_name,  # Full atom name
+            serial_number=int(current_serial_number)  # Automatically assigned serial number
         )
-        print(atom)
+        print(f"Atom: {atom.get_name()}, Position: {atom.get_coord()}, Residue: {residue_name}, Serial Number: {atom.serial_number}")
 
         # Add atom to the residue
         residue.add(atom)
@@ -174,9 +184,8 @@ def insert_new_molecule_into_pdb(input_pdb_file, output_pdb_file, new_molecule_a
 def add_truss2(s_pdb_file, p1, p2):
     """
 
-    vertices, edges = add_truss(peptide,[0, 0, 0], [1, 1, 1])
-    print(vertices)
-    print(edges)
+    cl.add_truss2("pepticat.pdb",[0, 0, 0], [1, 1, 1])
+
     """
 
     #define the number of equidistant points between the atips, and the size of the square
@@ -246,8 +255,8 @@ def add_truss2(s_pdb_file, p1, p2):
     new_molecule_atoms = []
     for i in range(len(vertices)):
         new_molecule_atoms.append({'name': f"X{i}", 'position': vertices[i], 'residue_name': 'TRS'})#example: {'name': 'X1', 'position': [15.0, 12.3, 10.7], 'residue_name': 'TRS'}
-        #print(new_molecule_atoms)
+        print(vertices[i])
 
     #at last, we insert the new molecule in the pdb
-    insert_new_molecule_into_pdb(s_pdb_file, "hahaha.pdb", new_molecule_atoms, new_chain_id='T')
+    insert_new_molecule_into_pdb(s_pdb_file, "hahaha.pdb", new_molecule_atoms)
 
