@@ -138,7 +138,11 @@ def insert_new_molecule_into_pdb(input_pdb_file, output_pdb_file, new_molecule_a
         #if not, add it to the chain
         #if yes, get the residue id
         # Check if the residue is already defined
-        existing_residue = new_chain.get_residue(residue_id)
+        existing_residue = None
+        for residue in new_chain.get_residues():
+            if residue.id == residue_id:
+                existing_residue = residue
+                break
         if existing_residue is None:
             # Create and add a new residue
 
