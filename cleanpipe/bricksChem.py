@@ -87,10 +87,10 @@ def insert_new_molecule_into_pdb(input_pdb_file, output_pdb_file, new_molecule_a
         new_molecule_atoms (list of dict): Each dict contains 'name', 'position', and 'residue_name'.
 
     # that molecule is something like this: 
-    #[{'structural_name': 'X0','element_name': 'X', 'position': [-3.346065214951231, 0.89657547216805345, 2.449489742783178], 'residue_name': 'TRS', 'residue_id': 1}, 
-    # {'structural_name': 'X1','element_name': 'X', 'position': [0.8965754721680534, -3.3460652149512313, 2.449489742783178], 'residue_name': 'TRS', 'residue_id': 1}, 
-    # {'structural_name': 'X2','element_name': 'X', 'position': [0.2347744239847329, -5.2938793894289373, 4.239847893938439], 'residue_name': 'TRS', 'residue_id': 1}, 
-    # {'structural_name': 'X3','element_name': 'X', 'position': [3.3460652149512313, -0.8965754721680534, -2.44948974278317], 'residue_name': 'TRS', 'residue_id': 1}]
+    #[{'structural_name': 'XA','element_name': 'X', 'position': [-3.346065214951231, 0.89657547216805345, 2.449489742783178], 'residue_name': 'TRS', 'residue_id': 1}, 
+    # {'structural_name': 'XB','element_name': 'X', 'position': [0.8965754721680534, -3.3460652149512313, 2.449489742783178], 'residue_name': 'TRS', 'residue_id': 1}, 
+    # {'structural_name': 'XC','element_name': 'X', 'position': [0.2347744239847329, -5.2938793894289373, 4.239847893938439], 'residue_name': 'TRS', 'residue_id': 1}, 
+    # {'structural_name': 'XD','element_name': 'X', 'position': [3.3460652149512313, -0.8965754721680534, -2.44948974278317], 'residue_name': 'TRS', 'residue_id': 1}]
 
 
     cl.insert_new_molecule_into_pdb("example.pdb", "modified_example.pdb", new_molecule_atoms) 
@@ -271,20 +271,20 @@ def add_truss2(s_pdb_file, p1, p2):
     #inset the coordinates in a pdb file. will create a representation of the molecule that is list of dictionaries
     # than that I can pass that representation to function that inserts the molecule in the pdb
     #here is an example of such a list
-    #[{'structural_name': 'X0','element_name': 'X', 'position': [-3.346065214951231, 0.89657547216805345, 2.449489742783178], 'residue_name': 'TRS', 'residue_id': 1}, 
-    # {'structural_name': 'X1','element_name': 'X', 'position': [0.8965754721680534, -3.3460652149512313, 2.449489742783178], 'residue_name': 'TRS', 'residue_id': 1}, 
-    # {'structural_name': 'X2','element_name': 'X', 'position': [0.2347744239847329, -5.2938793894289373, 4.239847893938439], 'residue_name': 'TRS', 'residue_id': 1}, 
-    # {'structural_name': 'X3','element_name': 'X', 'position': [3.3460652149512313, -0.8965754721680534, -2.44948974278317], 'residue_name': 'TRS', 'residue_id': 1}]
+    #[{'structural_name': 'XA','element_name': 'X', 'position': [-3.346065214951231, 0.89657547216805345, 2.449489742783178], 'residue_name': 'TRS', 'residue_id': 1}, 
+    # {'structural_name': 'XB','element_name': 'X', 'position': [0.8965754721680534, -3.3460652149512313, 2.449489742783178], 'residue_name': 'TRS', 'residue_id': 1}, 
+    # {'structural_name': 'XC','element_name': 'X', 'position': [0.2347744239847329, -5.2938793894289373, 4.239847893938439], 'residue_name': 'TRS', 'residue_id': 1}, 
+    # {'structural_name': 'XD','element_name': 'X', 'position': [3.3460652149512313, -0.8965754721680534, -2.44948974278317], 'residue_name': 'TRS', 'residue_id': 1}]
 
 
     new_molecule_atoms = []
     #this loop will insert the four vertices of the square. each square is considered a residue. the for loop is repetead until all the squares are added
     residue_count=1
     for i in range(0, len(vertices), 4):
-        new_molecule_atoms.append({'structural_name': f"X{i+0}",'element_name': 'X', 'position': vertices[i+0], 'residue_name': 'TRS', 'residue_id': residue_count})
-        new_molecule_atoms.append({'structural_name': f"X{i+1}",'element_name': 'X', 'position': vertices[i+1], 'residue_name': 'TRS', 'residue_id': residue_count})
-        new_molecule_atoms.append({'structural_name': f"X{i+2}",'element_name': 'X', 'position': vertices[i+2], 'residue_name': 'TRS', 'residue_id': residue_count})
-        new_molecule_atoms.append({'structural_name': f"X{i+3}",'element_name': 'X', 'position': vertices[i+3], 'residue_name': 'TRS', 'residue_id': residue_count})
+        new_molecule_atoms.append({'structural_name': f"XA",'element_name': 'X', 'position': vertices[i+0], 'residue_name': 'TRS', 'residue_id': residue_count})
+        new_molecule_atoms.append({'structural_name': f"XB",'element_name': 'X', 'position': vertices[i+1], 'residue_name': 'TRS', 'residue_id': residue_count})
+        new_molecule_atoms.append({'structural_name': f"XC",'element_name': 'X', 'position': vertices[i+2], 'residue_name': 'TRS', 'residue_id': residue_count})
+        new_molecule_atoms.append({'structural_name': f"XD",'element_name': 'X', 'position': vertices[i+3], 'residue_name': 'TRS', 'residue_id': residue_count})
         print(vertices[i])
         residue_count+=1
 
