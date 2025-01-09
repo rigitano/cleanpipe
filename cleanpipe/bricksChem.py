@@ -116,9 +116,13 @@ def insert_new_molecule_into_pdb(input_pdb_file, output_pdb_file, new_molecule_a
 
     # Determine the maximum residue ID in the whole structure to avoid collisions
     max_residue_id = max((residue.id[1] for residue in model.get_residues()), default=0)
+    max_serial_number = max((atom.serial_number for atom in model.get_atoms()), default=0)
 
     # Insert residues and atoms into the new chain
     current_residue_id = max_residue_id + 1
+    current_serial_number = max_serial_number + 1
+
+
     for atom_info in new_molecule_atoms:
         residue_name = atom_info['residue_name']
 
@@ -137,7 +141,8 @@ def insert_new_molecule_into_pdb(input_pdb_file, output_pdb_file, new_molecule_a
             1.0,  # Occupancy (optional, default 1.0)
             '',  # Alternate location indicator
             atom_info['name'],  # Full atom name
-            element=atom_info['name'][0]  # Guess element from the first character of the atom name
+            element=atom_info['name'][0],  # Guess element from the first character of the atom name
+            serial_number=current_serial_number  # Automatically assigned serial number
         )
 
         # Add atom to the residue
@@ -145,6 +150,7 @@ def insert_new_molecule_into_pdb(input_pdb_file, output_pdb_file, new_molecule_a
 
         # Increment residue ID for the next residue
         current_residue_id += 1
+        current_serial_number += 1
 
     # Write the modified structure to the output file
     io = PDBIO()
