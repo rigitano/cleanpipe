@@ -126,22 +126,34 @@ def insert_new_molecule_into_pdb(input_pdb_file, output_pdb_file, new_molecule_a
     for atom_info in new_molecule_atoms:
         residue_name = atom_info['residue_name']
 
+        # Ensure that residue_name is at most 3 characters to fit PDB conventions
+        residue_name = residue_name[:3] if len(residue_name) > 3 else residue_name
+
         # Automatically assign residue IDs sequentially
-        residue_id = (' ', current_residue_id, ' ')  # (het_flag, resseq, icode)
+        residue_id = (' ', int(current_residue_id), ' ')  # (het_flag, resseq, icode)
+
+        # Ensure that the het_flag and icode are single characters
+        het_flag = residue_id[0] if isinstance(residue_id[0], str) and len(residue_id[0]) == 1 else ' '
+        icode = residue_id[2] if isinstance(residue_id[2], str) and len(residue_id[2]) == 1 else ' '
+
+        residue_id = (het_flag, int(current_residue_id), icode)
 
         # Create and add a new residue
         residue = Residue.Residue(residue_id, residue_name, ' ')
         new_chain.add(residue)
 
+        # Ensure atom name is 4 characters (padded or truncated)
+        atom_name = atom_info['name'].ljust(4)[:4]
+
         # Create new atom
         atom = Atom.Atom(
-            atom_info['name'],  # Atom name (e.g., 'C1', 'N1', 'O1')
+            atom_name,  # Atom name (e.g., 'C1', 'N1', 'O1')
             tuple(atom_info['position']),  # Coordinates as a tuple (x, y, z)
             1.0,  # B-factor (optional, default 1.0)
             1.0,  # Occupancy (optional, default 1.0)
             '',  # Alternate location indicator
-            atom_info['name'],  # Full atom name
-            element=atom_info['name'][0],  # Guess element from the first character of the atom name
+            atom_name,  # Full atom name
+            element=atom_name[0].upper() if atom_name[0].isalpha() else 'X',  # Guess element or default to 'X'
             serial_number=current_serial_number  # Automatically assigned serial number
         )
 
