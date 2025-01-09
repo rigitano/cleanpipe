@@ -132,7 +132,7 @@ def insert_new_molecule_into_pdb(input_pdb_file, output_pdb_file, new_molecule_a
         residue_name = atom_info['residue_name']
 
         # Ensure that residue_name is at most 3 characters to fit PDB conventions
-        residue_name = residue_name[:3] if len(residue_name) > 3 else residue_name
+        residue_name = residue_name.ljust(3)[:3]
 
         # Automatically assign residue IDs sequentially
 
@@ -149,22 +149,23 @@ def insert_new_molecule_into_pdb(input_pdb_file, output_pdb_file, new_molecule_a
 
 
         # Create and add a new residue
-        residue = Residue.Residue(residue_id, residue_name, ' ')
+        residue = Residue.Residue(residue_id, residue_name, '')
         new_chain.add(residue)
 
         # Ensure atom name is 4 characters (padded or truncated)
-        atom_name = atom_info['name'].ljust(4)[:4]
+        atom_name = f"{atom_info['name']:<4}"
 
         # Create new atom
         atom = Atom.Atom(
-            name=str(atom_name).strip(),  # Atom name (e.g., 'C1', 'N1', 'O1')
-            coord=np.array(atom_info['position'], dtype=float),  # Coordinates as a numpy array
-            bfactor=1.0,  # B-factor (optional, default 1.0)
-            occupancy=1.0,  # Occupancy (optional, default 1.0)
-            altloc='',  # Alternate location indicator
-            fullname=atom_name,  # Full atom name
-            serial_number=int(current_serial_number)  # Automatically assigned serial number
+            str(atom_name).strip(),  # Atom name (e.g., 'C1', 'N1', 'O1')
+            np.array(atom_info['position'], dtype=float),  # Coordinates as a numpy array
+            1.0,  # B-factor (optional, default 1.0)
+            1.0,  # Occupancy (optional, default 1.0)
+            ' ',  # Alternate location indicator
+            str(atom_name).strip(),  # Full atom name
+            int(current_serial_number)  # Automatically assigned serial number
         )
+
         print(f"Atom: {atom.get_name()}, Position: {atom.get_coord()}, Residue: {residue_name}, Serial Number: {atom.serial_number}")
 
         # Add atom to the residue
