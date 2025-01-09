@@ -140,7 +140,7 @@ def insert_new_molecule_into_pdb(input_pdb_file, output_pdb_file, new_molecule_a
         # Check if the residue is already defined
         existing_residue = None
         for residue in new_chain.get_residues():
-            if residue.id == residue_id:
+            if residue.id == current_atom['residue_id']:
                 existing_residue = residue
                 break
         if existing_residue is None:
@@ -148,9 +148,9 @@ def insert_new_molecule_into_pdb(input_pdb_file, output_pdb_file, new_molecule_a
 
             #define residue info (het_flag, resseq, icode)
             if isHeteroatom:
-                residue_id = ('H_', int(current_atom['residue_id']), ' ')  
+                residue_id = ('H_', current_atom['residue_id'], ' ')  
             else:
-                residue_id = (' ', int(current_atom['residue_id']), ' ')
+                residue_id = (' ', current_atom['residue_id'], ' ')
 
             #create and add residue
             residue = Residue.Residue(residue_id, residue_name, '')
@@ -178,7 +178,7 @@ def insert_new_molecule_into_pdb(input_pdb_file, output_pdb_file, new_molecule_a
             current_atom['element_name'] # the element name (e.g., 'C', 'N', 'O')
         )
 
-        print(f"Atom: {atom.get_name()}, Position: {atom.get_coord()}, Residue: {residue_name}, Serial Number: {atom.serial_number}")
+        print(f"Atom: {atom.get_name()}, Position: {atom.get_coord()}, Residue: {residue_name}, Residueid: {current_atom['residue_id']}, Serial Number: {atom.serial_number}")
 
         # Add atom to the residue
         residue.add(atom)
