@@ -1,9 +1,11 @@
 import PeptideBuilder
-from Bio.PDB import PDBIO
+from Bio.PDB import PDBParser, PDBIO, Atom, Residue, Chain, Model, Structure
+import numpy as np
 import Geometry
 from cleanpipe import bricksFileSystem
 from cleanpipe import bricksAtoms
 import subprocess
+import string
 
 # xxx change name to bricksPdb
 
@@ -73,8 +75,7 @@ def create_peptide(s_outName, s_aminoacids, l_phi, l_psi_im1, s_nTerminusCAP, s_
 
 
 
-from Bio.PDB import PDBParser, PDBIO, Atom, Residue, Chain, Model, Structure
-import numpy as np
+
 
 def insert_new_molecule_into_pdb(input_pdb_file, output_pdb_file, new_molecule_atoms):
     """
