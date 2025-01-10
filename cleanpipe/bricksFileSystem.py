@@ -201,7 +201,7 @@ def run_and_capture(command):
         if captured_error:
             print(f"\nCLEANPIPE MESSAGE standard error output:\n{captured_error}")
 
-    return captured_output + captured_error
+    #return captured_output + captured_error
 
 
 
