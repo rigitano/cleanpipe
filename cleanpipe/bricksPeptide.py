@@ -5,7 +5,7 @@ import numpy as np
 import PeptideBuilder
 import Geometry
 
-# xxx change name to bricksPeptide
+
 
 def add_acetyl_to_Nterminus(peptide):
     

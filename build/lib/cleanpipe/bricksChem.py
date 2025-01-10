@@ -2,7 +2,7 @@ import PeptideBuilder
 from Bio.PDB import PDBIO
 import Geometry
 from cleanpipe import bricksFileSystem
-from cleanpipe import bricksAtoms
+from cleanpipe import bricksPeptide
 import subprocess
 
 
@@ -55,10 +55,10 @@ def create_peptide(s_outName, s_aminoacids, l_phi, l_psi_im1, s_nTerminusCAP, s_
 
     #################################### add termini ###################################
     if s_nTerminusCAP == "acyl":
-        bricksAtoms.add_acetyl_to_Nterminus(peptide)
+        bricksPeptide.add_acetyl_to_Nterminus(peptide)
 
     if s_cTerminusCAP == "amide":
-        bricksAtoms.add_amide_to_Cterminus(peptide)
+        bricksPeptide.add_amide_to_Cterminus(peptide)
 
 
     #################################### create system. (ps this will add hydrogens) ###################################

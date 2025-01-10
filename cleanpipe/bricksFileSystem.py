@@ -107,7 +107,7 @@ def delete(s_filename):
 
 
 
-def run_and_capture(command):
+def run_and_capture_old(command):
     """
     this funcion will run commands in cmd in a way whats printable in juyter and storable in the output
     """
@@ -162,7 +162,7 @@ def run_and_capture(command):
 
 
 
-def run_command(command):
+def run_and_capture(command):
 
     """
     Executes a shell command, captures both stdout and stderr in real-time, and waits for it to complete.
