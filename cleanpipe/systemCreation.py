@@ -1,7 +1,7 @@
-from cleanpipe import bricksChem
+from cleanpipe import bricksPDB
 from cleanpipe import bricksFileSystem
-from cleanpipe import bricksTopEdit
-from cleanpipe import bricksMD
+from cleanpipe import bricksTOP
+from cleanpipe import bricksGROMACS
 
 import subprocess
 import re
@@ -40,7 +40,7 @@ def pdb2box_full_of_that(s_pdbfile, s_forceField):
     
     #pdb2gmx generates a useless posres.itp with useless posres for 1 molecule. so I delete the posres.itp and the inclusion in the top
     bricksFileSystem.delete("posres.itp")
-    bricksTopEdit.remove_posres_inclusion(f"{s_outPathAndName}.top")
+    bricksTOP.remove_posres_inclusion(f"{s_outPathAndName}.top")
 
     #manipulate the GRO file to create a 5x5x5 box and fill it with copyes of the molecule
     captured_output = bricksFileSystem.run_and_capture(f"gmx insert-molecules -ci {s_outPathAndName}_just1mol.gro -nmol 1000 -rot xyz -box 5 5 5 -o {s_outPathAndName}.gro")
@@ -54,19 +54,19 @@ def pdb2box_full_of_that(s_pdbfile, s_forceField):
     added_molecules = int(match.group(1))
 
     #change the ugly molecule name currently inside the TOP file.
-    uglyMolName = bricksTopEdit.getMoleculeName(f"{s_outPathAndName}.top")
+    uglyMolName = bricksTOP.getMoleculeName(f"{s_outPathAndName}.top")
     molName = s_filename
-    bricksTopEdit.replaceMoleculeName(f"{s_outPathAndName}.top", uglyMolName, molName)
+    bricksTOP.replaceMoleculeName(f"{s_outPathAndName}.top", uglyMolName, molName)
 
     #update the TOP file with the new total the molecule
-    bricksTopEdit.update_molecule_quantity(f"{s_outPathAndName}.top", molName, added_molecules)
+    bricksTOP.update_molecule_quantity(f"{s_outPathAndName}.top", molName, added_molecules)
 
     #split the TOP file, into a ITP that describes the molecule and a simple TOP that contains only name of the system and the totals.
-    bricksTopEdit.decompose_TOP_file_into_TOP_and_ITPs(f"{s_outPathAndName}.top")
+    bricksTOP.decompose_TOP_file_into_TOP_and_ITPs(f"{s_outPathAndName}.top")
     
 
     #give a name for the system
-    bricksTopEdit.setSystemName(f"{s_outPathAndName}.top", f"box filled with {s_filename}" )
+    bricksTOP.setSystemName(f"{s_outPathAndName}.top", f"box filled with {s_filename}" )
 
 
 def pdb2molecule_in_solvent(s_pdbfile, s_outSytemName, s_solvent, s_forceField, s_boxSize):
@@ -86,13 +86,13 @@ def pdb2molecule_in_solvent(s_pdbfile, s_outSytemName, s_solvent, s_forceField, 
     bricksFileSystem.check_extention(s_pdbfile,['.pdb']) 
 
     # create gro and top from pdb. then add the box size to the gro
-    bricksMD.pdb2system(s_pdbfile,s_outSytemName,s_forceField,s_boxSize)
+    bricksGROMACS.pdb2system(s_pdbfile,s_outSytemName,s_forceField,s_boxSize)
 
     # add solvent to the system. I have 2 options here: tip3p or filled box
-    bricksMD.solvate_and_neutralize(s_outSytemName,s_solvent,s_forceField)
+    bricksGROMACS.solvate_and_neutralize(s_outSytemName,s_solvent,s_forceField)
 
     # set the the name of the system in the top file 
-    bricksTopEdit.setSystemName(f"{s_outSytemName}/{s_outSytemName}.top", f"{s_outSytemName} (molecule from {s_pdbfile}, inserted in solution made using {s_solvent})" )
+    bricksTOP.setSystemName(f"{s_outSytemName}/{s_outSytemName}.top", f"{s_outSytemName} (molecule from {s_pdbfile}, inserted in solution made using {s_solvent})" )
 
 
 

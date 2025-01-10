@@ -1,11 +1,11 @@
 from .bricksStorage import *
 from .algelin import *
-from .bricksAtoms import *
+from .bricksPeptide import *
 from .bricksFileSystem import *
-from .bricksMD import *
-from .bricksChem import *
-from .bricksTopEdit import *
-from .bricksGroEdit import *
+from .bricksGROMACS import *
+from .bricksPDB import *
+from .bricksTOP import *
+from .bricksGRO import *
 from .systemCreation import *
 from .visualisations import *
-
+#
