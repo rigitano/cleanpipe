@@ -48,7 +48,7 @@ def pdb2system(s_pdbfile,s_outName,s_forceField,s_boxSize,b_addterminal=True):
     #create output folder in parael with the pdb input. we will cd into that forder and do everithing there
     bricksFileSystem.run_and_capture(f"mkdir {s_outName}")
     bricksFileSystem.run_and_capture(f"cp {s_pdbfile} {s_outName}/temp.pdb")
-    bricksFileSystem.run_and_capture(f"cp -r {s_forceField} {s_outName}")
+    bricksFileSystem.run_and_capture(f"cp -r {s_forceField}.ff {s_outName.rstrip('/')}/")#copy the forcefield to the new folder
     #original_directory = os.getcwd()#original folder is stored so I can go back to it at the very end of this function
     os.chdir(f"{s_outName}")
 
