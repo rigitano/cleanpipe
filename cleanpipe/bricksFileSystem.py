@@ -160,6 +160,52 @@ def run_and_capture(command):
     return captured_output + captured_error
 
 
+
+
+def run_command(command):
+
+    """
+    Executes a shell command, captures both stdout and stderr in real-time, and waits for it to complete.
+    """
+    print(f"\nCLEANPIPE MESSAGE executing command:\n{command}\n")
+
+    # Start the subprocess
+    process = subprocess.Popen(
+        command,
+        shell=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        bufsize=1  # Line-buffered mode for real-time capture
+    )
+
+    captured_output = ""
+    captured_error = ""
+
+    # Reading the output and error streams in real-time
+    for line in iter(process.stdout.readline, ''):
+        sys.stdout.write(line)
+        captured_output += line
+
+    for line in iter(process.stderr.readline, ''):
+        sys.stderr.write(line)
+        captured_error += line
+
+    # Wait for the process to finish
+    process.stdout.close()
+    process.stderr.close()
+    process.wait()
+
+    if process.returncode != 0:
+        print(f"\nCLEANPIPE MESSAGE command failed with return code {process.returncode}")
+        if captured_error:
+            print(f"\nCLEANPIPE MESSAGE standard error output:\n{captured_error}")
+
+    return captured_output + captured_error
+
+
+
+
 def create_folder(s_folder_name):
     """
     Check if a folder exists, and create it if it doesn't.
