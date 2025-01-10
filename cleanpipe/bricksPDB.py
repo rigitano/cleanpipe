@@ -221,7 +221,7 @@ def add_truss2(s_pdb_file, p1, p2, n_square_size = 3):
     points = [np.array(p1, dtype=float) + i * n_square_size * direction for i in range(n + 1)]
     
     # Add the last point (p2)
-    points.append(np.array(p2, dtype=float))
+    #points.append(np.array(p2, dtype=float))
     
     # Calculate two perpendicular vectors to the direction
     if direction[0] != 0 or direction[1] != 0:
