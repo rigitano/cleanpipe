@@ -1,5 +1,5 @@
 from cleanpipe import bricksFileSystem
-from cleanpipe import bricksTopEdit
+from cleanpipe import bricksTOP
 
 import subprocess
 import os
@@ -48,6 +48,7 @@ def pdb2system(s_pdbfile,s_outName,s_forceField,s_boxSize,b_addterminal=True):
     #create output folder in parael with the pdb input. we will cd into that forder and do everithing there
     bricksFileSystem.run_and_capture(f"mkdir {s_outName}")
     bricksFileSystem.run_and_capture(f"cp {s_pdbfile} {s_outName}/temp.pdb")
+    bricksFileSystem.run_and_capture(f"cp -r {s_forceField} {s_outName}")
     #original_directory = os.getcwd()#original folder is stored so I can go back to it at the very end of this function
     os.chdir(f"{s_outName}")
 
@@ -66,15 +67,15 @@ def pdb2system(s_pdbfile,s_outName,s_forceField,s_boxSize,b_addterminal=True):
     
 
     #pdb2gmx is stupid, so by default it and givesa wierd name to the molecule from the pdb. most times is "Other_chain_O". lets replace it by the real molecule name, that I took from the pdb file name
-    uglyMolName = bricksTopEdit.getMoleculeName(f"{s_outName}.top")
-    bricksTopEdit.replaceMoleculeName(f"{s_outName}.top", uglyMolName, s_molName)
+    uglyMolName = bricksTOP.getMoleculeName(f"{s_outName}.top")
+    bricksTOP.replaceMoleculeName(f"{s_outName}.top", uglyMolName, s_molName)
 
     #define box size inside the gro file. s_boxSize contains the user definition (ex: "3 3 3")
     bricksFileSystem.run_and_capture(f"gmx editconf -f {s_outName}.gro -o {s_outName}.gro -c -box {s_boxSize} -bt cubic")
     bricksFileSystem.delete(f"\\#{s_outName}.gro.1\\#")# I chose to overwrite the old gro
 
     #decompose the original top into a new top and a itp. the new top will contain just sytem information, the itp will describe the protagonist molecule
-    bricksTopEdit.decompose_TOP_file_into_TOP_and_ITPs(f"{s_outName}.top")
+    bricksTOP.decompose_TOP_file_into_TOP_and_ITPs(f"{s_outName}.top")
 
     #delete the temporary pdb used by pdb2gmx as its no longer necessary
     bricksFileSystem.delete(f"temp.pdb")
@@ -126,7 +127,7 @@ def solvate_and_neutralize(s_systemFolder,s_solventName,s_forceField):
         #include necessary text in the top file
         s_text_to_insert = "\n; Include water topology\n#include \""+s_forceField+".ff/"+s_solventName+".itp\"\n\n#ifdef POSRES_WATER \n; Position restraint for each water oxygen\n[ position_restraints ]\n;  i funct       fcx        fcy        fcz\n1    1       1000       1000       1000\n#endif\n"
 
-        bricksTopEdit.insert_text_before_directive(f"{s_topName}.top", s_text_to_insert, "[ system ]")
+        bricksTOP.insert_text_before_directive(f"{s_topName}.top", s_text_to_insert, "[ system ]")
 
 
         # xxx add ions, to make the box neutral
@@ -158,8 +159,8 @@ def solvate_and_neutralize(s_systemFolder,s_solventName,s_forceField):
         bricksFileSystem.delete(f"\\#{s_topName}.top.1\\#")#I choose to overwrite the old top
 
         #when gmx solvate inform the quantity added in the top, its possible that it chooses a weird name. lets make sure its the name of the itp file
-        badmolName = bricksTopEdit.getMoleculeName(f"{s_topName}.top", order=-1)#get name of the last molecule in the directive [ molecules ]
-        bricksTopEdit.replaceWordInsideDirective(f"{s_topName}.top", "[ molecules ]", badmolName, l_solbox_itpNames[0].replace(".itp", ""))# xxx this is not preparet to deal with a solvent box with several different molecules
+        badmolName = bricksTOP.getMoleculeName(f"{s_topName}.top", order=-1)#get name of the last molecule in the directive [ molecules ]
+        bricksTOP.replaceWordInsideDirective(f"{s_topName}.top", "[ molecules ]", badmolName, l_solbox_itpNames[0].replace(".itp", ""))# xxx this is not preparet to deal with a solvent box with several different molecules
 
         #edit top to insert a line including a reference of the solvent itp before the [ system ] directive
         for s_sol_itpName in l_solbox_itpNames:
