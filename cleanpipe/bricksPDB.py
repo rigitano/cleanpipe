@@ -3,11 +3,10 @@ from Bio.PDB import PDBParser, PDBIO, Atom, Residue, Chain, Model, Structure
 import numpy as np
 import Geometry
 from cleanpipe import bricksFileSystem
-from cleanpipe import bricksAtoms
+from cleanpipe import bricksPeptide
 import subprocess
 import string
 
-# xxx change name to bricksPdb
 
 
 def download_and_clean_pdb(s_molecule_name):
@@ -59,10 +58,10 @@ def create_peptide(s_outName, s_aminoacids, l_phi, l_psi_im1, s_nTerminusCAP, s_
 
     #################################### add termini ###################################
     if s_nTerminusCAP == "acyl":
-        bricksAtoms.add_acetyl_to_Nterminus(peptide)
+        bricksPeptide.add_acetyl_to_Nterminus(peptide)
 
     if s_cTerminusCAP == "amide":
-        bricksAtoms.add_amide_to_Cterminus(peptide)
+        bricksPeptide.add_amide_to_Cterminus(peptide)
 
 
     #################################### create system. (ps this will add hydrogens) ###################################
@@ -77,7 +76,7 @@ def create_peptide(s_outName, s_aminoacids, l_phi, l_psi_im1, s_nTerminusCAP, s_
 
 
 
-def insert_new_molecule_into_pdb(input_pdb_file, output_pdb_file, new_molecule_atoms):
+def insert_new_molecule_into_pdb(s_input_pdb_file, s_output_pdb_file, d_new_molecule_atoms):
     """
     Insert a new molecule into a pre-existing PDB file as a new chain.
 
@@ -97,11 +96,11 @@ def insert_new_molecule_into_pdb(input_pdb_file, output_pdb_file, new_molecule_a
     """
 
     print("IN FUNCTION insert_new_molecule_into_pdb")
-    print(new_molecule_atoms)
+    print(d_new_molecule_atoms)
 
     # Parse the existing PDB structure
     parser = PDBParser(QUIET=True)
-    structure = parser.get_structure('input_structure', input_pdb_file)
+    structure = parser.get_structure('input_structure', s_input_pdb_file)
 
     # Get the first model or create a new one if needed
     model = structure[0] if len(structure) > 0 else Model.Model(0)
@@ -125,7 +124,7 @@ def insert_new_molecule_into_pdb(input_pdb_file, output_pdb_file, new_molecule_a
     current_serial_number = max_serial_number + 1
 
 
-    for current_atom in new_molecule_atoms:
+    for current_atom in d_new_molecule_atoms:
 
         #get residue name and ensure that it is at most 3 characters to fit PDB conventions
         residue_name = current_atom['residue_name']
@@ -193,31 +192,36 @@ def insert_new_molecule_into_pdb(input_pdb_file, output_pdb_file, new_molecule_a
     # Write the modified structure to the output file
     io = PDBIO()
     io.set_structure(structure)
-    io.save(output_pdb_file)
-    print(f"Modified PDB saved to {output_pdb_file}")
+    io.save(s_output_pdb_file)
+    print(f"Modified PDB saved to {s_output_pdb_file}")
 
 
 
-def add_truss2(s_pdb_file, p1, p2):
+def add_truss2(s_pdb_file, p1, p2, n_square_size = 3):
     """
 
     cl.add_truss2("pepticat.pdb",[0, 0, 0], [1, 1, 1])
 
     """
 
-    #define the number of equidistant points between the atips, and the size of the square
-    n = 6
-    square_size = 6
 
-    # Calculate the direction vector and the step size
+    
+
+    # Calculate the direction vector and the total distance
     direction = np.array(p2, dtype=float) - np.array(p1, dtype=float)
-    step = direction / (n + 1)
+    total_distance = np.linalg.norm(direction)
     
     # Normalize the direction vector
-    direction = direction / np.linalg.norm(direction)
+    direction = direction / total_distance
     
-    # Generate the equidistant points
-    points = [np.array(p1, dtype=float) + i * step for i in range(n + 2)]
+    # Calculate the number of points based on the square size
+    n = int(total_distance // n_square_size)
+    
+    # Generate the points separated by the square size
+    points = [np.array(p1, dtype=float) + i * n_square_size * direction for i in range(n + 1)]
+    
+    # Add the last point (p2)
+    points.append(np.array(p2, dtype=float))
     
     # Calculate two perpendicular vectors to the direction
     if direction[0] != 0 or direction[1] != 0:
@@ -233,7 +237,7 @@ def add_truss2(s_pdb_file, p1, p2):
         # Create the square's vertices centered at the point
         square_vertices = []
         for dx, dy in [(-1, -1), (1, -1), (1, 1), (-1, 1)]:
-            vertex = point + (dx * square_size / 2) * perp_vector1 + (dy * square_size / 2) * perp_vector2
+            vertex = point + (dx * n_square_size / 2) * perp_vector1 + (dy * n_square_size / 2) * perp_vector2
             square_vertices.append(vertex)
         squares.append(square_vertices)
     
