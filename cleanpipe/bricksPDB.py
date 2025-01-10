@@ -204,7 +204,7 @@ def add_truss2(s_pdb_file, p1, p2, n_square_size = 3):
 
     """
 
-
+    print("IN FUNCTION add_truss2")
     
 
     # Calculate the direction vector and the total distance
