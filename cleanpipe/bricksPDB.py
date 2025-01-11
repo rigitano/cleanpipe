@@ -83,13 +83,13 @@ def insert_new_molecule_into_pdb(s_input_pdb_file, s_output_pdb_file, d_new_mole
     Parameters:
         input_pdb_file (str): Path to the input PDB file.
         output_pdb_file (str): Path to save the modified PDB file.
-        new_molecule_atoms (list of dict): Each dict contains 'name', 'position', and 'residue_name'.
+        new_molecule_atoms (list of dict): Each dict contains atom infos:
 
     # that molecule is something like this: 
-    #[{'structural_name': 'XA','element_name': 'X', 'position': [-3.346065214951231, 0.89657547216805345, 2.449489742783178], 'residue_name': 'TRS', 'residue_id': 1}, 
-    # {'structural_name': 'XB','element_name': 'X', 'position': [0.8965754721680534, -3.3460652149512313, 2.449489742783178], 'residue_name': 'TRS', 'residue_id': 1}, 
-    # {'structural_name': 'XC','element_name': 'X', 'position': [0.2347744239847329, -5.2938793894289373, 4.239847893938439], 'residue_name': 'TRS', 'residue_id': 1}, 
-    # {'structural_name': 'XD','element_name': 'X', 'position': [3.3460652149512313, -0.8965754721680534, -2.44948974278317], 'residue_name': 'TRS', 'residue_id': 1}]
+    #[{'structural_name': 'XA','element_name': 'X', 'coord': [-3.346065214951231, 0.89657547216805345, 2.449489742783178], 'residue_name': 'TRS', 'residue_id': 1}, 
+    # {'structural_name': 'XB','element_name': 'X', 'coord': [0.8965754721680534, -3.3460652149512313, 2.449489742783178], 'residue_name': 'TRS', 'residue_id': 1}, 
+    # {'structural_name': 'XC','element_name': 'X', 'coord': [0.2347744239847329, -5.2938793894289373, 4.239847893938439], 'residue_name': 'TRS', 'residue_id': 1}, 
+    # {'structural_name': 'XD','element_name': 'X', 'coord': [3.3460652149512313, -0.8965754721680534, -2.44948974278317], 'residue_name': 'TRS', 'residue_id': 1}]
 
 
     cl.insert_new_molecule_into_pdb("example.pdb", "modified_example.pdb", new_molecule_atoms) 
@@ -161,26 +161,19 @@ def insert_new_molecule_into_pdb(s_input_pdb_file, s_output_pdb_file, d_new_mole
             residue = existing_residue
 
 
-
-
-
-
-        # Ensure atom name is 4 characters (padded or truncated)
-        structural_name = f"{current_atom['structural_name']:<4}"
-
         # Create new atom
         atom = Atom.Atom(
-            str(structural_name).strip(),  # Atom name (e.g., 'C1', 'N1', 'O1')
-            np.array(current_atom['position'], dtype=float),  # Coordinates as a numpy array
+            f"{current_atom['structural_name']:<4}".strip(),  # Atom name (e.g., 'C1', 'N1', 'O1') # Ensure atom name is 4 characters (padded or truncated)
+            np.array(current_atom['coord'], dtype=float),  # Coordinates as a numpy array
             1.0,  # B-factor (optional, default 1.0)
             1.0,  # Occupancy (optional, default 1.0)
             ' ',  # Alternate location indicator
-            str(structural_name).strip(),  # Full atom name
+            str(current_atom['structural_name']).strip(),  # Full atom name
             int(current_serial_number),  # Automatically assigned serial number
             current_atom['element_name'] # the element name (e.g., 'C', 'N', 'O')
         )
 
-        print(f"Atom: {atom.get_name()}, Position: {atom.get_coord()}, Residue: {residue_name}, Residueid: {current_atom['residue_id']}, Serial Number: {atom.serial_number}")
+        print(f"Atom: {atom.get_name()}, coord: {atom.get_coord()}, Residue: {residue_name}, Residueid: {current_atom['residue_id']}, Serial Number: {atom.serial_number}")
 
         # Add atom to the residue
         residue.add(atom)
@@ -197,14 +190,14 @@ def insert_new_molecule_into_pdb(s_input_pdb_file, s_output_pdb_file, d_new_mole
 
 
 
-def add_truss2(s_pdb_file, p1, p2, n_square_size = 3):
+def add_truss(s_pdb_file, p1, p2, n_square_size = 3):
     """
 
-    cl.add_truss2("pepticat.pdb",[0, 0, 0], [1, 1, 1])
+    cl.add_truss("pepticat.pdb",[0, 0, 0], [1, 1, 1])
 
     """
 
-    print("IN FUNCTION add_truss2")
+    print("IN FUNCTION add_truss")
     
 
     # Calculate the direction vector and the total distance
@@ -275,23 +268,175 @@ def add_truss2(s_pdb_file, p1, p2, n_square_size = 3):
     #inset the coordinates in a pdb file. will create a representation of the molecule that is list of dictionaries
     # than that I can pass that representation to function that inserts the molecule in the pdb
     #here is an example of such a list
-    #[{'structural_name': 'XA','element_name': 'X', 'position': [-3.346065214951231, 0.89657547216805345, 2.449489742783178], 'residue_name': 'TRS', 'residue_id': 1}, 
-    # {'structural_name': 'XB','element_name': 'X', 'position': [0.8965754721680534, -3.3460652149512313, 2.449489742783178], 'residue_name': 'TRS', 'residue_id': 1}, 
-    # {'structural_name': 'XC','element_name': 'X', 'position': [0.2347744239847329, -5.2938793894289373, 4.239847893938439], 'residue_name': 'TRS', 'residue_id': 1}, 
-    # {'structural_name': 'XD','element_name': 'X', 'position': [3.3460652149512313, -0.8965754721680534, -2.44948974278317], 'residue_name': 'TRS', 'residue_id': 1}]
+    #[{'structural_name': 'XA','element_name': 'X', 'coord': [-3.346065214951231, 0.89657547216805345, 2.449489742783178], 'residue_name': 'TRS', 'residue_id': 1}, 
+    # {'structural_name': 'XB','element_name': 'X', 'coord': [0.8965754721680534, -3.3460652149512313, 2.449489742783178], 'residue_name': 'TRS', 'residue_id': 1}, 
+    # {'structural_name': 'XC','element_name': 'X', 'coord': [0.2347744239847329, -5.2938793894289373, 4.239847893938439], 'residue_name': 'TRS', 'residue_id': 1}, 
+    # {'structural_name': 'XD','element_name': 'X', 'coord': [3.3460652149512313, -0.8965754721680534, -2.44948974278317], 'residue_name': 'TRS', 'residue_id': 1}]
 
 
     new_molecule_atoms = []
     #this loop will insert the four vertices of the square. each square is considered a residue. the for loop is repetead until all the squares are added
     residue_count=1
     for i in range(0, len(vertices), 4):
-        new_molecule_atoms.append({'structural_name': f"XA",'element_name': 'X', 'position': vertices[i+0], 'residue_name': 'TRS', 'residue_id': residue_count})
-        new_molecule_atoms.append({'structural_name': f"XB",'element_name': 'X', 'position': vertices[i+1], 'residue_name': 'TRS', 'residue_id': residue_count})
-        new_molecule_atoms.append({'structural_name': f"XC",'element_name': 'X', 'position': vertices[i+2], 'residue_name': 'TRS', 'residue_id': residue_count})
-        new_molecule_atoms.append({'structural_name': f"XD",'element_name': 'X', 'position': vertices[i+3], 'residue_name': 'TRS', 'residue_id': residue_count})
+        new_molecule_atoms.append({'structural_name': f"XA",'element_name': 'X', 'coord': vertices[i+0], 'residue_name': 'TRS', 'residue_id': residue_count})
+        new_molecule_atoms.append({'structural_name': f"XB",'element_name': 'X', 'coord': vertices[i+1], 'residue_name': 'TRS', 'residue_id': residue_count})
+        new_molecule_atoms.append({'structural_name': f"XC",'element_name': 'X', 'coord': vertices[i+2], 'residue_name': 'TRS', 'residue_id': residue_count})
+        new_molecule_atoms.append({'structural_name': f"XD",'element_name': 'X', 'coord': vertices[i+3], 'residue_name': 'TRS', 'residue_id': residue_count})
         print(vertices[i])
         residue_count+=1
 
     #at last, we insert the new molecule in the pdb
     insert_new_molecule_into_pdb(s_pdb_file, "hahaha.pdb", new_molecule_atoms)
 
+
+def insert_residue_into_chain(s_input_pdb_file,s_output_pdb_file,s_chain,n_residue,s_new_residue_name, d_new_residue_atoms,s_replace_or_displace='displace'):
+    """
+    
+    """
+
+    print("IN FUNCTION insert_residue_into_chain")
+
+    #define the protein/heteroatom flag. this will be used latter. biopython will require this weird flag
+    if s_new_residue_name not in ['ALA', 'CYS', 'ASP', 'GLU', 'PHE', 'GLY', 'HIS', 'ILE', 'LYS', 'LEU', 'MET', 'ASN', 'PRO', 'GLN', 'ARG', 'SER', 'THR', 'VAL', 'TRP', 'TYR']:
+        het_flag = 'H_'
+    else:
+        het_flag = ' '
+
+
+
+    # Parse the existing PDB structure
+    parser = PDBParser(QUIET=True)
+    structure = parser.get_structure('input_structure', s_input_pdb_file)
+
+    # Get the first model or create a new one if needed
+    model = structure[0] if len(structure) > 0 else print('CLEAN PIPE MESSAGE : ATTENTION there are several models in the pdb file, it is the first that will be edited')
+
+    # Determine the maximum residue ID in the whole structure to avoid collisions
+    max_serial_number = max((atom.serial_number for atom in model.get_atoms()), default=0)
+    n_current_serial_number = max_serial_number + 1
+
+    #get the chain
+    chain = model[s_chain] #e.g. chain = model['A']
+    l_residues = list(chain.get_residues())
+
+
+    if s_replace_or_displace=='replace':
+
+        # Remove the residue at the specified position
+        for residue in chain.get_residues():
+            if residue.id[1] == n_residue:
+                chain.detach_child(residue.id)
+                break
+
+        # Create and add the new residue at the specified position
+        residue = Residue.Residue((het_flag, n_residue, ' '), s_new_residue_name.ljust(3)[:3], '')
+        chain.add(residue)
+
+
+    elif s_replace_or_displace=='displace':
+
+        # Create and add the new residue at the specified position
+        new_residue = Residue.Residue((het_flag, n_residue, ' '), s_new_residue_name.ljust(3)[:3], '')
+
+        # Detach all residues after the specified position to avoid index conflict
+        residues_to_reinsert = []
+        for residue in l_residues:
+            if residue.id[1] >= n_residue:
+            residues_to_reinsert.append(residue)
+            chain.detach_child(residue.id)
+
+        # Insert the new residue
+        chain.add(new_residue)
+
+        # Re-insert each residue with updated numbers
+        for residue in residues_to_reinsert:
+            residue.id = (residue.id[0], residue.id[1] + 1, residue.id[2])
+            chain.add(residue)
+
+
+    for current_new_atom in d_new_residue_atoms:
+
+        # define new atom in biopython
+        atom = Atom.Atom(
+            f"{current_new_atom['structural_name']:<4}".strip(),  # Atom name (e.g., 'C1', 'N1', 'O1') # Ensure atom name is 4 characters (padded or truncated)
+            np.array(current_new_atom['coord'], dtype=float),  # Coordinates as a numpy array
+            1.0,  # B-factor (optional, default 1.0)
+            1.0,  # Occupancy (optional, default 1.0)
+            ' ',  # Alternate location indicator
+            str(current_new_atom['structural_name']).strip(),  # Atom full structural name. I dont know why this is necessary
+            int(n_current_serial_number),  # serial number e.g. 1001 
+            str(current_new_atom['element_name']).strip()# the element name (e.g., 'C', 'N', 'O')
+        )
+
+
+        print(f"Atom: {atom.get_name()}, coord: {atom.get_coord()}, Residue: {residue_name}, Residueid: {current_atom['residue_id']}, Serial Number: {atom.serial_number}")
+
+        residue.add(atom)
+
+
+
+
+    # Write the modified structure to the output file
+    io = PDBIO()
+    io.set_structure(structure)
+    io.save(s_output_pdb_file)
+    print(f"Modified PDB saved to {s_output_pdb_file}")
+
+
+
+def insert_atom_into_residue(s_input_pdb_file,s_output_pdb_file,s_chain,n_residue,s_atom_structural_name,s_atom_element_name,l_coord):
+    """
+
+    the user specify the chain and residue id. and put an atom there with defined name and coordinates
+
+    
+    clinsert_atom_into_residue('oi.pdb','tchau.pdb','A',3,'CA','C',[3,4,5]):
+
+    """
+
+    print("IN FUNCTION insert_atom_to_residue")
+
+
+    # Parse the existing PDB structure
+    parser = PDBParser(QUIET=True)
+    structure = parser.get_structure('input_structure', s_input_pdb_file)
+
+    # Get the first model or create a new one if needed
+    model = structure[0] if len(structure) > 0 else print('CLEAN PIPE MESSAGE : ATTENTION there are several models in the pdb file, it is the first that will be edited')
+
+    # Determine the maximum residue ID in the whole structure to avoid collisions
+    max_serial_number = max((atom.serial_number for atom in model.get_atoms()), default=0)
+    n_current_serial_number = max_serial_number + 1
+
+    #get the chain
+    chain = model[s_chain] #e.g. chain = model['A']
+    l_residues = list(chain.get_residues())
+
+    # Get the residue to be edited
+    residue = l_residues[n_residue] #e.g. residue = l_residues[0]
+
+
+    # define new atom in biopython
+    new_atom = Atom.Atom(
+        str(s_atom_structural_name).strip(),  # Atom name (e.g., 'C1', 'N1', 'O1') # Ensure atom name is 4 characters (padded or truncated)
+        np.array(l_coord, dtype=float),  # Coordinates as a numpy array
+        1.0,  # B-factor (optional, default 1.0)
+        1.0,  # Occupancy (optional, default 1.0)
+        ' ',  # Alternate location indicator
+        str(s_atom_structural_name).strip(),  # Atom full structural name. I dont know why this is necessary
+        int(n_current_serial_number),  # serial number e.g. 1001 
+        str(s_atom_element_name).strip()# the element name (e.g., 'C', 'N', 'O')
+    )
+
+
+    # add atom to the residue
+    residue.add(new_atom)
+
+    # xxx there tmight be a problem in this function. when I add a atom to the middle of a molecule, that atom serial number will be the biggest, but its not the last atom on the pdb file
+
+
+    # Write the modified structure to the output file
+    io = PDBIO()
+    io.set_structure(structure)
+    io.save(s_output_pdb_file)
+    print(f"Modified PDB saved to {s_output_pdb_file}")
