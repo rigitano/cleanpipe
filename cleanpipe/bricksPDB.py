@@ -342,8 +342,8 @@ def insert_residue_into_chain(s_input_pdb_file,s_output_pdb_file,s_chain,n_resid
         residues_to_reinsert = []
         for residue in l_residues:
             if residue.id[1] >= n_residue:
-            residues_to_reinsert.append(residue)
-            chain.detach_child(residue.id)
+                residues_to_reinsert.append(residue)
+                chain.detach_child(residue.id)
 
         # Insert the new residue
         chain.add(new_residue)
@@ -367,11 +367,11 @@ def insert_residue_into_chain(s_input_pdb_file,s_output_pdb_file,s_chain,n_resid
             int(n_current_serial_number),  # serial number e.g. 1001 
             str(current_new_atom['element_name']).strip()# the element name (e.g., 'C', 'N', 'O')
         )
-
-
-        print(f"Atom: {atom.get_name()}, coord: {atom.get_coord()}, Residue: {residue_name}, Residueid: {current_atom['residue_id']}, Serial Number: {atom.serial_number}")
-
+        n_current_serial_number += 1
         residue.add(atom)
+        print(f"Atom: {atom.get_name()}, coord: {atom.get_coord()}, Residue: {s_new_residue_name}, Residueid: {n_residue}, Serial Number: {atom.serial_number}")
+
+        
 
 
 
