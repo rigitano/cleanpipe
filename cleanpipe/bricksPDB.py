@@ -140,7 +140,7 @@ def insert_new_molecule_into_pdb(s_input_pdb_file, s_output_pdb_file, d_new_mole
         existing_residue = None
         for residue in new_chain.get_residues():
             if residue.id[1] == current_atom['residue_id']:
-                print(f"Residue {residue.id} already exists")
+                #print(f"Residue {residue.id} already exists")
                 existing_residue = residue
                 break
 
