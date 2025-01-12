@@ -163,14 +163,14 @@ def insert_new_molecule_into_pdb(s_input_pdb_file, s_output_pdb_file, d_new_mole
 
         # Create new atom
         atom = Atom.Atom(
-            f"{current_atom['structural_name']:<4}".strip().capitalize(),  # Atom name (e.g., 'C1', 'N1', 'O1') # Ensure atom name is 4 characters (padded or truncated)
+            f"{current_atom['structural_name']:<4}".strip().upper(),  # Atom name (e.g., 'C1', 'N1', 'O1') # Ensure atom name is 4 characters (padded or truncated)
             np.array(current_atom['coord'], dtype=float),  # Coordinates as a numpy array
             1.0,  # B-factor (optional, default 1.0)
             1.0,  # Occupancy (optional, default 1.0)
             ' ',  # Alternate location indicator
             str(current_atom['structural_name']).strip(),  # Full atom name
             int(current_serial_number),  # Automatically assigned serial number
-            current_atom['element_name'].capitalize() # the element name (e.g., 'C', 'N', 'O')
+            current_atom['element_name'].upper() # the element name (e.g., 'C', 'N', 'O')
         )
 
         print(f"Atom: {atom.get_name()}, coord: {atom.get_coord()}, Residue: {residue_name}, Residueid: {current_atom['residue_id']}, Serial Number: {atom.serial_number}")
@@ -360,14 +360,14 @@ def insert_residue_into_chain(s_input_pdb_file,s_output_pdb_file,s_chain,n_resid
 
         # define new atom in biopython
         atom = Atom.Atom(
-            f"{current_new_atom['structural_name']:<4}".strip().capitalize(),  # Atom name (e.g., 'C1', 'N1', 'O1') # Ensure atom name is 4 characters (padded or truncated)
+            f"{current_new_atom['structural_name']:<4}".strip().upper(),  # Atom name (e.g., 'C1', 'N1', 'O1') # Ensure atom name is 4 characters (padded or truncated)
             np.array(current_new_atom['coord'], dtype=float),  # Coordinates as a numpy array
             1.0,  # B-factor (optional, default 1.0)
             1.0,  # Occupancy (optional, default 1.0)
             ' ',  # Alternate location indicator
             str(current_new_atom['structural_name']).strip(),  # Atom full structural name. I dont know why this is necessary
             int(n_current_serial_number),  # serial number e.g. 1001 
-            str(current_new_atom['element_name']).strip().capitalize()# the element name (e.g., 'C', 'N', 'O')
+            str(current_new_atom['element_name']).strip().upper()# the element name (e.g., 'C', 'N', 'O')
         )
         n_current_serial_number += 1
         residue.add(atom)
@@ -423,14 +423,14 @@ def insert_atom_into_residue(s_input_pdb_file,s_output_pdb_file,s_chain,n_residu
 
     # define new atom in biopython
     new_atom = Atom.Atom(
-        f"{s_atom_structural_name:<4}".strip().capitalize(),  # Atom name (e.g., 'C1', 'N1', 'O1') # Ensure atom name is 4 characters (padded or truncated)
+        f"{s_atom_structural_name:<4}".strip().upper(),  # Atom name (e.g., 'C1', 'N1', 'O1') # Ensure atom name is 4 characters (padded or truncated)
         np.array(l_coord, dtype=float),  # Coordinates as a numpy array
         1.0,  # B-factor (optional, default 1.0)
         1.0,  # Occupancy (optional, default 1.0)
         ' ',  # Alternate location indicator
         str(s_atom_structural_name).strip(),  # Atom full structural name. I dont know why this is necessary
         1001, #int(n_current_serial_number),  # serial number e.g. 1001 
-        str(s_atom_element_name).strip().capitalize() # the element name (e.g., 'C', 'N', 'O') it shoule be capital letters
+        str(s_atom_element_name).strip().upper() # the element name (e.g., 'C', 'N', 'O') it shoule be capital letters
     )
 
 
