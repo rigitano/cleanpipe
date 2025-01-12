@@ -20,7 +20,7 @@ import mdtraj as md
 import seaborn as sns
 
 
-def view_coordinates(s_coord):
+def view_coord(s_coord):
     """
     
     example:
