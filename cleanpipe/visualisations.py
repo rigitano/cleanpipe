@@ -20,11 +20,11 @@ import mdtraj as md
 import seaborn as sns
 
 
-def visualize_coordinates(s_coord):
+def view_coordinates(s_coord):
     """
     
     example:
-    cl.visualize_coordinates("pepticat.pdb")
+    cl.visualize_coord("pepticat.pdb")
     """
 
 
@@ -49,7 +49,7 @@ def visualize_coordinates(s_coord):
 
 
 
-def visualize_trajectory(s_xtc,s_gro):
+def view_traj(s_xtc,s_gro):
     """
     
     example:
@@ -66,7 +66,7 @@ def visualize_trajectory(s_xtc,s_gro):
     view.add_representation('ball+stick', selection='NA', color='green', aspectRatio=10)
 
     view.add_spacefill('not protein', opacity=0.1)
-    
+
     return view
 
 
