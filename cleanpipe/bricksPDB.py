@@ -190,7 +190,7 @@ def insert_new_molecule_into_pdb(s_input_pdb_file, s_output_pdb_file, d_new_mole
 
 
 
-def add_truss(s_pdb_file, p1, p2, n_square_size = 3):
+def add_truss(s_pdb_file, s_out_pdb_file, p1, p2, n_square_size = 3):
     """
 
     cl.add_truss("pepticat.pdb",[0, 0, 0], [1, 1, 1])
@@ -274,19 +274,19 @@ def add_truss(s_pdb_file, p1, p2, n_square_size = 3):
     # {'structural_name': 'XD','element_name': 'X', 'coord': [3.3460652149512313, -0.8965754721680534, -2.44948974278317], 'residue_name': 'TRS', 'residue_id': 1}]
 
 
-    new_molecule_atoms = []
+    l_new_molecule_atoms = []
     #this loop will insert the four vertices of the square. each square is considered a residue. the for loop is repetead until all the squares are added
     residue_count=1
     for i in range(0, len(vertices), 4):
-        new_molecule_atoms.append({'structural_name': f"XA",'element_name': 'X', 'coord': vertices[i+0], 'residue_name': 'TRS', 'residue_id': residue_count})
-        new_molecule_atoms.append({'structural_name': f"XB",'element_name': 'X', 'coord': vertices[i+1], 'residue_name': 'TRS', 'residue_id': residue_count})
-        new_molecule_atoms.append({'structural_name': f"XC",'element_name': 'X', 'coord': vertices[i+2], 'residue_name': 'TRS', 'residue_id': residue_count})
-        new_molecule_atoms.append({'structural_name': f"XD",'element_name': 'X', 'coord': vertices[i+3], 'residue_name': 'TRS', 'residue_id': residue_count})
+        l_new_molecule_atoms.append({'structural_name': f"XA",'element_name': 'X', 'coord': vertices[i+0], 'residue_name': 'TRS', 'residue_id': residue_count})
+        l_new_molecule_atoms.append({'structural_name': f"XB",'element_name': 'X', 'coord': vertices[i+1], 'residue_name': 'TRS', 'residue_id': residue_count})
+        l_new_molecule_atoms.append({'structural_name': f"XC",'element_name': 'X', 'coord': vertices[i+2], 'residue_name': 'TRS', 'residue_id': residue_count})
+        l_new_molecule_atoms.append({'structural_name': f"XD",'element_name': 'X', 'coord': vertices[i+3], 'residue_name': 'TRS', 'residue_id': residue_count})
         print(vertices[i])
         residue_count+=1
 
     #at last, we insert the new molecule in the pdb
-    insert_new_molecule_into_pdb(s_pdb_file, "hahaha.pdb", new_molecule_atoms)
+    insert_new_molecule_into_pdb(s_pdb_file, s_out_pdb_file, l_new_molecule_atoms)
 
 
 def insert_residue_into_chain(s_input_pdb_file,s_output_pdb_file,s_chain,n_residue,s_new_residue_name, d_new_residue_atoms,s_replace_or_displace='displace'):
