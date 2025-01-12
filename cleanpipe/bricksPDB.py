@@ -429,15 +429,13 @@ def insert_atom_into_residue(s_input_pdb_file,s_output_pdb_file,s_chain,n_residu
         1.0,  # Occupancy (optional, default 1.0)
         ' ',  # Alternate location indicator
         str(s_atom_structural_name).strip(),  # Atom full structural name. I dont know why this is necessary
-        1001, #int(n_current_serial_number),  # serial number e.g. 1001 
+        1001, #int(n_current_serial_number),  # serial number e.g. 1001. I dont know why this is necessary. inside the new pdb, the numbering dont consider this
         str(s_atom_element_name).strip().upper() # the element name (e.g., 'C', 'N', 'O') it shoule be capital letters
     )
 
 
     # add atom to the residue
     residue.add(new_atom)
-
-    # xxx there tmight be a problem in this function. when I add a atom to the middle of a molecule, that atom serial number will be the biggest, but its not the last atom on the pdb file
 
 
     # Write the modified structure to the output file
