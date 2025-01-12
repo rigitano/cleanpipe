@@ -163,7 +163,7 @@ def insert_new_molecule_into_pdb(s_input_pdb_file, s_output_pdb_file, d_new_mole
 
         # Create new atom
         atom = Atom.Atom(
-            f"{current_atom['structural_name']:<4}".strip().upper(),  # Atom name (e.g., 'C1', 'N1', 'O1') # Ensure atom name is 4 characters (padded or truncated)
+            current_atom['structural_name'].upper().ljust(4),  # Atom name (e.g., 'C1', 'N1', 'O1') # Ensure atom name is 4 characters (padded or truncated)
             np.array(current_atom['coord'], dtype=float),  # Coordinates as a numpy array
             1.0,  # B-factor (optional, default 1.0)
             1.0,  # Occupancy (optional, default 1.0)
@@ -360,7 +360,7 @@ def insert_residue_into_chain(s_input_pdb_file,s_output_pdb_file,s_chain,n_resid
 
         # define new atom in biopython
         atom = Atom.Atom(
-            f"{current_new_atom['structural_name']:<4}".strip().upper(),  # Atom name (e.g., 'C1', 'N1', 'O1') # Ensure atom name is 4 characters (padded or truncated)
+            current_new_atom['structural_name'].upper().ljust(4),  # Atom name (e.g., 'C1', 'N1', 'O1') # Ensure atom name is 4 characters (padded or truncated)
             np.array(current_new_atom['coord'], dtype=float),  # Coordinates as a numpy array
             1.0,  # B-factor (optional, default 1.0)
             1.0,  # Occupancy (optional, default 1.0)
@@ -423,7 +423,7 @@ def insert_atom_into_residue(s_input_pdb_file,s_output_pdb_file,s_chain,n_residu
 
     # define new atom in biopython
     new_atom = Atom.Atom(
-        f"{s_atom_structural_name:<4}".strip().upper(),  # Atom name (e.g., 'C1', 'N1', 'O1') # Ensure atom name is 4 characters (padded or truncated)
+        s_atom_structural_name.upper().ljust(4),  # Atom name (e.g., 'C1', 'N1', 'O1') # Ensure atom name is 4 characters (padded or truncated)
         np.array(l_coord, dtype=float),  # Coordinates as a numpy array
         1.0,  # B-factor (optional, default 1.0)
         1.0,  # Occupancy (optional, default 1.0)
