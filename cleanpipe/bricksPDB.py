@@ -193,7 +193,7 @@ def insert_new_molecule_into_pdb(s_input_pdb_file, s_output_pdb_file, d_new_mole
 def add_truss(s_pdb_file, s_out_pdb_file, p1, p2, n_square_size = 3):
     """
 
-    cl.add_truss("pepticat.pdb",[0, 0, 0], [1, 1, 1])
+    cl.add_truss("pepticat6_with_atom.pdb","pepticat6_with_atom_and_truss.pdb", [0,0,0], [10,10,10])
 
     """
 
@@ -282,7 +282,7 @@ def add_truss(s_pdb_file, s_out_pdb_file, p1, p2, n_square_size = 3):
         l_new_molecule_atoms.append({'structural_name': f"XB",'element_name': 'X', 'coord': vertices[i+1], 'residue_name': 'TRS', 'residue_id': residue_count})
         l_new_molecule_atoms.append({'structural_name': f"XC",'element_name': 'X', 'coord': vertices[i+2], 'residue_name': 'TRS', 'residue_id': residue_count})
         l_new_molecule_atoms.append({'structural_name': f"XD",'element_name': 'X', 'coord': vertices[i+3], 'residue_name': 'TRS', 'residue_id': residue_count})
-        print(vertices[i])
+        #print(vertices[i])
         residue_count+=1
 
     #at last, we insert the new molecule in the pdb
@@ -291,7 +291,15 @@ def add_truss(s_pdb_file, s_out_pdb_file, p1, p2, n_square_size = 3):
 
 def insert_residue_into_chain(s_input_pdb_file,s_output_pdb_file,s_chain,n_residue,s_new_residue_name, d_new_residue_atoms,s_replace_or_displace='displace'):
     """
-    
+
+
+    example:
+    d_hi =[{'structural_name': 'XI','element_name': 'X', 'coord': [1, 2, 3]}, 
+        {'structural_name': 'XJ','element_name': 'X', 'coord': [4, 5, 6]}, 
+        {'structural_name': 'XK','element_name': 'X', 'coord': [7, 8, 9]}, 
+        {'structural_name': 'XL','element_name': 'X', 'coord': [10, 11, 12]}
+      ]
+    cl.insert_residue_into_chain("pepticat6_with_atom_and_truss.pdb","pepticat6_with_atom_and_truss_modified.pdb",'A',3,"BOB", d_hi,s_replace_or_displace='displace')
     """
 
     print("IN FUNCTION insert_residue_into_chain")
@@ -338,7 +346,7 @@ def insert_residue_into_chain(s_input_pdb_file,s_output_pdb_file,s_chain,n_resid
         )
         #n_current_serial_number += 1
         new_residue.add(atom)
-        print(f"Atom: {atom.get_name()}, coord: {atom.get_coord()}, Residue: {s_new_residue_name}, Residueid: {n_residue}, Serial Number: {atom.serial_number}")
+        #print(f"Atom: {atom.get_name()}, coord: {atom.get_coord()}, Residue: {s_new_residue_name}, Residueid: {n_residue}, Serial Number: {atom.serial_number}")
 
         
     # To insert the new resitue in the correct position, first detach all residues, saving all of them in a list
@@ -364,14 +372,14 @@ def insert_residue_into_chain(s_input_pdb_file,s_output_pdb_file,s_chain,n_resid
             elif residue.id[1] == n_residue:#current residue is in the exact place of the new one
                 chain.add(new_residue)#the new residue is added instead of the old one
             else:#current residue is after the new one
-                previous_residue.id[1] = previous_residue.id[1] +1 #redefine the residue position, so the numbering will be correct in the pdb file
+                previous_residue.id = (previous_residue.id[0], previous_residue.id[1] +1, previous_residue.id[2])#redefine the residue position, so the numbering will be correct in the pdb file
                 chain.add(previous_residue)#residues remain the same, but is the one from the last iteration that will be inserted, so to displace all residues after the new one
 
                 if residue.id[1] == len(residues_to_reinsert):#if it is the last residue, we inser also the final one and break the loop
-                    residue.id[1] = residue.id[1] +1 #redefine the residue position, so the numbering will be correct in the pdb file
+                    residue.id = (residue.id[0], residue.id[1] +1, residue.id[2])#redefine the residue position, so the numbering will be correct in the pdb file
                     chain.add(residue)
                     break
-                
+
             previous_residue = residue #save the current residue for the next iteration, if necessary
 
 
@@ -390,11 +398,11 @@ def insert_atom_into_residue(s_input_pdb_file,s_output_pdb_file,s_chain,n_residu
     the user specify the chain and residue id. and put an atom there with defined name and coordinates
 
     
-    cl.insert_atom_into_residue('pepticat4.pdb','pepticat4_.pdb','A',3,'CAE','C',[1,1,1])
+    cl.insert_atom_into_residue('pepticat6.pdb','pepticat6_with_atom.pdb','A',3,'CAE','AU',[1,1,1])
 
     """
 
-    print("IN FUNCTION insert_atom_to_residue")
+    print("IN FUNCTION insert_atom_into_residue")
 
     
     
