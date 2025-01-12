@@ -49,6 +49,10 @@ def pdb2system(s_pdbfile,s_outName,s_forceField,s_boxSize,b_addterminal=True):
     bricksFileSystem.run_and_capture(f"mkdir {s_outName}")
     bricksFileSystem.run_and_capture(f"cp {s_pdbfile} {s_outName}/temp.pdb")
     bricksFileSystem.run_and_capture(f"cp -r {s_forceField}.ff {s_outName.rstrip('/')}/")#copy the forcefield to the new folder
+    try:
+        bricksFileSystem.run_and_capture(f"cp -r toppar {s_outName.rstrip('/')}/")#copy the forcefield to the new folder
+    except:
+        print("CLEANPIPE MESSAGEtoppar folder not found, so it was not copied to the new folder")
     #original_directory = os.getcwd()#original folder is stored so I can go back to it at the very end of this function
     os.chdir(f"{s_outName}")
 

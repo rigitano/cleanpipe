@@ -96,7 +96,7 @@ def insert_new_molecule_into_pdb(s_input_pdb_file, s_output_pdb_file, d_new_mole
     """
 
     print("IN FUNCTION insert_new_molecule_into_pdb")
-    print(d_new_molecule_atoms)
+    #print(d_new_molecule_atoms)
 
     # Parse the existing PDB structure
     parser = PDBParser(QUIET=True)
@@ -173,7 +173,7 @@ def insert_new_molecule_into_pdb(s_input_pdb_file, s_output_pdb_file, d_new_mole
             current_atom['element_name'].upper() # the element name (e.g., 'C', 'N', 'O')
         )
 
-        print(f"Atom: {atom.get_name()}, coord: {atom.get_coord()}, Residue: {residue_name}, Residueid: {current_atom['residue_id']}, Serial Number: {atom.serial_number}")
+        #print(f"Atom: {atom.get_name()}, coord: {atom.get_coord()}, Residue: {residue_name}, Residueid: {current_atom['residue_id']}, Serial Number: {atom.serial_number}")
 
         # Add atom to the residue
         residue.add(atom)
