@@ -314,46 +314,16 @@ def insert_residue_into_chain(s_input_pdb_file,s_output_pdb_file,s_chain,n_resid
     model = structure[0] if len(structure) > 0 else print('CLEAN PIPE MESSAGE : ATTENTION there are several models in the pdb file, it is the first that will be edited')
 
     # Determine the maximum residue ID in the whole structure to avoid collisions
-    max_serial_number = max((atom.serial_number for atom in model.get_atoms()), default=0)
-    n_current_serial_number = max_serial_number + 1
+    #max_serial_number = max((atom.serial_number for atom in model.get_atoms()), default=0)
+    #n_current_serial_number = max_serial_number + 1
 
     #get the chain
     chain = model[s_chain] #e.g. chain = model['A']
     l_residues = list(chain.get_residues())
 
 
-    if s_replace_or_displace=='replace':
-
-        # Remove the residue at the specified position
-        for residue in chain.get_residues():
-            if residue.id[1] == n_residue:
-                chain.detach_child(residue.id)
-                break
-
-        # Create and add the new residue at the specified position
-        residue = Residue.Residue((het_flag, n_residue, ' '), s_new_residue_name.ljust(3)[:3], '')
-        chain.add(residue)
-
-
-    elif s_replace_or_displace=='displace':
-
-        # Create and add the new residue at the specified position
-        new_residue = Residue.Residue((het_flag, n_residue, ' '), s_new_residue_name.ljust(3)[:3], '')
-
-        # Detach all residues after the specified position to avoid index conflict
-        residues_to_reinsert = []
-        for residue in l_residues:
-            if residue.id[1] >= n_residue:
-                residues_to_reinsert.append(residue)
-                chain.detach_child(residue.id)
-
-        # Insert the new residue
-        chain.add(new_residue)
-
-        # Re-insert each residue with updated numbers
-        for residue in residues_to_reinsert:
-            residue.id = (residue.id[0], residue.id[1] + 1, residue.id[2])
-            chain.add(residue)
+    # Create and a new detached residue. we will set the specified position, but its not part of any chain yet
+    new_residue = Residue.Residue((het_flag, n_residue, ' '), s_new_residue_name.ljust(3)[:3], '')
 
 
     for current_new_atom in d_new_residue_atoms:
@@ -366,15 +336,42 @@ def insert_residue_into_chain(s_input_pdb_file,s_output_pdb_file,s_chain,n_resid
             1.0,  # Occupancy (optional, default 1.0)
             ' ',  # Alternate location indicator
             str(current_new_atom['structural_name']).strip(),  # Atom full structural name. I dont know why this is necessary
-            int(n_current_serial_number),  # serial number e.g. 1001 
+            1001, #int(n_current_serial_number),  # serial number e.g. 1001 #i dont know why this is necessary, it seems like in the pdb file a renumbering takes place, and dont consider this
             str(current_new_atom['element_name']).strip().upper()# the element name (e.g., 'C', 'N', 'O')
         )
-        n_current_serial_number += 1
-        residue.add(atom)
+        #n_current_serial_number += 1
+        new_residue.add(atom)
         print(f"Atom: {atom.get_name()}, coord: {atom.get_coord()}, Residue: {s_new_residue_name}, Residueid: {n_residue}, Serial Number: {atom.serial_number}")
 
         
+    # To insert the new resitue in the correct position, first detach all residues, saving all of them in a list
+    residues_to_reinsert = []
+    for residue in l_residues:
+        residues_to_reinsert.append(residue)
+        chain.detach_child(residue.id)
 
+    #now recontruct the chain, putting the new residue in the correct position
+    if s_replace_or_displace=='replace': #the new residue will replace the old one in that position
+
+        for residue in residues_to_reinsert:
+            if residue.id[1] == n_residue:
+                chain.add(new_residue)#the new residue one is added
+            else:
+                chain.add(residue)#old residues remain the same
+
+    elif s_replace_or_displace=='displace': #the new residue will be inserted in the position, displacing the folowing ones
+
+        for residue in residues_to_reinsert:
+            if residue.id[1] < n_residue:#current residue is before the new one
+                chain.add(residue)#residues remain the same
+            elif residue.id[1] == n_residue:#current residue is in the exact place of the new one
+                chain.add(new_residue)#the new residue is added instead of the old one
+            else:#current residue is after the new one
+                chain.add(previous_residue)#residues remain the same, but is the one from the last iteration that will be inserted, so to displace all residues after the new one
+                if residue.id[1] == len(residues_to_reinsert):#if it is the last residue, we inser also the final one and break the loop
+                    chain.add(residue)
+                    break#
+            previous_residue = residue #save the current residue for the next iteration, if necessary
 
 
 
