@@ -302,9 +302,6 @@ def insert_residue_into_chain(s_input_pdb_file,s_output_pdb_file,s_chain,n_resid
     else:
         het_flag = ' '
 
-    #change residue number from natural number (like in pdb ) to id (like in biopython)
-    n_residue = n_residue-1
-
 
     # Parse the existing PDB structure
     parser = PDBParser(QUIET=True)
@@ -367,10 +364,14 @@ def insert_residue_into_chain(s_input_pdb_file,s_output_pdb_file,s_chain,n_resid
             elif residue.id[1] == n_residue:#current residue is in the exact place of the new one
                 chain.add(new_residue)#the new residue is added instead of the old one
             else:#current residue is after the new one
+                previous_residue.id[1] = previous_residue.id[1] +1 #redefine the residue position, so the numbering will be correct in the pdb file
                 chain.add(previous_residue)#residues remain the same, but is the one from the last iteration that will be inserted, so to displace all residues after the new one
+
                 if residue.id[1] == len(residues_to_reinsert):#if it is the last residue, we inser also the final one and break the loop
+                    residue.id[1] = residue.id[1] +1 #redefine the residue position, so the numbering will be correct in the pdb file
                     chain.add(residue)
-                    break#
+                    break
+                
             previous_residue = residue #save the current residue for the next iteration, if necessary
 
 
@@ -395,8 +396,8 @@ def insert_atom_into_residue(s_input_pdb_file,s_output_pdb_file,s_chain,n_residu
 
     print("IN FUNCTION insert_atom_to_residue")
 
-    #change residue number from natural number (like in pdb ) to id (like in biopython)
-    n_residue = n_residue-1
+    
+    
 
 
     # Parse the existing PDB structure
@@ -415,6 +416,7 @@ def insert_atom_into_residue(s_input_pdb_file,s_output_pdb_file,s_chain,n_residu
     l_residues = list(chain.get_residues())
 
     # Get the residue to be edited
+    n_residue = n_residue-1#change residue number so it suits the list index
     residue = l_residues[n_residue] 
 
 
