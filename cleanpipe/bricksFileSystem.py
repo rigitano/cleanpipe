@@ -162,7 +162,7 @@ def run_and_capture_old(command):
 
 
 
-def run_and_capture(command):
+def run_and_capture_old_version_that_works_but_doesnt_stop_code_that_called_it_if_there_was_an_error(command):
 
     """
     Executes a shell command, captures both stdout and stderr in real-time, and waits for it to complete.
@@ -203,7 +203,69 @@ def run_and_capture(command):
 
     #return captured_output + captured_error
 
+def run_and_capture(command):
+    """
+    Executes a shell command, capturing both its normal output (stdout) and error output (stderr) in real-time.
+    If the command fails (returns a non-zero code), an exception is raised to stop further execution.
+    """
 
+    # Tell the user which command is being executed
+    print(f"\nCLEANPIPE MESSAGE executing command:\n{command}\n")
+
+    # Start the command as a separate process.
+    # - 'shell=True' lets us run the command as if we typed it into the shell.
+    # - 'stdout=subprocess.PIPE' and 'stderr=subprocess.PIPE' tell Python to capture the output and errors.
+    # - 'text=True' means we work with text (strings) rather than raw bytes.
+    # - 'bufsize=1' makes the output be line-buffered, which helps us print output in real-time.
+    process = subprocess.Popen(
+        command,
+        shell=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        bufsize=1
+    )
+
+    # Create empty strings to save the outputs we capture.
+    captured_output = ""
+    captured_error = ""
+
+    # Read the standard (normal) output line by line as soon as it is available.
+    # The iter() function keeps reading until it finds an empty string (which means there's no more output).
+    for line in iter(process.stdout.readline, ''):
+        sys.stdout.write(line)    # Print the line immediately to the console.
+        captured_output += line   # Also add it to our captured_output string.
+
+    # Read the error output line by line in a similar way.
+    for line in iter(process.stderr.readline, ''):
+        sys.stderr.write(line)    # Print the error line immediately to the console.
+        captured_error += line    # Also add it to our captured_error string.
+
+    # Close the output and error streams now that we're done reading from them.
+    process.stdout.close()
+    process.stderr.close()
+
+    # Wait for the process to finish executing the command.
+    process.wait()
+
+    # Check if the command was successful.
+    # A return code of 0 usually means success. Any other number indicates an error.
+    if process.returncode != 0:
+        # Inform the user that the command failed and show the return code.
+        print(f"\nCLEANPIPE MESSAGE command failed with return code {process.returncode}")
+        if captured_error:
+            print(f"\nCLEANPIPE MESSAGE standard error output:\n{captured_error}")
+        # Raise an exception so that the caller of this function will not continue running further code.
+        # This exception can be caught by the calling code if needed.
+        raise subprocess.CalledProcessError(
+            process.returncode,
+            command,
+            output=captured_output,
+            stderr=captured_error
+        )
+
+    # If everything went well, you might want to return the captured normal output.
+    #return captured_output
 
 
 def create_folder(s_folder_name):
