@@ -238,21 +238,21 @@ def make_realistic(s_systemFolder,s_groups_to_monitor_separately, s_temperature)
     bricksFileSystem.run_and_capture(f"mkdir 1_EM")
     os.chdir(f"1_EM")
     bricksFileSystem.run_and_capture(f"gmx grompp -f {s_mdp_folder}/em.mdp -c ../{s_initialgroName} -p ../{s_topName} -o em.tpr -maxwarn 3" )
-    bricksFileSystem.run_and_capture(f"gmx mdrun -deffnm em" )
+    bricksFileSystem.run_and_capture(f"gmx mdrun -v -deffnm em" )
     os.chdir(f"..")
 
     #NVT equilibration
     bricksFileSystem.run_and_capture(f"mkdir 2_NVT")
     os.chdir(f"2_NVT")
     bricksFileSystem.run_and_capture(f"gmx grompp -f {s_mdp_folder}/{s_mdpNameNVT} -c ../1_EM/em.gro -r ../1_EM/em.gro -p ../{s_topName} -o nvt.tpr -maxwarn 3")
-    bricksFileSystem.run_and_capture(f"gmx mdrun -deffnm nvt")
+    bricksFileSystem.run_and_capture(f"gmx mdrun -v -deffnm nvt")
     os.chdir(f"..")
 
     #NPT equilibration
     bricksFileSystem.run_and_capture(f"mkdir 3_NPT")
     os.chdir(f"3_NPT")
     bricksFileSystem.run_and_capture(f"gmx grompp -f {s_mdp_folder}/{s_mdpNameNPT} -c ../2_NVT/nvt.gro -r ../2_NVT/nvt.gro -t ../2_NVT/nvt.cpt -p ../{s_topName} -o npt.tpr -maxwarn 3")
-    bricksFileSystem.run_and_capture(f"gmx mdrun -deffnm npt")
+    bricksFileSystem.run_and_capture(f"gmx mdrun -v -deffnm npt")
     os.chdir(f"..")
 
 
@@ -289,11 +289,11 @@ def production(s_systemFolder,n_nanoseconds):
 
     #initial simulation
     bricksFileSystem.run_and_capture(f"gmx grompp -f {s_mdp_folder}/prod_continuation_Vr_Cr.mdp -c ../3_NPT/npt.gro -p ../{s_topName} -o prod.tpr -maxwarn 3")
-    bricksFileSystem.run_and_capture(f"gmx mdrun -deffnm prod")
+    bricksFileSystem.run_and_capture(f"gmx mdrun -v -deffnm prod")
 
     #extend the simulation, use the tpbconv tool to extend the .tpr file
     bricksFileSystem.run_and_capture(f"gmx convert-tpr -s prod.tpr -extend {str(n_nanoseconds*1000-1)} -o prod.tpr")
-    bricksFileSystem.run_and_capture(f"gmx mdrun -deffnm prod -cpi prod.cpt")  # Continue the simulation from the checkpoint file
+    bricksFileSystem.run_and_capture(f"gmx mdrun -v -deffnm prod -cpi prod.cpt")  # Continue the simulation from the checkpoint file
 
     #xxx room for improvement in the processing configurations, for example -nt 8
 
