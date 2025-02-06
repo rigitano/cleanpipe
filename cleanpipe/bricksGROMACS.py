@@ -70,9 +70,9 @@ def pdb2system(s_pdbfile,s_outName,s_forceField,s_boxSize,b_addterminal=True):
         bricksFileSystem.run_and_capture(f"printf '8\n7\n' | gmx pdb2gmx -f temp.pdb -o {s_outName}.gro -p {s_outName}.top -i {s_molName}.posres.itp -missing -ter -ignh -water none -ff {s_forceField}")
     
 
-    #pdb2gmx is stupid, so by default it and givesa wierd name to the molecule from the pdb. most times is "Other_chain_O". lets replace it by the real molecule name, that I took from the pdb file name
-    uglyMolName = bricksTOP.getMoleculeName(f"{s_outName}.top")
-    bricksTOP.replaceMoleculeName(f"{s_outName}.top", uglyMolName, s_molName)
+    #pdb2gmx is stupid, so by default it and givesa weird name to the molecule from the pdb. most times is "Other_chain_O". lets replace it by the real molecule name, that I took from the pdb file name
+    #uglyMolName = bricksTOP.getMoleculeName(f"{s_outName}.top")
+    #bricksTOP.replaceMoleculeName(f"{s_outName}.top", uglyMolName, s_molName)
 
     #define box size inside the gro file. s_boxSize contains the user definition (ex: "3 3 3")
     bricksFileSystem.run_and_capture(f"gmx editconf -f {s_outName}.gro -o {s_outName}.gro -c -box {s_boxSize} -bt cubic")
@@ -163,8 +163,8 @@ def solvate_and_neutralize(s_systemFolder,s_solventName,s_forceField):
         bricksFileSystem.delete(f"\\#{s_topName}.top.1\\#")#I choose to overwrite the old top
 
         #when gmx solvate inform the quantity added in the top, its possible that it chooses a weird name. lets make sure its the name of the itp file
-        badmolName = bricksTOP.getMoleculeName(f"{s_topName}.top", order=-1)#get name of the last molecule in the directive [ molecules ]
-        bricksTOP.replaceWordInsideDirective(f"{s_topName}.top", "[ molecules ]", badmolName, l_solbox_itpNames[0].replace(".itp", ""))# xxx this is not preparet to deal with a solvent box with several different molecules
+        #badmolName = bricksTOP.getMoleculeName(f"{s_topName}.top", order=-1)#get name of the last molecule in the directive [ molecules ]
+        #bricksTOP.replaceWordInsideDirective(f"{s_topName}.top", "[ molecules ]", badmolName, l_solbox_itpNames[0].replace(".itp", ""))# xxx this is not preparet to deal with a solvent box with several different molecules
 
         #edit top to insert a line including a reference of the solvent itp before the [ system ] directive
         for s_sol_itpName in l_solbox_itpNames:
