@@ -4,6 +4,7 @@ from cleanpipe import bricksTOP
 import subprocess
 import os
 import functools
+import time
 
 def ensure_original_directory(func):
     """
@@ -237,13 +238,20 @@ def make_realistic(s_systemFolder,s_groups_to_monitor_separately, s_temperature)
     #EM
     bricksFileSystem.run_and_capture(f"mkdir 1_EM")
     os.chdir(f"1_EM")
+
+    #gmx grompp -f em.mdp -c ../1_EM/em.gro -r ../1_EM/em.gro -p ../pepticat9_truss_in_water.top -o nvt.tpr -maxwarn 3
     bricksFileSystem.run_and_capture(f"gmx grompp -f {s_mdp_folder}/em.mdp -c ../{s_initialgroName} -p ../{s_topName} -o em.tpr -maxwarn 3" )
+
+    time.sleep(3) # Seconds
+    
     bricksFileSystem.run_and_capture(f"gmx mdrun -v -deffnm em" )
     os.chdir(f"..")
 
     #NVT equilibration
     bricksFileSystem.run_and_capture(f"mkdir 2_NVT")
     os.chdir(f"2_NVT")
+    
+    #gmx grompp -f nvt_begin_Vr_1GROUP.mdp -c ../1_EM/em.gro -r ../1_EM/em.gro -p ../pepticat9_truss_in_water.top -o nvt.tpr -maxwarn 3
     bricksFileSystem.run_and_capture(f"gmx grompp -f {s_mdp_folder}/{s_mdpNameNVT} -c ../1_EM/em.gro -r ../1_EM/em.gro -p ../{s_topName} -o nvt.tpr -maxwarn 3")
     bricksFileSystem.run_and_capture(f"gmx mdrun -v -deffnm nvt")
     os.chdir(f"..")
@@ -391,3 +399,29 @@ def dssp(s_xtc,s_gro):
 
 
 
+def see_bond_paramenters():
+
+    l_bondt = bricksTOP.parse_directive("\\\\wsl.localhost\\Ubuntu\\home\\bioinformatician\\MD\\charmm36-jul2022_TRUSS.ff\\ffbonded.itp","[ bondtypes ]")
+
+    print("##############################")
+    print(l_bondt)
+
+    l_anglet = bricksTOP.parse_directive("\\\\wsl.localhost\\Ubuntu\\home\\bioinformatician\\MD\\charmm36-jul2022_TRUSS.ff\\ffbonded.itp","[ angletypes ]")
+
+    print("##############################")
+    print(l_anglet)
+
+    l_bonds = bricksTOP.parse_directive("\\\\wsl.localhost\\Ubuntu\\home\\bioinformatician\\MD\\pepticat9_truss_in_water\\pepticat9_truss_in_water_Support_chain_B.itp","[ bonds ]")
+
+    print("##############################")
+    print(l_bonds)
+
+    l_angles = bricksTOP.parse_directive("\\\\wsl.localhost\\Ubuntu\\home\\bioinformatician\\MD\\pepticat9_truss_in_water\\pepticat9_truss_in_water_Support_chain_B.itp","[ angles ]")
+
+    print("##############################")
+    print(l_angles)
+
+    l_atoms = bricksTOP.parse_directive("\\\\wsl.localhost\\Ubuntu\\home\\bioinformatician\\MD\\pepticat9_truss_in_water\\pepticat9_truss_in_water_Support_chain_B.itp","[ atoms ]")
+
+    print("##############################")
+    print(l_atoms)
