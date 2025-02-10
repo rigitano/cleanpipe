@@ -399,29 +399,10 @@ def dssp(s_xtc,s_gro):
 
 
 
-def see_bond_paramenters():
+def see_bond_paramenters(s_file,s_directive):
 
-    l_bondt = bricksTOP.parse_directive("\\\\wsl.localhost\\Ubuntu\\home\\bioinformatician\\MD\\charmm36-jul2022_TRUSS.ff\\ffbonded.itp","[ bondtypes ]")
-
-    print("##############################")
-    print(l_bondt)
-
-    l_anglet = bricksTOP.parse_directive("\\\\wsl.localhost\\Ubuntu\\home\\bioinformatician\\MD\\charmm36-jul2022_TRUSS.ff\\ffbonded.itp","[ angletypes ]")
+    l_parsed = bricksTOP.parse_directive(s_file,s_directive)
 
     print("##############################")
-    print(l_anglet)
+    print(l_parsed)
 
-    l_bonds = bricksTOP.parse_directive("\\\\wsl.localhost\\Ubuntu\\home\\bioinformatician\\MD\\pepticat9_truss_in_water\\pepticat9_truss_in_water_Support_chain_B.itp","[ bonds ]")
-
-    print("##############################")
-    print(l_bonds)
-
-    l_angles = bricksTOP.parse_directive("\\\\wsl.localhost\\Ubuntu\\home\\bioinformatician\\MD\\pepticat9_truss_in_water\\pepticat9_truss_in_water_Support_chain_B.itp","[ angles ]")
-
-    print("##############################")
-    print(l_angles)
-
-    l_atoms = bricksTOP.parse_directive("\\\\wsl.localhost\\Ubuntu\\home\\bioinformatician\\MD\\pepticat9_truss_in_water\\pepticat9_truss_in_water_Support_chain_B.itp","[ atoms ]")
-
-    print("##############################")
-    print(l_atoms)
