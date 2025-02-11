@@ -241,10 +241,8 @@ def make_realistic(s_systemFolder,s_groups_to_monitor_separately, s_temperature)
 
     #gmx grompp -f em.mdp -c ../1_EM/em.gro -r ../1_EM/em.gro -p ../pepticat9_truss_in_water.top -o nvt.tpr -maxwarn 3
     bricksFileSystem.run_and_capture(f"gmx grompp -f {s_mdp_folder}/em.mdp -c ../{s_initialgroName} -p ../{s_topName} -o em.tpr -maxwarn 3" )
-
-    time.sleep(3) # Seconds
-    
-    bricksFileSystem.run_and_capture(f"gmx mdrun -v -deffnm em" )
+    #time.sleep(3) # Seconds
+    bricksFileSystem.run_and_capture(f"gmx mdrun -v -deffnm em -ntmpi 1 -ntomp 1 -dlb no" )
     os.chdir(f"..")
 
     #NVT equilibration
@@ -253,14 +251,14 @@ def make_realistic(s_systemFolder,s_groups_to_monitor_separately, s_temperature)
     
     #gmx grompp -f nvt_begin_Vr_1GROUP.mdp -c ../1_EM/em.gro -r ../1_EM/em.gro -p ../pepticat9_truss_in_water.top -o nvt.tpr -maxwarn 3
     bricksFileSystem.run_and_capture(f"gmx grompp -f {s_mdp_folder}/{s_mdpNameNVT} -c ../1_EM/em.gro -r ../1_EM/em.gro -p ../{s_topName} -o nvt.tpr -maxwarn 3")
-    bricksFileSystem.run_and_capture(f"gmx mdrun -v -deffnm nvt")
+    bricksFileSystem.run_and_capture(f"gmx mdrun -v -deffnm nvt -ntmpi 1 -ntomp 1 -dlb no")
     os.chdir(f"..")
 
     #NPT equilibration
     bricksFileSystem.run_and_capture(f"mkdir 3_NPT")
     os.chdir(f"3_NPT")
     bricksFileSystem.run_and_capture(f"gmx grompp -f {s_mdp_folder}/{s_mdpNameNPT} -c ../2_NVT/nvt.gro -r ../2_NVT/nvt.gro -t ../2_NVT/nvt.cpt -p ../{s_topName} -o npt.tpr -maxwarn 3")
-    bricksFileSystem.run_and_capture(f"gmx mdrun -v -deffnm npt")
+    bricksFileSystem.run_and_capture(f"gmx mdrun -v -deffnm npt -ntmpi 1 -ntomp 1 -dlb no")
     os.chdir(f"..")
 
 
