@@ -56,9 +56,7 @@ def coordinate_by_id(s_gro_file, s_atom_id, format='dictionary'):
     this matching is not considered by this function, the function will just return the coordinate for a given id
 
     """
-    print("barrrrrr")
-    print("s_atom_id")
-    print(s_atom_id)
+
 
     list_of_dicts = parse_gro(s_gro_file)
 
