@@ -8,6 +8,14 @@ import tempfile
 import os
 
 
+from cleanpipe import lltools
+from cleanpipe import algelin
+from cleanpipe import bricksTOP
+from cleanpipe import bricksGRO
+from cleanpipe import bricksFileSystem
+
+
+
 import matplotlib.pyplot as plt
 from matplotlib.ticker import ScalarFormatter, LogLocator
 import matplotlib.colors as mcolors
@@ -357,54 +365,11 @@ def plot_dssp(s_dssp_file,s_subtitle):
     plt.show()
 
 
+
+
+
+
 def open_vmd_with_socket():
-    """"
-    xxx this should be used in the app
-
-    """
-
-    # Define the Tcl script as a string
-    tcl_script = """
-    proc start_server {port} {
-        set server [socket -server handle_connection $port]
-        puts "Server started on port $port"
-        return $server
-    }
-
-    proc handle_connection {sock addr port} {
-        puts "Connection from $addr:$port"
-        fconfigure $sock -buffering line
-        while {[gets $sock line] >= 0} {
-            puts "Received command: $line"
-            catch {eval $line} result
-            puts $sock $result
-            flush $sock
-        }
-        close $sock
-    }
-
-    start_server 5555
-    """
-
-    # Create a temporary file for the script
-    with tempfile.NamedTemporaryFile(delete=False, suffix=".tcl") as temp_script:
-        temp_script.write(tcl_script.encode('utf-8'))
-        temp_script_path = temp_script.name
-
-    try:
-        # Call VMD with the temporary script
-        subprocess.run(["C:\\Program Files\\VMD\\vmd", "-e", temp_script_path], check=True)
-    finally:
-        # Ensure the temporary file is deleted
-        if os.path.exists(temp_script_path):
-            os.remove(temp_script_path)
-
-
-
-
-
-
-def open_vmd_with_socket2():
     """
     Launches VMD with a Tcl script for a socket server without blocking the Jupyter cell.
     """
@@ -471,3 +436,835 @@ def send_command_to_vmd(s_command):
         response = sock.recv(1024)
         print("Response:", response.decode('utf-8'))
 
+
+
+def see_interactions(s_top,s_gro,s_mol_name):
+
+    """
+    based on the top, this funcion will draw the topology.
+
+    each parameter of each directive will be ploted as a new molecule
+    parameters that as zero will be ploted as white
+
+
+
+
+    example
+
+    s_top = r"//wsl$/Ubuntu/home/bioinformatician/MD/pepticat9_truss_in_water/pepticat9_truss_in_water.top"
+    s_gro = r"//wsl$/Ubuntu/home/bioinformatician/MD/pepticat9_truss_in_water/3_NPT/npt.gro"
+
+    cl.see_interactions(s_top,s_gro,'Protein_chain_A')
+    
+    """
+
+    print("CLEAN PIPE excecuting function see_topology_of_one_molecule")
+
+
+
+
+
+    
+    
+    what_to_plot = ["[ bonds ]","[ angles ]","[ dihedrals ]","[ cmap ]","[ pairs ]","[ exclusions ]","[ position_restraints ]"]
+    #what_to_plot = ["[ bonds ]","[ dihedrals ]","[ cmap ]","[ position_restraints ]"]
+    #what_to_plot = ["[ dihedrals ]","[ cmap ]","[ pairs ]","[ exclusions ]","[ position_restraints ]"]
+    #what_to_plot = ["[ bonds ]","[ angles ]","[ dihedrals ]","[ cmap ]","[ pairs ]","[ exclusions ]"]
+    #what_to_plot = ["[ position_restraints ]"]
+    #what_to_plot = ["[ bonds ]"]
+    
+    #l_tcl_commads.append("graphics top delete all")
+
+    #here are usefull advanged setups, of transoformations for a give molecule. I fixed the issue in a simpler way, using the command "display resetview"
+    #this obtains a transformatin matrix:
+    #"molinfo top get center_matrix"
+    #this changes the transformation matrices
+    #l_tcl_commads.append("molinfo [molinfo top] set {center_matrix rotate_matrix scale_matrix global_matrix} {{{1 0 0 0} {0 1 0 0} {0 0 1 0} {0 0 0 1}} {{1 0 0 0} {0 1 0 0} {0 0 1 0} {0 0 0 1}} {{1 0 0 0} {0 1 0 0} {0 0 1 0} {0 0 0 1}} {{1 0 0 0} {0 1 0 0} {0 0 1 0} {0 0 0 1}}}")
+
+    print("CLEAN PIPE gathering topology data")
+
+
+    #a functions to help do deal with dihedrals
+    def split_ll_diherals_into_proper_and_improper(ll_dihedrals):
+        # First list: sublists where the 4th element equals '2'
+        ll_improper = [sublist for sublist in ll_dihedrals if len(sublist) > 3 and sublist[4] == '2']
+        # Second list: sublists where the 4th element is not '2'
+        ll_proper = [sublist for sublist in ll_dihedrals if len(sublist) > 3 and sublist[4] != '2']
+        return ll_proper, ll_improper
+
+    #a function to help to deal with items not found in the lookup, probably because of the atom order
+    def split_ll_into_found_and_not_found(ll_input):
+        #split based on the last element last element equals '2'
+        ll_found = [sublist for sublist in ll_input if sublist[-1] != 'Unknown']
+        # here we exclude the last column
+        ll_not_found = [sublist[:(len(sublist)-1)] for sublist in ll_input if sublist[-1] == 'Unknown']
+        return ll_found, ll_not_found
+
+
+    global s_itp_with_inclusions
+    
+    #inser all inclusions of the top file, so that all forcefield information will be there, at the same place
+    s_top_with_inclusions = bricksTOP.expand_includes_to_temp_file(s_top)
+
+
+
+
+
+
+    # get parameter infos from the top file. please notice that those infos were originally in he ffbonded.itp file, but we included that in the top
+    ll_bondtypes     = lltools.clean_comments_out(bricksTOP.parse_directive(s_top_with_inclusions, "[ bondtypes ]"))
+    ll_angletypes    = lltools.clean_comments_out(bricksTOP.parse_directive(s_top_with_inclusions, "[ angletypes ]"))
+    ll_dihedraltypes = lltools.clean_comments_out(bricksTOP.parse_directive(s_top_with_inclusions, "[ dihedraltypes ]"))
+
+    # get the molecule topology
+    global ll_atoms
+    global ll_exclusions
+    global ll_posres
+    
+    global ll_bonds_filled
+    global ll_angles_filled
+    global ll_dihedrals_filled
+
+    global ll_proper_dihedrals_filled
+    global ll_improper_dihedrals_filled
+
+    global ll_dihedrals_filled_proper
+    global ll_dihedrals_filled_improper
+    global ll_dihedraltypes_improper
+    global ll_dihedraltypes_proper
+
+
+
+    #now parse each and every molecule in the top
+    dd_parsed_mols = bricksTOP.parse_directives_inside_each_and_every_molecule(s_top_with_inclusions)
+
+    #if there are [ intermolecular_interactions ], add it as if it were a molecule. just dont forget that the ids are global there
+    dd_parsed_intermolecular = bricksTOP.parse_directives_inside_intermolecular_interactions(s_top_with_inclusions)
+    if dd_parsed_intermolecular != {}:
+        dd_parsed_mols['intermolecular_interactions'] = dd_parsed_intermolecular['intermolecular_interactions']
+
+
+    #understand how many molecules there are in the top, and the number of atoms in each
+    dd_mols_infos = bricksTOP.basic_infos_of_molecules(s_top_with_inclusions)
+    #this dict contains something like, for example:
+    #{ 'Protein_chain_A': {'count': 1, 'qt_atoms': 81, 'first_id': 1},
+    #  'Support_chain_B': {'count': 1, 'qt_atoms': 24, 'first_id': 82},
+    #  'SOL':             {'count': 845, 'qt_atoms': 3, 'first_id': 106}}
+
+
+
+    #obtain infos for the molecule of interest
+    n_first_id       = dd_mols_infos.get(s_mol_name, {}).get('first_id', 1)  
+    n_atoms_in_mol   = dd_mols_infos.get(s_mol_name, {}).get('qt_atoms', 0)  
+    n_molecules      = dd_mols_infos.get(s_mol_name, {}).get('count', 1)     
+
+    
+    #obtain parsed directives of a certain molecule. Im using gte because some molecule might not have a certain directive. this is not a problem.
+
+    ll_atoms      = dd_parsed_mols.get(s_mol_name, {}).get('[ atoms ]', [])
+
+    ll_bonds      = dd_parsed_mols.get(s_mol_name, {}).get('[ bonds ]', [])
+    ll_angles     = dd_parsed_mols.get(s_mol_name, {}).get('[ angles ]', [])
+    ll_dihedrals  = dd_parsed_mols.get(s_mol_name, {}).get('[ dihedrals ]', [])
+    ll_cmap       = dd_parsed_mols.get(s_mol_name, {}).get('[ cmap ]', [])
+    ll_pairs      = dd_parsed_mols.get(s_mol_name, {}).get('[ pairs ]', [])
+    ll_exclusions = dd_parsed_mols.get(s_mol_name, {}).get('[ exclusions ]', [])
+    ll_posres     = dd_parsed_mols.get(s_mol_name, {}).get('[ position_restraints ]', [])
+
+
+
+
+    
+
+
+    #now obtain the gro, so to get the coordinates as needed
+    ld_coordinates = bricksGRO.parse_gro(s_gro)
+    df_coordinates = pd.DataFrame(ld_coordinates)
+    df_coordinates.set_index('id', inplace=True)# Set 'id' as the index for fast lookups
+    #print(df_coordinates)
+
+    
+    #########   add atom names to the table, looking up the [ atoms ] directive ########
+    
+    if s_mol_name != 'intermolecular_interactions': #within a certain molecule, we just lookup the [ atoms ] directive
+        
+        # BONDS
+        ll_bonds_named = lltools.procv_ll(ll_bonds,[0],ll_atoms,[0],[1])
+        ll_bonds_named = lltools.procv_ll(ll_bonds_named,[1],ll_atoms,[0],[1])
+       
+        #ANGLES
+        ll_angles_named = lltools.procv_ll(ll_angles,[0],ll_atoms,[0],[1])
+        ll_angles_named = lltools.procv_ll(ll_angles_named,[1],ll_atoms,[0],[1])
+        ll_angles_named = lltools.procv_ll(ll_angles_named,[2],ll_atoms,[0],[1])
+
+        #DIHEDRALS
+        ll_dihedrals_named = lltools.procv_ll(ll_dihedrals,[0],ll_atoms,[0],[1])
+        ll_dihedrals_named = lltools.procv_ll(ll_dihedrals_named,[1],ll_atoms,[0],[1])
+        ll_dihedrals_named = lltools.procv_ll(ll_dihedrals_named,[2],ll_atoms,[0],[1])
+        ll_dihedrals_named = lltools.procv_ll(ll_dihedrals_named,[3],ll_atoms,[0],[1])
+    
+    elif s_mol_name == 'intermolecular_interactions': 
+        #it this case its a bit harder, because there's a global id, and no [ atoms ] directive, 
+        #so for each global id it will be necessary to find the correct molecule to get its [ atoms ] and calculate the intermolegular directive from the global ones
+
+        #BONDS
+        ll_bonds_named = [] #
+        for line in ll_bonds: #
+
+            #get the ids in the first couple of columns, but in this case they are global
+            global_id1 = int(line[0])
+            global_id2 = int(line[1])
+
+            #this function will discover the molecule name using the global ids. this will be usefull to get the correct [ atoms ] directive, where the name is
+            current_s_mol_name1 = bricksTOP.discover_molecule_name_from_global_id(s_top_with_inclusions, global_id1)
+            current_s_mol_name2 = bricksTOP.discover_molecule_name_from_global_id(s_top_with_inclusions, global_id2)
+            
+            #obtain [ atoms ] directive of the apropriate molecule. the names are there
+            current_ll_atoms1      = dd_parsed_mols.get(current_s_mol_name1, {}).get('[ atoms ]', [])
+            current_ll_atoms2      = dd_parsed_mols.get(current_s_mol_name2, {}).get('[ atoms ]', [])
+            
+            #obtain basif infos for the current molecules, this will be usefull do calculate the intermolar ids from the global ones
+            n_first_id1       = dd_mols_infos.get(current_s_mol_name1, {}).get('first_id', 1)  
+            n_first_id2       = dd_mols_infos.get(current_s_mol_name2, {}).get('first_id', 1)  
+
+            #calculate the intramolecular ids instead of the global ones. make them a str too, because thats how there were stored in the lookup table
+            intramolecular_id1 = str(global_id1 - (n_first_id1-1))
+            intramolecular_id2 = str(global_id2 - (n_first_id2-1))
+            
+            #lookput, but I have to create a borring table with just one line, and then I have to extract the first line and last colum of the result to get the string with the atom name
+            found_name1 = lltools.procv_ll([[intramolecular_id1]],[0],current_ll_atoms1,[0],[1])[0][1] 
+            found_name2 = lltools.procv_ll([[intramolecular_id2]],[0],current_ll_atoms2,[0],[1])[0][1] 
+
+            #concatenate all the information in a single list, and append it to the table
+            ll_bonds_named.append(line + [found_name1] + [found_name2]) #
+
+
+        #ANGLES
+        ll_angles_named = [] #
+        for line in ll_angles: #
+
+            #get the ids in the first couple of columns, but in this case they are global
+            global_id1 = int(line[0])
+            global_id2 = int(line[1])
+            global_id3 = int(line[2])
+
+            #this function will discover the molecule name using the global ids. this will be usefull to get the correct [ atoms ] directive, where the name is
+            current_s_mol_name1 = bricksTOP.discover_molecule_name_from_global_id(s_top_with_inclusions, global_id1)
+            current_s_mol_name2 = bricksTOP.discover_molecule_name_from_global_id(s_top_with_inclusions, global_id2)
+            current_s_mol_name3 = bricksTOP.discover_molecule_name_from_global_id(s_top_with_inclusions, global_id3)
+            
+            #obtain [ atoms ] directive of the apropriate molecule. the names are there
+            current_ll_atoms1      = dd_parsed_mols.get(current_s_mol_name1, {}).get('[ atoms ]', [])
+            current_ll_atoms2      = dd_parsed_mols.get(current_s_mol_name2, {}).get('[ atoms ]', [])
+            current_ll_atoms3      = dd_parsed_mols.get(current_s_mol_name3, {}).get('[ atoms ]', [])
+            
+            #obtain basif infos for the current molecules, this will be usefull do calculate the intermolar ids from the global ones
+            n_first_id1       = dd_mols_infos.get(current_s_mol_name1, {}).get('first_id', 1)  
+            n_first_id2       = dd_mols_infos.get(current_s_mol_name2, {}).get('first_id', 1)  
+            n_first_id3       = dd_mols_infos.get(current_s_mol_name3, {}).get('first_id', 1)  
+
+            #calculate the intramolecular ids instead of the global ones. make them a str too, because thats how there were stored in the lookup table
+            intramolecular_id1 = str(global_id1 - (n_first_id1-1))
+            intramolecular_id2 = str(global_id2 - (n_first_id2-1))
+            intramolecular_id3 = str(global_id3 - (n_first_id3-1))
+            
+            #lookput, but I have to create a borring table with just one line, and then I have to extract the first line and last colum of the result to get the string with the atom name
+            found_name1 = lltools.procv_ll([[intramolecular_id1]],[0],current_ll_atoms1,[0],[1])[0][1] 
+            found_name2 = lltools.procv_ll([[intramolecular_id2]],[0],current_ll_atoms2,[0],[1])[0][1] 
+            found_name3 = lltools.procv_ll([[intramolecular_id3]],[0],current_ll_atoms3,[0],[1])[0][1] 
+
+            #concatenate all the information in a single list, and append it to the table
+            ll_angles_named.append(line + [found_name1] + [found_name2] + [found_name3]) #
+
+        
+        #DIHEDRALS
+        ll_dihedrals_named = [] #
+        for line in ll_dihedrals: #
+
+            #get the ids in the first couple of columns, but in this case they are global
+            global_id1 = int(line[0])
+            global_id2 = int(line[1])
+            global_id3 = int(line[2])
+            global_id4 = int(line[4])
+
+            #this function will discover the molecule name using the global ids. this will be usefull to get the correct [ atoms ] directive, where the name is
+            current_s_mol_name1 = bricksTOP.discover_molecule_name_from_global_id(s_top_with_inclusions, global_id1)
+            current_s_mol_name2 = bricksTOP.discover_molecule_name_from_global_id(s_top_with_inclusions, global_id2)
+            current_s_mol_name3 = bricksTOP.discover_molecule_name_from_global_id(s_top_with_inclusions, global_id3)
+            current_s_mol_name4 = bricksTOP.discover_molecule_name_from_global_id(s_top_with_inclusions, global_id4)
+            
+            #obtain [ atoms ] directive of the apropriate molecule. the names are there
+            current_ll_atoms1      = dd_parsed_mols.get(current_s_mol_name1, {}).get('[ atoms ]', [])
+            current_ll_atoms2      = dd_parsed_mols.get(current_s_mol_name2, {}).get('[ atoms ]', [])
+            current_ll_atoms3      = dd_parsed_mols.get(current_s_mol_name3, {}).get('[ atoms ]', [])
+            current_ll_atoms4      = dd_parsed_mols.get(current_s_mol_name4, {}).get('[ atoms ]', [])
+            
+            #obtain basif infos for the current molecules, this will be usefull do calculate the intermolar ids from the global ones
+            n_first_id1       = dd_mols_infos.get(current_s_mol_name1, {}).get('first_id', 1)  
+            n_first_id2       = dd_mols_infos.get(current_s_mol_name2, {}).get('first_id', 1)  
+            n_first_id3       = dd_mols_infos.get(current_s_mol_name3, {}).get('first_id', 1)  
+            n_first_id4       = dd_mols_infos.get(current_s_mol_name4, {}).get('first_id', 1)  
+
+            #calculate the intramolecular ids instead of the global ones. make them a str too, because thats how there were stored in the lookup table
+            intramolecular_id1 = str(global_id1 - (n_first_id1-1))
+            intramolecular_id2 = str(global_id2 - (n_first_id2-1))
+            intramolecular_id3 = str(global_id3 - (n_first_id3-1))
+            intramolecular_id4 = str(global_id4 - (n_first_id4-1))
+            
+            #lookput, but I have to create a borring table with just one line, and then I have to extract the first line and last colum of the result to get the string with the atom name
+            found_name1 = lltools.procv_ll([[intramolecular_id1]],[0],current_ll_atoms1,[0],[1])[0][1] 
+            found_name2 = lltools.procv_ll([[intramolecular_id2]],[0],current_ll_atoms2,[0],[1])[0][1] 
+            found_name3 = lltools.procv_ll([[intramolecular_id3]],[0],current_ll_atoms3,[0],[1])[0][1] 
+            found_name4 = lltools.procv_ll([[intramolecular_id4]],[0],current_ll_atoms4,[0],[1])[0][1] 
+
+            #concatenate all the information in a single list, and append it to the table
+            ll_dihedrals_named.append(line + [found_name1] + [found_name2] + [found_name3] + [found_name4]) #
+
+
+
+    else:
+        raise ValueError(f"Molecule name not found: {s_mol_name}")
+    
+
+
+    ######## add parameters values to the table, looking up the info that came from the ffbonded file ########
+
+    #BONDS
+    ll_bonds_filled = lltools.procv_ll(ll_bonds_named,[set([3,4]),2], ll_bondtypes,[set([0,1]),2], list(range(3,len(ll_bondtypes[0]))))
+
+    #ANGLES
+    ll_angles_filled = lltools.procv_ll(ll_angles_named,[set([4,6]),5,3], ll_angletypes,[set([0,2]),1,3], list(range(4,len(ll_angletypes[0]))))
+
+    #DIHEDRALS, they are more complex because of the need of spliting into proper and improper and the possiblility of atom reordering
+    
+    #split into proper and improper
+    ll_dihedraltypes_proper, ll_dihedraltypes_improper       = split_ll_diherals_into_proper_and_improper(ll_dihedraltypes)
+    ll_dihedrals_proper, ll_dihedrals_improper               = split_ll_diherals_into_proper_and_improper(ll_dihedrals)
+    ll_dihedrals_filled_proper, ll_dihedrals_filled_improper = split_ll_diherals_into_proper_and_improper(ll_dihedrals_named)
+        
+    # add paramenters for the given atomtypes for PROPER AND IMPROPER
+    ll_dihedrals_filled_proper   = lltools.procv_ll(ll_dihedrals_filled_proper,[5,6,7,8,4], ll_dihedraltypes_proper,[0,1,2,3,4], list(range(5,len(ll_dihedraltypes_proper[0]))))# add paramenters for the given atomtypes
+    ll_dihedrals_filled_improper = lltools.procv_ll(ll_dihedrals_filled_improper,[5,6,7,8,4], ll_dihedraltypes_improper,[0,1,2,3,4], list(range(5,len(ll_dihedraltypes_improper[0]))))# add paramenters for the given atomtypes
+        
+    #check the reverse order for cases not found
+    
+    ll_dihedrals_filled_proper, ll_not_found = split_ll_into_found_and_not_found(ll_dihedrals_filled_proper)
+    ll_second_try = lltools.procv_ll(ll_not_found,[8,7,6,5,4], ll_dihedraltypes_proper,[0,1,2,3,4], list(range(5,len(ll_dihedraltypes_proper[0]))))# add paramenters for the given atomtypes
+    ll_dihedrals_filled_proper = ll_dihedrals_filled_proper + ll_second_try
+    
+    ll_dihedrals_filled_improper, ll_not_found = split_ll_into_found_and_not_found(ll_dihedrals_filled_improper)
+    
+    ll_second_try = lltools.procv_ll(ll_not_found,[8,7,6,5,4], ll_dihedraltypes_improper,[0,1,2,3,4], list(range(5,len(ll_dihedraltypes_improper[0]))))# add paramenters for the given atomtypes
+    ll_dihedrals_filled_improper = ll_dihedrals_filled_improper + ll_second_try
+
+
+
+    
+
+
+    ######## rewrite filled list if there are manually defined parameters in the directives  #######
+    #for now [ bonds ], [ angles ], [ dihedrals ]
+    print("CLEAN PIPE checking for used defined parameters")
+
+
+    # [ bonds ]
+    for i in range(0, len(ll_bonds)): #
+        line_unfilled = ll_bonds[i] #
+        line_filled   = ll_bonds_filled[i] #
+
+        n_len_line_u = len(line_unfilled)
+        n_len_line_f  = len(line_filled)
+
+        #in [ bonds ] Im looking for this type of filled columns in the current line
+        #[ bonds ]
+        #;  ai    aj funct            c0            c1            c2            c3
+        #   1     2     1           0.1234       0.4321
+        n_ids_and_functional = 3 # bonds shoud have 3 columns. If they have more, there are manually added pararameters 
+        if n_len_line_u > n_ids_and_functional:
+            l_ids_and_functional         = line_unfilled[0:n_ids_and_functional]                                    #   1     2     1
+            l_parameters_in_moleculetype = line_unfilled[n_ids_and_functional:n_len_line_u]                         # 0.1234       0.4321
+            l_atom_names                 = line_filled[n_len_line_u:(n_len_line_u+n_ids_and_functional-1)]         # CA     CB
+
+            ll_bonds_filled[i] = l_ids_and_functional + l_atom_names + l_parameters_in_moleculetype #reconstruct the line
+
+    
+    
+    # [ angles ]
+    for i in range(0, len(ll_angles)): #
+        line_unfilled = ll_angles[i] #
+        line_filled   = ll_angles_filled[i] #
+
+        n_len_line_u = len(line_unfilled)
+        n_len_line_f  = len(line_filled)
+
+        #in [ angles ] Im looking for this type of filled columns in the current line
+        #[ angles ]
+        #;  ai    aj    ak funct            c0            c1            c2            c3
+        #    2     1     3     5             0.1234       0.4321
+        n_ids_and_functional = 4 # angles shoud have 4 columns. If they have more, there are manually added pararameters 
+        if n_len_line_u > n_ids_and_functional:
+            l_ids_and_functional         = line_unfilled[0:n_ids_and_functional]                                    #    2     1     3     5
+            l_parameters_in_moleculetype = line_unfilled[n_ids_and_functional:n_len_line_u]                         # 0.1234       0.4321
+            l_atom_names                 = line_filled[n_len_line_u:(n_len_line_u+n_ids_and_functional-1)]         # CA     CB      CD
+            
+            ll_angles_filled[i] = l_ids_and_functional + l_atom_names + l_parameters_in_moleculetype #reconstruct the line
+
+     
+    # [ dihedrals ] proper
+    for i in range(0, len(ll_dihedrals_proper)): #
+        line_unfilled = ll_dihedrals_proper[i] #
+        line_filled   = ll_dihedrals_filled_proper[i] #
+
+        n_len_line_u = len(line_unfilled)
+        n_len_line_f  = len(line_filled)
+
+        #in [ dihedrals ] Im looking for this type of filled columns in the current line
+        #[ dihedrals ]
+        #;  ai    aj    ak    al funct            c0            c1            c2            c3            c4            c5
+        #    2     1     5     6     9            0.1234       0.4321
+        n_ids_and_functional = 5 # dihedrals shoud have 5 columns. If they have more, there are manually added pararameters 
+        if n_len_line_u > n_ids_and_functional:
+            l_ids_and_functional         = line_unfilled[0:n_ids_and_functional]                                    #   2     1     5     6     9
+            l_parameters_in_moleculetype = line_unfilled[n_ids_and_functional:n_len_line_u]                         # 0.1234       0.4321
+            l_atom_names                 = line_filled[n_len_line_u:(n_len_line_u+n_ids_and_functional-1)]         # CA     CB      CD      CE
+            
+            ll_dihedrals_filled_proper[i] = l_ids_and_functional + l_atom_names + l_parameters_in_moleculetype #reconstruct the line
+
+     
+    # [ dihedrals ] improper
+    for i in range(0, len(ll_dihedrals_improper)): #
+        line_unfilled = ll_dihedrals_improper[i] #
+        line_filled   = ll_dihedrals_filled_improper[i] #
+
+        n_len_line_u = len(line_unfilled)
+        n_len_line_f  = len(line_filled)
+
+        #in [ dihedrals ] Im looking for this type of filled columns in the current line
+        #[ dihedrals ]
+        #;  ai    aj    ak    al funct            c0            c1            c2            c3            c4            c5
+        #    2     1     5     6     9            0.1234       0.4321
+        n_ids_and_functional = 5 # dihedrals shoud have 5 columns. If they have more, there are manually added pararameters 
+        if n_len_line_u > n_ids_and_functional:
+            l_ids_and_functional         = line_unfilled[0:n_ids_and_functional]                                    #   2     1     5     6     9
+            l_parameters_in_moleculetype = line_unfilled[n_ids_and_functional:n_len_line_u]                         # 0.1234       0.4321
+            l_atom_names                 = line_filled[n_len_line_u:(n_len_line_u+n_ids_and_functional-1)]         # CA     CB      CD      CE
+            
+            ll_dihedrals_filled_improper[i] = l_ids_and_functional + l_atom_names + l_parameters_in_moleculetype #reconstruct the line
+
+
+
+    ############create list of tlc commands########## xxx
+    print("CLEAN PIPE creating list of tcl commands")
+    l_tcl_commads = [] #create list of lists to store all lines of a tcl script that will be sent in the end
+
+    
+    if "[ bonds ]" in what_to_plot and ll_bonds_filled !=[]:
+        print("CLEAN PIPE processing [ bonds ]")
+    
+        #go throught the ids of columns that contain the functional, and the columns that contains the parameters
+        count = 1 #this is to set the molecule name if its a parameter
+        n_lenght = max(len(line) for line in ll_bonds_filled) #this is the lenght of the biggest line
+        id_functional = 2
+        id_fist_parameter = 5
+        columns = [id_functional]+list(range(id_fist_parameter,n_lenght))#list containing the id of column with functional + the ids with parameters
+        for column in columns: 
+            
+            #define name of molecule
+            if column == id_functional:
+                l_tcl_commads.append(f"mol load graphics {{{s_mol_name[0:5]}-bonds-functional}}")
+            else:
+                l_tcl_commads.append(f"mol load graphics {{{s_mol_name[0:5]}-bonds-c{count}}}")
+                count = count + 1
+    
+            #define basic properties of the molecule
+            l_tcl_commads.append("display resetview")#required after creating a new molecule so it doesnt have different coordinates and transformations
+            l_tcl_commads.append("graphics top material Opaque")
+
+
+            # go throught all the instantiations of molecules of a certain type that are present in the gro, appending plotting commands
+            n_index_prev_mol = n_first_id -1
+            for n_molecule_counter in range(1,n_molecules+1):
+    
+        
+                for line in ll_bonds_filled:
+                    
+                    coords_i = df_coordinates.loc[str(int(line[0])+n_index_prev_mol), ['x', 'y', 'z']].astype(float).to_dict()
+                    coords_j = df_coordinates.loc[str(int(line[1])+n_index_prev_mol), ['x', 'y', 'z']].astype(float).to_dict()
+                    coords_m = algelin.calc_intermediate_point(coords_i,coords_j,50)
+            
+                    
+                    try:
+                        param = line[column] #get the column, that might not exist if there are less columns that than n_lenght
+                        
+                        #define color. but it will be white if the parameter is zero
+                        if float(param) == 0:
+                            l_tcl_commads.append("graphics top color white")
+                        else:
+                            l_tcl_commads.append("graphics top color blue")
+                
+                         #draw
+                        l_tcl_commads.append(f"graphics top cylinder {{{coords_i.get('x')*10:.3f} {coords_i.get('y')*10:.3f} {coords_i.get('z')*10:.3f}}} {{{coords_j.get('x')*10:.3f} {coords_j.get('y')*10:.3f} {coords_j.get('z')*10:.3f}}} radius 0.1")
+                        l_tcl_commads.append(f'graphics top text {{{coords_m.get("x")*10-0.3:.3f} {coords_m.get("y")*10-0.3:.3f} {coords_m.get("z")*10-0.3:.3f}}} "{param}" size 1')
+                        l_tcl_commads.append("display update")
+                        l_tcl_commads.append("mol off top")
+                    except:
+                        pass #if the line[column] is out of range 
+
+                #the for loop that goes trought all molecules of a certain type ends after this line that updates the n_index_prev_mol to be used in the next iteration
+                n_index_prev_mol = n_index_prev_mol + n_atoms_in_mol
+    
+    
+    if "[ angles ]" in what_to_plot and ll_angles_filled !=[]:
+        print("CLEAN PIPE processing [ angles ]")
+    
+        #go throught the ids of columns that contain the functional, and the columns that contains the parameters
+        count = 1 #this is to set the molecule name if its a parameter
+        n_lenght = max(len(line) for line in ll_angles_filled) #this is the lenght of the biggest line
+        id_functional = 3
+        id_fist_parameter = 7
+        columns = [id_functional]+list(range(id_fist_parameter,n_lenght))#list containing the id of column with functional + the ids with parameters
+        for column in columns: 
+            
+            #define name of molecule
+            if column == id_functional:
+                l_tcl_commads.append(f"mol load graphics {{{s_mol_name[0:5]}-angles-functional}}")
+            else:
+                l_tcl_commads.append(f"mol load graphics {{{s_mol_name[0:5]}-angles-c{count}}}")
+                count = count + 1
+    
+            #define basic properties of the molecule
+            l_tcl_commads.append("display resetview")#required after creating a new molecule so it doesnt have different coordinates and transformations
+            l_tcl_commads.append("graphics top material Opaque")
+            
+
+
+            # go throught all the instantiations of molecules of a certain type that are present in the gro, appending plotting commands
+            n_index_prev_mol = n_first_id -1
+            for n_molecule_counter in range(1,n_molecules+1):
+            
+                for line in ll_angles_filled:
+                    
+                    coords_i = df_coordinates.loc[str(int(line[0])+n_index_prev_mol), ['x', 'y', 'z']].astype(float).to_dict()
+                    coords_j = df_coordinates.loc[str(int(line[1])+n_index_prev_mol), ['x', 'y', 'z']].astype(float).to_dict()
+                    coords_k = df_coordinates.loc[str(int(line[2])+n_index_prev_mol), ['x', 'y', 'z']].astype(float).to_dict()
+                    
+                    coords_i2 = algelin.calc_intermediate_point(coords_j,coords_i,25)
+                    coords_k2 = algelin.calc_intermediate_point(coords_j,coords_k,25)
+                    coords_m  = algelin.calc_intermediate_point(coords_i2,coords_k2,50)
+            
+                    
+                    try:
+                        param = line[column] #get the column, that might not exist if there are less columns that than n_lenght
+                        
+                        #define color. but it will be white if the parameter is zero
+                        if float(param) == 0:
+                            l_tcl_commads.append("graphics top color white")
+                        else:
+                            l_tcl_commads.append("graphics top color blue")
+                
+                         #draw
+                        l_tcl_commads.append(f"graphics top triangle {{{coords_i2.get('x')*10:.3f} {coords_i2.get('y')*10:.3f} {coords_i2.get('z')*10:.3f}}} {{{coords_j.get('x')*10:.3f} {coords_j.get('y')*10:.3f} {coords_j.get('z')*10:.3f}}} {{{coords_k2.get('x')*10:.3f} {coords_k2.get('y')*10:.3f} {coords_k2.get('z')*10:.3f}}}")
+                        l_tcl_commads.append(f'graphics top text {{{coords_m.get("x")*10:.3f} {coords_m.get("y")*10:.3f} {coords_m.get("z")*10:.3f}}} "{param}" size 1')
+                        l_tcl_commads.append("display update")
+                        l_tcl_commads.append("mol off top")
+                    except:
+                        pass #if the line[column] is out of range 
+    
+                #the for loop that goes trought all molecules of a certain type ends after this line that updates the n_index_prev_mol to be used in the next iteration
+                n_index_prev_mol = n_index_prev_mol + n_atoms_in_mol
+    
+    #proper dihedrals
+    if "[ dihedrals ]" in what_to_plot and ll_dihedrals_filled_proper !=[]:
+        print("CLEAN PIPE processing [ dihedrals ] all types but 2")
+    
+        #go throught the ids of columns that contain the functional, and the columns that contains the parameters
+        count = 1 #this is to set the molecule name if its a parameter
+        n_lenght = max(len(line) for line in ll_dihedrals_filled_proper) #this is the lenght of the biggest line
+        id_functional = 4
+        id_fist_parameter = 9
+        columns = [id_functional]+list(range(id_fist_parameter,n_lenght))#list containing the id of column with functional + the ids with parameters
+        for column in columns: 
+            
+            #define name of molecule
+            if column == id_functional:
+                l_tcl_commads.append(f"mol load graphics {{{s_mol_name[0:5]}-dihedrals(prop)-functional}}")
+            else:
+                l_tcl_commads.append(f"mol load graphics {{{s_mol_name[0:5]}-dihedrals(prop)-c{count}}}")
+                count = count + 1
+    
+            #define basic properties of the molecule
+            l_tcl_commads.append("display resetview")#required after creating a new molecule so it doesnt have different coordinates and transformations
+            l_tcl_commads.append("graphics top material Opaque")
+
+
+
+            # go throught all the instantiations of molecules of a certain type that are present in the gro, appending plotting commands
+            n_index_prev_mol = n_first_id -1
+            for n_molecule_counter in range(1,n_molecules+1):
+        
+                for line in ll_dihedrals_filled_proper:
+                    
+                    coords_i = df_coordinates.loc[str(int(line[0])+n_index_prev_mol), ['x', 'y', 'z']].astype(float).to_dict()
+                    coords_j = df_coordinates.loc[str(int(line[1])+n_index_prev_mol), ['x', 'y', 'z']].astype(float).to_dict()
+                    coords_k = df_coordinates.loc[str(int(line[2])+n_index_prev_mol), ['x', 'y', 'z']].astype(float).to_dict()
+                    coords_l = df_coordinates.loc[str(int(line[3])+n_index_prev_mol), ['x', 'y', 'z']].astype(float).to_dict()
+                    
+                    coords_m = algelin.calc_intermediate_point(coords_j,coords_k,50)
+            
+                    
+                    try:
+                        param = line[column] #get the column, that might not exist if there are less columns that than n_lenght
+                        
+                        #define color. but it will be white if the parameter is zero
+                        if float(param) == 0:
+                            l_tcl_commads.append("graphics top color white")
+                        else:
+                            l_tcl_commads.append("graphics top color blue")
+                
+                        #draw
+                        l_tcl_commads.append(f"graphics top cone {{{coords_m.get('x')*10:.3f} {coords_m.get('y')*10:.3f} {coords_m.get('z')*10:.3f}}} {{{coords_j.get('x')*10:.3f} {coords_j.get('y')*10:.3f} {coords_j.get('z')*10:.3f}}} radius 0.2")
+                        l_tcl_commads.append(f"graphics top cone {{{coords_m.get('x')*10:.3f} {coords_m.get('y')*10:.3f} {coords_m.get('z')*10:.3f}}} {{{coords_k.get('x')*10:.3f} {coords_k.get('y')*10:.3f} {coords_k.get('z')*10:.3f}}} radius 0.2")
+                        l_tcl_commads.append(f'graphics top text {{{coords_m.get("x")*10+0.3:.3f} {coords_m.get("y")*10+0.3:.3f} {coords_m.get("z")*10+0.3:.3f}}} "{param}" size 1')
+                        l_tcl_commads.append("display update")
+                        l_tcl_commads.append("mol off top")
+                    except:
+                        pass #if the line[column] is out of range 
+        
+                #the for loop that goes trought all molecules of a certain type ends after this line that updates the n_index_prev_mol to be used in the next iteration
+                n_index_prev_mol = n_index_prev_mol + n_atoms_in_mol
+        
+    
+    
+    
+    #improper dihedrals
+    if "[ dihedrals ]" in what_to_plot and ll_dihedrals_filled_improper !=[]:
+        print("CLEAN PIPE processing [ dihedrals ] type 2")
+    
+        #go throught the ids of columns that contain the functional, and the columns that contains the parameters
+        count = 1 #this is to set the molecule name if its a parameter
+        n_lenght = max(len(line) for line in ll_dihedrals_filled_improper) #this is the lenght of the biggest line
+        id_functional = 4
+        id_fist_parameter = 9
+        columns = [id_functional]+list(range(id_fist_parameter,n_lenght))#list containing the id of column with functional + the ids with parameters
+        for column in columns: 
+            
+            #define name of molecule
+            if column == id_functional:
+                l_tcl_commads.append(f"mol load graphics {{{s_mol_name[0:5]}-dihedrals(impr)-functional}}")
+            else:
+                l_tcl_commads.append(f"mol load graphics {{{s_mol_name[0:5]}-dihedrals(impr)-c{count}}}")
+                count = count + 1
+    
+            #define basic properties of the molecule
+            l_tcl_commads.append("display resetview")#required after creating a new molecule so it doesnt have different coordinates and transformations
+            l_tcl_commads.append("graphics top material Transparent")
+    
+
+            # go throught all the instantiations of molecules of a certain type that are present in the gro, appending plotting commands
+            n_index_prev_mol = n_first_id -1
+            for n_molecule_counter in range(1,n_molecules+1):
+
+            
+                for line in ll_dihedrals_filled_improper:
+                    
+                    coords_i = df_coordinates.loc[str(int(line[0])+n_index_prev_mol), ['x', 'y', 'z']].astype(float).to_dict()
+                    coords_j = df_coordinates.loc[str(int(line[1])+n_index_prev_mol), ['x', 'y', 'z']].astype(float).to_dict()
+                    coords_k = df_coordinates.loc[str(int(line[2])+n_index_prev_mol), ['x', 'y', 'z']].astype(float).to_dict()
+                    coords_l = df_coordinates.loc[str(int(line[3])+n_index_prev_mol), ['x', 'y', 'z']].astype(float).to_dict()
+                    
+                    try:
+                        param = line[column] #get the column, that might not exist if there are less columns that than n_lenght
+                        
+                        #define color. but it will be white if the parameter is zero
+                        if float(param) == 0:
+                            l_tcl_commads.append("graphics top color white")
+                        else:
+                            l_tcl_commads.append("graphics top color green")
+                
+                        #draw
+        
+                        #lines around the external triangle
+                        #l_tcl_commads.append(f"graphics top triangle {{{coords_l.get('x')*10:.3f} {coords_l.get('y')*10:.3f} {coords_l.get('z')*10:.3f}}} {{{coords_j.get('x')*10:.3f} {coords_j.get('y')*10:.3f} {coords_j.get('z')*10:.3f}}} {{{coords_k.get('x')*10:.3f} {coords_k.get('y')*10:.3f} {coords_k.get('z')*10:.3f}}}")
+                        l_tcl_commads.append(f"graphics top line {{{coords_l.get('x')*10:.3f} {coords_l.get('y')*10:.3f} {coords_l.get('z')*10:.3f}}} {{{coords_j.get('x')*10:.3f} {coords_j.get('y')*10:.3f} {coords_j.get('z')*10:.3f}}}")
+                        l_tcl_commads.append(f"graphics top line {{{coords_j.get('x')*10:.3f} {coords_j.get('y')*10:.3f} {coords_j.get('z')*10:.3f}}} {{{coords_k.get('x')*10:.3f} {coords_k.get('y')*10:.3f} {coords_k.get('z')*10:.3f}}}")
+                        l_tcl_commads.append(f"graphics top line {{{coords_k.get('x')*10:.3f} {coords_k.get('y')*10:.3f} {coords_k.get('z')*10:.3f}}} {{{coords_l.get('x')*10:.3f} {coords_l.get('y')*10:.3f} {coords_l.get('z')*10:.3f}}}")
+        
+                        #transparent triangle in the internal triangle
+                        l_tcl_commads.append(f"graphics top triangle {{{coords_i.get('x')*10:.3f} {coords_i.get('y')*10:.3f} {coords_i.get('z')*10:.3f}}} {{{coords_j.get('x')*10:.3f} {coords_j.get('y')*10:.3f} {coords_j.get('z')*10:.3f}}} {{{coords_k.get('x')*10:.3f} {coords_k.get('y')*10:.3f} {coords_k.get('z')*10:.3f}}}")
+                        l_tcl_commads.append(f'graphics top text {{{coords_i.get("x")*10+0.3:.3f} {coords_i.get("y")*10+0.3:.3f} {coords_i.get("z")*10+0.3:.3f}}} "{param}" size 1')
+                        l_tcl_commads.append("display update")
+                        l_tcl_commads.append("mol off top")
+                    except:
+                        pass #if the line[column] is out of range 
+    
+                #the for loop that goes trought all molecules of a certain type ends after this line that updates the n_index_prev_mol to be used in the next iteration
+                n_index_prev_mol = n_index_prev_mol + n_atoms_in_mol
+    
+    
+    
+    if "[ cmap ]" in what_to_plot and ll_cmap !=[]:
+        print("CLEAN PIPE processing [ cmap ]")
+    
+        l_tcl_commads.append(f"mol load graphics {{{s_mol_name[0:5]}-cmap}}")
+        l_tcl_commads.append("display resetview")#required after creating a new molecule so it doesnt have different coordinates and transformations
+        l_tcl_commads.append("graphics top material Opaque")
+
+
+
+        # go throught all the instantiations of molecules of a certain type that are present in the gro, appending plotting commands
+        n_index_prev_mol = n_first_id -1
+        for n_molecule_counter in range(1,n_molecules+1):
+    
+            for line in ll_cmap:
+                
+                coords_i = df_coordinates.loc[str(int(line[0])+n_index_prev_mol), ['x', 'y', 'z']].astype(float).to_dict()
+                coords_j = df_coordinates.loc[str(int(line[1])+n_index_prev_mol), ['x', 'y', 'z']].astype(float).to_dict()
+                coords_k = df_coordinates.loc[str(int(line[2])+n_index_prev_mol), ['x', 'y', 'z']].astype(float).to_dict()
+                coords_l = df_coordinates.loc[str(int(line[3])+n_index_prev_mol), ['x', 'y', 'z']].astype(float).to_dict()
+                coords_m = df_coordinates.loc[str(int(line[4])+n_index_prev_mol), ['x', 'y', 'z']].astype(float).to_dict()
+        
+                coords_m1 = algelin.calc_intermediate_point(coords_j,coords_k,50)
+                coords_m2 = algelin.calc_intermediate_point(coords_k,coords_l,50)
+        
+                coords_a = algelin.calc_intermediate_point(coords_j,coords_k,25)
+                coords_b = algelin.calc_intermediate_point(coords_j,coords_k,75)
+                coords_c = algelin.calc_intermediate_point(coords_k,coords_l,25)
+                coords_d = algelin.calc_intermediate_point(coords_k,coords_l,75)
+                
+                l_tcl_commads.append("graphics top color purple")
+                l_tcl_commads.append(f"graphics top cone {{{coords_m1.get('x')*10:.3f} {coords_m1.get('y')*10:.3f} {coords_m1.get('z')*10:.3f}}} {{{coords_a.get('x')*10:.3f} {coords_a.get('y')*10:.3f} {coords_a.get('z')*10:.3f}}} radius 0.3")
+                l_tcl_commads.append(f"graphics top cone {{{coords_m1.get('x')*10:.3f} {coords_m1.get('y')*10:.3f} {coords_m1.get('z')*10:.3f}}} {{{coords_b.get('x')*10:.3f} {coords_b.get('y')*10:.3f} {coords_b.get('z')*10:.3f}}} radius 0.3")
+                
+                l_tcl_commads.append(f"graphics top cone {{{coords_m2.get('x')*10:.3f} {coords_m2.get('y')*10:.3f} {coords_m2.get('z')*10:.3f}}} {{{coords_c.get('x')*10:.3f} {coords_c.get('y')*10:.3f} {coords_c.get('z')*10:.3f}}} radius 0.3")
+                l_tcl_commads.append(f"graphics top cone {{{coords_m2.get('x')*10:.3f} {coords_m2.get('y')*10:.3f} {coords_m2.get('z')*10:.3f}}} {{{coords_d.get('x')*10:.3f} {coords_d.get('y')*10:.3f} {coords_d.get('z')*10:.3f}}} radius 0.3")
+                
+                l_tcl_commads.append("display update")
+                l_tcl_commads.append("mol off top")
+
+            #the for loop that goes trought all molecules of a certain type ends after this line that updates the n_index_prev_mol to be used in the next iteration
+            n_index_prev_mol = n_index_prev_mol + n_atoms_in_mol
+    
+    
+    if "[ pairs ]" in what_to_plot and ll_pairs !=[]:
+        print("CLEAN PIPE processing [ pairs ]")
+        
+        l_tcl_commads.append(f"mol load graphics {{{s_mol_name[0:5]}-pairs}}")
+        l_tcl_commads.append("display resetview")#required after creating a new molecule so it doesnt have different coordinates and transformations
+        l_tcl_commads.append("graphics top color yellow")
+        l_tcl_commads.append("graphics top material Opaque")
+
+
+        # go throught all the instantiations of molecules of a certain type that are present in the gro, appending plotting commands
+        n_index_prev_mol = n_first_id -1
+        for n_molecule_counter in range(1,n_molecules+1):
+        
+            for line in ll_pairs:
+                
+                coords_i = df_coordinates.loc[str(int(line[0])+n_index_prev_mol), ['x', 'y', 'z']].astype(float).to_dict()
+                coords_j = df_coordinates.loc[str(int(line[1])+n_index_prev_mol), ['x', 'y', 'z']].astype(float).to_dict()
+                param = line[2]
+                coords_m = algelin.calc_intermediate_point(coords_i,coords_j,50)
+                
+                l_tcl_commads.append(f"graphics top line {{{coords_i.get('x')*10:.3f} {coords_i.get('y')*10:.3f} {coords_i.get('z')*10:.3f}}} {{{coords_j.get('x')*10:.3f} {coords_j.get('y')*10:.3f} {coords_j.get('z')*10:.3f}}}")
+                l_tcl_commads.append(f'graphics top text {{{coords_m.get("x")*10-0.3:.3f} {coords_m.get("y")*10-0.3:.3f} {coords_m.get("z")*10-0.3:.3f}}} "{param}" size 1')
+                l_tcl_commads.append("display update")
+                l_tcl_commads.append("mol off top")
+
+            #the for loop that goes trought all molecules of a certain type ends after this line that updates the n_index_prev_mol to be used in the next iteration
+            n_index_prev_mol = n_index_prev_mol + n_atoms_in_mol
+
+
+    
+    
+    if "[ exclusions ]" in what_to_plot and ll_exclusions !=[]:
+        print("CLEAN PIPE processing [ exclusions ]")
+        
+        l_tcl_commads.append(f"mol load graphics {{{s_mol_name[0:5]}-exclusion}}")
+        l_tcl_commads.append("display resetview")#required after creating a new molecule so it doesnt have different coordinates and transformations
+        l_tcl_commads.append("graphics top color orange")
+        l_tcl_commads.append("graphics top material Transparent")
+
+
+        # go throught all the instantiations of molecules of a certain type that are present in the gro, appending plotting commands
+        n_index_prev_mol = n_first_id -1
+        for n_molecule_counter in range(1,n_molecules+1):
+        
+            for line in ll_exclusions:
+                
+                #in exclusions, the first id ina line is a reference  atom, and all others in that line are exclusions with respect to that one
+                coords_i = df_coordinates.loc[str(int(line[0])+n_index_prev_mol), ['x', 'y', 'z']].astype(float).to_dict()
+                for second_atom_id in range(1,len(line)):
+                    coords_j = df_coordinates.loc[str(int(line[second_atom_id])+n_index_prev_mol), ['x', 'y', 'z']].astype(float).to_dict()
+                    l_tcl_commads.append(f"graphics top cylinder {{{coords_i.get('x')*10:.3f} {coords_i.get('y')*10:.3f} {coords_i.get('z')*10:.3f}}} {{{coords_j.get('x')*10:.3f} {coords_j.get('y')*10:.3f} {coords_j.get('z')*10:.3f}}} radius 0.2")
+                    l_tcl_commads.append("display update")
+                    l_tcl_commads.append("mol off top")
+    
+            #the for loop that goes trought all molecules of a certain type ends after this line that updates the n_index_prev_mol to be used in the next iteration
+            n_index_prev_mol = n_index_prev_mol + n_atoms_in_mol
+    
+    
+    if "[ position_restraints ]" in what_to_plot and ll_posres !=[]:
+        print("CLEAN PIPE processing [ position_restraints ]")
+        
+        #go throught the ids of columns that contain the functional, and the columns that contains the parameters
+        count = 1 #this is to set the molecule name if its a parameter
+        n_lenght = max(len(line) for line in ll_posres) #this is the lenght of the biggest line
+        id_functional = 1
+        id_fist_parameter = 2
+        columns = [id_functional]+list(range(id_fist_parameter,n_lenght))#list containing the id of column with functional + the ids with parameters
+        for column in columns: 
+            
+            #define name of molecule
+            if column == id_functional:
+                l_tcl_commads.append(f"mol load graphics {{{s_mol_name[0:5]}-posit...-functional}}")
+            else:
+                l_tcl_commads.append(f"mol load graphics {{{s_mol_name[0:5]}-posit...-c{count}}}")
+                count = count + 1
+    
+            #define basic properties of the molecule
+            l_tcl_commads.append("display resetview")#required after creating a new molecule so it doesnt have different coordinates and transformations
+            l_tcl_commads.append("graphics top material Transparent")
+            
+
+
+            # go throught all the instantiations of molecules of a certain type that are present in the gro, appending plotting commands
+            n_index_prev_mol = n_first_id -1
+            for n_molecule_counter in range(1,n_molecules+1):
+        
+                for line in ll_posres:
+                
+                    coords_i = df_coordinates.loc[str(int(line[0])+n_index_prev_mol), ['x', 'y', 'z']].astype(float).to_dict()
+    
+                    try:
+                        param = line[column] #get the column, that might not exist if there are less columns that than n_lenght
+                        
+                        #define color. but it will be white if the parameter is zero
+                        if float(param) == 0:
+                            l_tcl_commads.append("graphics top color white")
+                        else:
+                            l_tcl_commads.append("graphics top color red")
+                
+                        #draw
+                        l_tcl_commads.append(f"graphics top sphere {{{coords_i.get('x')*10:.3f} {coords_i.get('y')*10:.3f} {coords_i.get('z')*10:.3f}}} radius 0.3")
+                        l_tcl_commads.append(f'graphics top text {{{coords_i.get("x")*10+0.4:.3f} {coords_i.get("y")*10+0.4:.3f} {coords_i.get("z")*10+0.4:.3f}}} "{param}" size 1')
+                        l_tcl_commads.append("display update")
+                        l_tcl_commads.append("mol off top")
+                    except:
+                        pass #if the line[column] is out of range 
+
+
+                #the for loop that goes trought all molecules of a certain type ends after this line that updates the n_index_prev_mol to be used in the next iteration
+                n_index_prev_mol = n_index_prev_mol + n_atoms_in_mol
+
+    print("CLEAN PIPE sending tcl commands to vmd")
+
+    #create temporary text file with all the lines of the tcl script
+    with tempfile.NamedTemporaryFile(mode='w', delete=False, encoding='utf-8') as temp_file:
+        # Join all strings with a newline and write them at once.
+        temp_file.write("\n".join(l_tcl_commads))
+    temp_file_path = temp_file.name
+    
+    send_command_to_vmd("source "+temp_file_path.replace("\\", "\\\\"))
+
+    #clean temp file
+    bricksFileSystem.delete(s_top_with_inclusions)

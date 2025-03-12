@@ -8,6 +8,7 @@ cleanpipe/bricksPDB.py
 cleanpipe/bricksPeptide.py
 cleanpipe/bricksStorage.py
 cleanpipe/bricksTOP.py
+cleanpipe/lltools.py
 cleanpipe/systemCreation.py
 cleanpipe/visualisations.py
 cleanpipe.egg-info/PKG-INFO
