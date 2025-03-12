@@ -1,0 +1,60 @@
+
+Integrator              = 	md
+nsteps                  =	50000
+dt                      =	0.002
+
+; output control	
+; TRR	
+nstxout                 = 	500
+nstvout                 = 	500
+; EDR	
+nstenergy               = 	500
+; LOG	
+nstlog                  = 	500
+
+;box configuration	
+pbc                     = 	xyz
+
+
+; Bond parameters	
+constraints             = 	none
+
+; non bonded interactions	
+cutoff-scheme           = 	Verlet
+nstlist                 = 	10
+ns_type                 = 	grid
+	
+coulombtype             = 	PME
+pme_order               = 	4
+fourierspacing          = 	0.16
+rcoulomb                = 	1.0
+	
+rvdw                    = 	1.0
+DispCorr                = 	EnerPres
+
+
+; Gereral dynamic setup
+continuation            = 	no  ; first step!
+gen_vel                 = 	yes ; first step!
+gen_temp                = 	300
+
+; Temperature coupling	
+tcoupl                  = 	V-rescale 
+tc-grps                 =   System
+tau_t                   = 	0.1
+ref_t                   = 	300
+
+; Pressure coupling	
+Pcoupl                   = C-rescale  ; parrinello-rahman should not be used in equilibration
+Pcoupltype               = isotropic  
+compressibility          = 4.5e-5    ; 3e-4 for water , 1 e-4 for octane  
+tau_p                    = 5     ; 6 for water, 2 for octane  
+ref_p                    = 1.0        
+;refcoord_scaling         = com
+
+      
+
+
+
+
+

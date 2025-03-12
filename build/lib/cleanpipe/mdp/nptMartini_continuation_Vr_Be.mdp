@@ -1,0 +1,53 @@
+
+integrator               = md
+nsteps                   = 50000
+dt                       = 0.03  
+nstcomm                  = 100
+
+nstxout                  = 0
+nstvout                  = 0
+nstfout                  = 0
+nstlog                   = 10000 ; Output frequency for energies to log file 
+nstenergy                = 100   ; Output frequency for energies to energy file
+nstxtcout                = 1000  ; Output frequency for .xtc file
+xtc_precision            = 100
+
+pbc                      = xyz
+
+
+define                   = -DPOSRES  ; most important parameter in equilibration
+constraint_algorithm     = Lincs
+lincs_order              = 4
+lincs_warnangle          = 30
+             
+cutoff-scheme            = Verlet
+nstlist                  = 20
+ns_type                  = grid
+
+verlet-buffer-tolerance  = 0.005
+
+coulombtype              = reaction-field
+rcoulomb                 = 1.1
+epsilon_r                = 15	; 2.5 (with polarizable water)
+epsilon_rf               = 0 
+vdw_type                 = cutoff ;(for use with Verlet-pairlist)   
+rvdw                     = 1.1 ;(for use with Verlet-pairlist)
+
+
+continuation             = yes
+
+tcoupl                   = v-rescale 
+tc-grps                  = Protein Non-Protein
+tau_t                    = 1.0  1.0 
+ref_t                    = 323 323 
+
+; Pressure coupling	
+Pcoupl                   = berendsen  ; parrinello-rahman should not be used in equilibration
+Pcoupltype               = isotropic  
+tau_p                    = 6.0        
+compressibility          = 3e-4       
+ref_p                    = 1.0    
+
+
+
+
