@@ -127,24 +127,24 @@ def delete(target_path):
         path = Path(target_path).expanduser().resolve()
 
         if not path.exists():
-            print(f"Error: {path} does not exist.")
+            print(f"CLEAN PIPE Error: {path} does not exist.")
             return
 
         if path.is_file():
             path.unlink()
-            print(f"Deleted file: {path}")
+            print(f"CLEAN PIPE Deleted file: {path}")
         elif path.is_dir():
             shutil.rmtree(path)  # Recursively delete the folder and all its contents
-            print(f"Deleted folder: {path}")
+            print(f"CLEAN PIPE Deleted folder: {path}")
         else:
-            print(f"Error: {path} is neither a file nor a folder.")
+            print(f"CLEAN PIPE Error: {path} is neither a file nor a folder.")
 
     except FileNotFoundError:
-        print(f"Error: {path} does not exist.")
+        print(f"CLEAN PIPE Error: {path} does not exist.")
     except PermissionError:
-        print(f"Error: Permission denied to delete {path}. Try running with admin rights.")
+        print(f"CLEAN PIPE Error: Permission denied to delete {path}. Try running with admin rights.")
     except Exception as e:
-        print(f"Unexpected error: {e}")
+        print(f"CLEAN PIPE Unexpected error: {e}")
 
 
 

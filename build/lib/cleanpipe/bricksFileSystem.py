@@ -5,6 +5,8 @@ import select
 import platform
 import multiprocessing
 import psutil
+import shutil
+from pathlib import Path
 
 
 
@@ -98,12 +100,53 @@ def get_all_itps(s_folder_path):
 
     return l_files
 
-def delete(s_filename):
+def delete_old(s_filename):
     """
+    xxx should be replaced by the new delete function
+
     example
     delete("posres.itp")
     """
     subprocess.run(f"rm {s_filename}" , shell=True, check=True) 
+
+
+
+def delete(target_path):
+    """
+    Deletes a file or folder safely, working across all operating systems.
+    Handles errors like non-existent paths, permission issues, and read-only files.
+
+    # Example usage
+    delete_any_path("C:/Users/Example/Desktop/test.txt")  # Windows file
+    delete_any_path("/home/user/example.txt")  # Linux/macOS file
+    delete_any_path("~/Documents/test_folder")  # Expands to home directory, deletes folder
+
+    """
+    try:
+        # Convert string to Path object and resolve the absolute path
+        path = Path(target_path).expanduser().resolve()
+
+        if not path.exists():
+            print(f"CLEAN PIPE Error: {path} does not exist.")
+            return
+
+        if path.is_file():
+            path.unlink()
+            print(f"CLEAN PIPE Deleted file: {path}")
+        elif path.is_dir():
+            shutil.rmtree(path)  # Recursively delete the folder and all its contents
+            print(f"CLEAN PIPE Deleted folder: {path}")
+        else:
+            print(f"CLEAN PIPE Error: {path} is neither a file nor a folder.")
+
+    except FileNotFoundError:
+        print(f"CLEAN PIPE Error: {path} does not exist.")
+    except PermissionError:
+        print(f"CLEAN PIPE Error: Permission denied to delete {path}. Try running with admin rights.")
+    except Exception as e:
+        print(f"CLEAN PIPE Unexpected error: {e}")
+
+
 
 
 

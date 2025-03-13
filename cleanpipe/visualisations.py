@@ -1256,15 +1256,17 @@ def see_interactions(s_top,s_gro,s_mol_name):
                 #the for loop that goes trought all molecules of a certain type ends after this line that updates the n_index_prev_mol to be used in the next iteration
                 n_index_prev_mol = n_index_prev_mol + n_atoms_in_mol
 
-    print("CLEAN PIPE sending tcl commands to vmd")
+
 
     #create temporary text file with all the lines of the tcl script
     with tempfile.NamedTemporaryFile(mode='w', delete=False, encoding='utf-8') as temp_file:
         # Join all strings with a newline and write them at once.
         temp_file.write("\n".join(l_tcl_commads))
     temp_file_path = temp_file.name
+    print(f"CLEAN PIPE created temp file {temp_file_path} to store the tcl script that will be sent to vmd")
     
     send_command_to_vmd("source "+temp_file_path.replace("\\", "\\\\"))
 
-    #clean temp file
+    #clean temp files
     bricksFileSystem.delete(s_top_with_inclusions)
+    bricksFileSystem.delete(temp_file_path)

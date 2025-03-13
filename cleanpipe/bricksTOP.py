@@ -583,7 +583,7 @@ def expand_includes(file_path):
 def expand_includes_to_temp_file(file_path):
     """
     Expands the given topology file (and all its included files) into one string,
-    writes that string to a temporary file (a "virtual file"), and returns the path to that file.
+    writes that string to a temporary file (a "virtual file"), and returns the path to that file
     
     Returns:
         A string with the path to the temporary file containing the full, expanded topology.
@@ -596,6 +596,8 @@ def expand_includes_to_temp_file(file_path):
     tmp_file = tempfile.NamedTemporaryFile(mode='w', suffix='.top', delete=False)
     tmp_file.write(expanded_text)
     tmp_file.close()
+
+    print(f"CLEAN PIPE created temp file {tmp_file.name} to store the expanded top file.")
     
     # Return the filename (as a string) that points to the virtual file.
     return tmp_file.name
@@ -754,6 +756,7 @@ def deconstruct_top_into_molecules(top_file_path):
             tmp_file = tempfile.NamedTemporaryFile(mode='w', suffix='.itp', delete=False)
             tmp_file.write(block_content)
             tmp_file.close()
+            print(f"CLEAN PIPE created temp file {tmp_file.name} to store the itp of the molecule {mol_name}")
 
 
             #CONSTRUCT THE DICTIONARY ENTRY
