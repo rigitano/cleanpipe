@@ -1290,6 +1290,6 @@ def highlight_id(s_gro, n_id):
     send_command_to_vmd(f"mol load graphics {{id {n_id} spherical highlight}}") #create a new molecule and set its name
     send_command_to_vmd("display resetview")#required after creating a new molecule so it doesnt have different coordinates and transformations
     send_command_to_vmd("graphics top material Transparent")
-    send_command_to_vmd("graphics top color pink")
-    send_command_to_vmd(f"graphics top sphere {{{coords.get('x')*10:.3f} {coords.get('y')*10:.3f} {coords.get('z')*10:.3f}}} radius 0.4")
+    send_command_to_vmd("graphics top color red")
+    send_command_to_vmd(f"graphics top sphere {{{coords.get('x')*10:.3f} {coords.get('y')*10:.3f} {coords.get('z')*10:.3f}}} radius 0.3")
     send_command_to_vmd("display update")

@@ -1,0 +1,57 @@
+Integrator              = 	md
+nsteps                  =	1000
+dt                      =	0.002; 2 femtoseconds, without lincs this would have to be 0.0001
+; output control	
+; TRR	
+nstxout                 = 	500000 
+nstvout                 = 	500000
+nstfout                 = 	0
+nstcomm                 =       100 ; ???
+; EDR	
+nstenergy               = 	500
+; LOG	
+nstlog                  = 	500000
+; XTC
+nstxout-compressed      =       5000
+compressed-x-grps       =       System 
+
+;box configuration	
+pbc                     = 	xyz
+
+
+; Bond restrictions	
+constraint_algorithm    = 	lincs
+constraints             = 	h-bonds
+lincs_iter              = 	1
+lincs_order             = 	4
+
+; non bonded interactions	
+nstlist                 = 	10
+cutoff-scheme           = 	Verlet
+ns_type                 = 	grid
+	
+coulombtype             = 	PME
+pme_order               = 	4
+fourierspacing          = 	0.16
+rcoulomb                = 	1.0
+	
+rvdw                    = 	1.0
+DispCorr                = 	EnerPres
+
+
+; Gereral dynamic setup
+continuation            = 	yes
+gen_vel                 = 	no
+
+; Temperature coupling	
+tcoupl                  = 	V-rescale 
+tc-grps                 = 	Protein Non-Protein
+tau_t                   = 	0.1     0.1
+ref_t                   = 	298     298
+
+; Pressure coupling	
+pcoupl                  = 	C-rescale
+pcoupltype              = 	isotropic
+tau_p                   = 	5.0
+ref_p                   = 	1.0
+compressibility         = 	4.5e-5

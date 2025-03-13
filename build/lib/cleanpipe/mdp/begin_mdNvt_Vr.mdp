@@ -1,0 +1,57 @@
+
+Integrator              = 	md
+nsteps                  =	50000
+dt                      =	0.002
+
+; output control	
+; TRR	
+nstxout                 = 	500
+nstvout                 = 	500
+; EDR	
+nstenergy               = 	500
+; LOG	
+nstlog                  = 	500
+
+;box configuration	
+pbc                     = 	xyz
+
+
+; Bond parameters	
+define                  =   -DPOSRES  ; most important parameter in equilibration
+constraint_algorithm    = 	lincs
+constraints             = 	h-bonds
+lincs_iter              = 	1
+lincs_order             = 	4
+
+; non bonded neigbour interactions	
+nstlist                 = 	10
+cutoff-scheme           = 	Verlet
+ns_type                 = 	grid
+	
+coulombtype             = 	PME
+pme_order               = 	4
+fourierspacing          = 	0.16
+rcoulomb                = 	1.0
+	
+rvdw                    = 	1.0
+DispCorr                = 	EnerPres
+
+
+; Gereral dynamic setup
+continuation            = 	no ; first step!
+gen_vel                 = 	yes
+gen_temp                = 	300
+gen_seed                = 	-1
+
+; Temperature coupling	
+tcoupl                  = 	V-rescale 
+tc-grps                 = 	Protein Non-Protein
+tau_t                   = 	0.1     0.1
+ref_t                   = 	300     300
+
+; Pressure coupling	
+pcoupl                  = 	no
+
+
+
+
