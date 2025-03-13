@@ -1270,3 +1270,26 @@ def see_interactions(s_top,s_gro,s_mol_name):
     #clean temp files
     bricksFileSystem.delete(s_top_with_inclusions)
     bricksFileSystem.delete(temp_file_path)
+
+
+def highlight_id(s_gro, n_id):
+    """
+    given an a global id, will draw a sphere around that atom in vmd
+    the input id is te gromacs global id, as in the gro. I say that because the id numbering in vmd is different because it starts at 0 instead of 1. ignore the vmd numbering
+    
+    example:
+
+    s_gro = r"//wsl$/Ubuntu/home/bioinformatician/MD/pepticat9_truss_in_water/3_NPT/npt.gro"
+    cl.highlight_id(s_gro, 97)
+    
+    """
+
+    #we get the coordinates of that id and draw an sphere there, so not to be misguided by the vmd id numbering, that is different
+    coords = bricksGRO.coordinate_by_id(s_gro, n_id,'dictionary') #get the coordinates as a dictionary, for example {'x': 0.926, 'y': 1.383, 'z': 1.367}
+    
+    send_command_to_vmd(f"mol load graphics {{id {n_id} spherical highlight}}") #create a new molecule and set its name
+    send_command_to_vmd("display resetview")#required after creating a new molecule so it doesnt have different coordinates and transformations
+    send_command_to_vmd("graphics top material Transparent")
+    send_command_to_vmd("graphics top color red")
+    send_command_to_vmd(f"graphics top sphere {{{coords.get('x')*10:.3f} {coords.get('y')*10:.3f} {coords.get('z')*10:.3f}}} radius 0.3")
+    send_command_to_vmd("display update")
