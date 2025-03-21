@@ -1405,9 +1405,6 @@ proc draw_forces {{ name element op }} {{
 {force_data_tcl}
 
 
-set mol [molinfo top]
-set vmd_frame($mol) [molinfo frame $mol]
-trace variable vmd_frame($mol) w draw_forces
 
 
 enable_force_visualization
