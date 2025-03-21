@@ -23,6 +23,7 @@ import matplotlib.patches as mpatches
 from matplotlib.colors import BoundaryNorm
 
 import nglview as nv
+import MDAnalysis as mda
 import mdtraj as md
 
 import seaborn as sns
@@ -484,13 +485,7 @@ def see_interactions(s_top,s_gro,s_mol_name):
     print("CLEAN PIPE gathering topology data")
 
 
-    #a functions to help do deal with dihedrals
-    def split_ll_diherals_into_proper_and_improper(ll_dihedrals):
-        # First list: sublists where the 4th element equals '2'
-        ll_improper = [sublist for sublist in ll_dihedrals if len(sublist) > 3 and sublist[4] == '2']
-        # Second list: sublists where the 4th element is not '2'
-        ll_proper = [sublist for sublist in ll_dihedrals if len(sublist) > 3 and sublist[4] != '2']
-        return ll_proper, ll_improper
+
 
     #a function to help to deal with items not found in the lookup, probably because of the atom order
     def split_ll_into_found_and_not_found(ll_input):
@@ -501,7 +496,6 @@ def see_interactions(s_top,s_gro,s_mol_name):
         return ll_found, ll_not_found
 
 
-    global s_itp_with_inclusions
     
     #inser all inclusions of the top file, so that all forcefield information will be there, at the same place
     s_top_with_inclusions = bricksTOP.expand_includes_to_temp_file(s_top)
@@ -515,24 +509,6 @@ def see_interactions(s_top,s_gro,s_mol_name):
     ll_bondtypes     = lltools.clean_comments_out(bricksTOP.parse_directive(s_top_with_inclusions, "[ bondtypes ]"))
     ll_angletypes    = lltools.clean_comments_out(bricksTOP.parse_directive(s_top_with_inclusions, "[ angletypes ]"))
     ll_dihedraltypes = lltools.clean_comments_out(bricksTOP.parse_directive(s_top_with_inclusions, "[ dihedraltypes ]"))
-
-    # get the molecule topology
-    global ll_atoms
-    global ll_exclusions
-    global ll_posres
-    
-    global ll_bonds_filled
-    global ll_angles_filled
-    global ll_dihedrals_filled
-
-    global ll_proper_dihedrals_filled
-    global ll_improper_dihedrals_filled
-
-    global ll_dihedrals_filled_proper
-    global ll_dihedrals_filled_improper
-    global ll_dihedraltypes_improper
-    global ll_dihedraltypes_proper
-
 
 
     #now parse each and every molecule in the top
@@ -738,9 +714,9 @@ def see_interactions(s_top,s_gro,s_mol_name):
     #DIHEDRALS, they are more complex because of the need of spliting into proper and improper and the possiblility of atom reordering
     
     #split into proper and improper
-    ll_dihedraltypes_proper, ll_dihedraltypes_improper       = split_ll_diherals_into_proper_and_improper(ll_dihedraltypes)
-    ll_dihedrals_proper, ll_dihedrals_improper               = split_ll_diherals_into_proper_and_improper(ll_dihedrals)
-    ll_dihedrals_filled_proper, ll_dihedrals_filled_improper = split_ll_diherals_into_proper_and_improper(ll_dihedrals_named)
+    ll_dihedraltypes_proper, ll_dihedraltypes_improper       = lltools.split_ll_diherals_into_proper_and_improper(ll_dihedraltypes)
+    ll_dihedrals_proper, ll_dihedrals_improper               = lltools.split_ll_diherals_into_proper_and_improper(ll_dihedrals)
+    ll_dihedrals_filled_proper, ll_dihedrals_filled_improper = lltools.split_ll_diherals_into_proper_and_improper(ll_dihedrals_named)
         
     # add paramenters for the given atomtypes for PROPER AND IMPROPER
     ll_dihedrals_filled_proper   = lltools.procv_ll(ll_dihedrals_filled_proper,[5,6,7,8,4], ll_dihedraltypes_proper,[0,1,2,3,4], list(range(5,len(ll_dihedraltypes_proper[0]))))# add paramenters for the given atomtypes
@@ -1293,3 +1269,165 @@ def highlight_id(s_gro, n_id):
     send_command_to_vmd("graphics top color pink")
     send_command_to_vmd(f"graphics top sphere {{{coords.get('x')*10:.3f} {coords.get('y')*10:.3f} {coords.get('z')*10:.3f}}} radius 0.4")
     send_command_to_vmd("display update")
+
+
+
+
+
+def see_forces(s_tpr_file,s_trr_file,force_threshold):
+
+    """
+    this function Il plot arrows in a trajectory file where the forcess are above the define threshhold
+
+    this functions works by creating and sourcing a tcl script that updates the drawing of the errows every time the user mooves the frame slide on vmd
+
+
+    example usage:
+    
+    s_tpr_file = r"//wsl$/Ubuntu/home/bioinformatician/MD/pepticat9_truss_in_water/4_PROD/prod.tpr"
+    s_trr_file = r"//wsl$/Ubuntu/home/bioinformatician/MD/pepticat9_truss_in_water/4_PROD/prod.trr"
+    force_threshold = 300  # in kJ/mol/nm
+
+    cl.see_forces(s_tpr_file,s_trr_file,force_threshold)
+    
+    """
+
+
+    # Load the GROMACS trajectory (.trr) and topology (.tpr)
+    u = mda.Universe(s_tpr_file, s_trr_file, refresh_offsets=True)
+    atoms = u.atoms
+
+    # this a basic mda example on how to get information
+    #u = mda.Universe(s_tpr_file, s_trr_file, refresh_offsets=True)
+    #u.trajectory[0] # this set a certain frame directly in the object
+    #a = u.atoms[123].position
+    #b = u.atoms[123].force
+    #c = u.atoms[123].name
+    #d = u.atoms[123].resid
+
+    # Prepare force data as a TCL dictionary
+    force_data_tcl = "set force_data [dict create]\n"
+
+    for frame_idx, ts in enumerate(u.trajectory):
+        #in mdanalysus, when we chose a frame, like for example "u.trajectory[0]" or when we loop throught it (like it was done in this for loop),
+        #the object is set to that frame, so that when we get corrdinates and forces of the atom, they will be from that specifc frame
+
+    
+        frame_data = []
+        forces = atoms.forces 
+
+        for i, force in enumerate(forces):
+
+            force = np.array(force, dtype=float)  # Ensure force is a NumPy array.  example of a force np.array([150.0, -50.0, 200.0])
+
+
+            # Compute the magnitude (length) of the force vector
+            # Example calculation:
+            # np.linalg.norm([150.0, -50.0, 200.0]) ≈ 250.0
+            magnitude = np.linalg.norm(force) 
+        
+            if magnitude > force_threshold:
+                #print(f"i {i}")
+                #print(f"force {force}")
+                #print(f"magnitude {magnitude}")
+            
+                pos = atoms[i].position 
+                pos = np.array(pos, dtype=float)  # Ensure pos is a NumPy array.  example of a position: np.array([1.5, 2.0, 3.5])
+                #print(f"pos {pos}")
+
+
+                # Normalize the force vector (get its direction)
+                # Example where force = [150, -50, 200] and magnitude = 250
+                # direction = [150/250, -50/250, 200/250] ≈ [0.6, -0.2, 0.8]
+                # If magnitude is very small (~0), set direction to zero to avoid division by zero
+                direction = force / magnitude if magnitude > 1e-10 else np.zeros(3)
+
+            
+                # Compute the end position of the arrow (position + scaled direction)
+                # Example:
+                # pos = [1.5, 2.0, 3.5]
+                # direction = [0.6, -0.2, 0.8]
+                # Scaling by 2: direction * 2 = [1.2, -0.4, 1.6]
+                # end_pos = [1.5, 2.0, 3.5] + [1.2, -0.4, 1.6] = [2.7, 1.6, 5.1]
+                end_pos = pos + (direction * 2)
+
+
+                # Append formatted force vector
+                frame_data.append(
+                    f"    {{{pos[0]:.5f} {pos[1]:.5f} {pos[2]:.5f} "
+                    f"{end_pos[0]:.5f} {end_pos[1]:.5f} {end_pos[2]:.5f}}}"
+                )
+
+        # Only add frame data if it contains at least one force vector
+        if frame_data:
+            frame_entry = "\\\n".join(frame_data)  # Join forces on new lines with proper indentation
+            force_data_tcl += f"dict set force_data {frame_idx} [list \\\n{frame_entry}]\n"
+
+    # TCL script template
+    tcl_script_template = f"""\
+proc enable_force_visualization {{}} {{
+    global vmd_frame force_data
+    trace variable vmd_frame([molinfo top]) w draw_forces
+}}
+
+proc disable_force_visualization {{}} {{
+    global vmd_frame
+    trace vdelete vmd_frame([molinfo top]) w draw_forces
+    draw delete all
+}}
+
+proc draw_arrow {{mol start end}} {{
+    set middle [vecadd $start [vecscale 0.8 [vecsub $end $start]]]
+    graphics $mol color red
+    graphics $mol material Opaque
+    graphics $mol cylinder $start $middle radius 0.2
+    graphics $mol cone $middle $end radius 0.3
+}}
+
+proc draw_forces {{ name element op }} {{
+    global vmd_frame force_data
+    draw delete all
+    set mol [molinfo top]
+
+    if {{[dict exists $force_data $vmd_frame([molinfo top])]}} {{
+        set forces [dict get $force_data $vmd_frame([molinfo top])]
+
+        if {{[llength $forces] > 0}} {{
+            foreach force_vector $forces {{
+                set start [lrange $force_vector 0 2]
+                set end [lrange $force_vector 3 5]
+                draw_arrow $mol $start $end
+            }}
+        }}
+    }}
+}}
+
+{force_data_tcl}
+
+
+set mol [molinfo top]
+set vmd_frame($mol) [molinfo frame $mol]
+trace variable vmd_frame($mol) w draw_forces
+
+
+enable_force_visualization
+
+"""
+
+
+
+    #create temporary text file with the tcl script
+    with tempfile.NamedTemporaryFile(mode='w', delete=False, encoding='utf-8') as temp_file:
+        # Join all strings with a newline and write them at once.
+        temp_file.write(tcl_script_template)
+    temp_file_path = temp_file.name
+    print(f"CLEAN PIPE created temp file {temp_file_path} to store the tcl script that will be sent to vmd")
+    
+
+    send_command_to_vmd("source "+temp_file_path.replace("\\", "\\\\"))
+
+
+
+    #clean temp file
+    #bricksFileSystem.delete(temp_file_path)
+

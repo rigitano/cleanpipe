@@ -276,3 +276,11 @@ def clean_comments_out(list_of_lists):
                 new_row.append(cell)
         cleaned_rows.append(new_row)
     return cleaned_rows
+
+
+def split_ll_diherals_into_proper_and_improper(ll_dihedrals):
+    # First list: sublists where the 4th element equals '2'
+    ll_improper = [sublist for sublist in ll_dihedrals if len(sublist) > 3 and sublist[4] == '2']
+    # Second list: sublists where the 4th element is not '2'
+    ll_proper = [sublist for sublist in ll_dihedrals if len(sublist) > 3 and sublist[4] != '2']
+    return ll_proper, ll_improper
