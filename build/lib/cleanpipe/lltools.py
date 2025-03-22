@@ -2,6 +2,8 @@ import pandas as pd
 import copy
 import re
 
+from cleanpipe import bricksStorage
+
 
 def procv_ll(data_ll, data_key_spec, lookup_ll, lookup_key_spec, lookup_return_cols):
     """
@@ -279,8 +281,78 @@ def clean_comments_out(list_of_lists):
 
 
 def split_ll_diherals_into_proper_and_improper(ll_dihedrals):
+    """
+    give a list of lists representing dihedrals, this function will split them into two list of lists (proper and improper)
+    
+    example usage
+    ll_dihedrals_proper , ll_dihedrals_improper           = scl.plit_ll_diherals_into_proper_and_improper(ll_dihedrals)
+    """
+
+
     # First list: sublists where the 4th element equals '2'
     ll_improper = [sublist for sublist in ll_dihedrals if len(sublist) > 3 and sublist[4] == '2']
     # Second list: sublists where the 4th element is not '2'
     ll_proper = [sublist for sublist in ll_dihedrals if len(sublist) > 3 and sublist[4] != '2']
     return ll_proper, ll_improper
+
+
+
+
+def filter_dihedrals_to_keep_only_phi_and_psi(ll_dihedrals,ll_atoms):
+    """
+    filter to keep only backbone dihedrals
+    
+    given ll_dihedrals, will find out the ones that the ones that define phi and psi
+    to find that, ll_atoms is necessary, because the only way to find out is to check if the connection between N-CA (using C as 0) ad CA-C (using N as 0)
+
+    example usage:
+
+    ll_atoms     = dll_parsed_molecules['Protein_chain_A']['[ atoms ]']
+    ll_dihedrals = dll_parsed_molecules['Protein_chain_A']['[ dihedrals ]']
+    
+    ll_backbone_dihedrals = cl.filter_dihedrals_to_keep_only_phi_and_psi(ll_dihedrals,ll_atoms)
+    
+    """
+
+
+    df_hihedrals = bricksStorage.ll2df(ll_dihedrals)
+
+
+
+    df_atoms = bricksStorage.ll2df(ll_atoms)
+    df_atoms = df_atoms.iloc[:, :5] # keep only 'id','ff name','resid','resname','structural name'
+    df_atoms.columns=['id','ff name','resid','resname','structural name']
+    
+    
+    filtered_rows = []
+    for index, row in df_hihedrals.iterrows():
+        # Check if the atoms involved in the dihedarl are in phi and psi aroung the CA. this are the possibilities: 
+        # ["C N CA C","C N CA C","N CA C N","N C CA N"]
+        #if they are, we add the line to the filtered table. if they are not, the loop goes on without adding the line
+        #all the nested ifs are to avoid unecessary lookups
+        name_i = df_atoms.loc[df_atoms['id'] == row[0], 'structural name'].values[0]
+        if name_i == "C":
+            name_l = df_atoms.loc[df_atoms['id'] == row[3], 'structural name'].values[0]
+            if name_l == "C":
+                name_j = df_atoms.loc[df_atoms['id'] == row[1], 'structural name'].values[0]
+                name_k = df_atoms.loc[df_atoms['id'] == row[2], 'structural name'].values[0]
+                if (name_j == "N" and name_k == "CA") or (name_j == "CA" and name_k == "N"):
+                    #add
+                    filtered_rows.append(row)
+                    continue
+        else:
+            if name_i == "N":
+                name_l = df_atoms.loc[df_atoms['id'] == row[3], 'structural name'].values[0]
+                if name_l == "N":
+                    name_j = df_atoms.loc[df_atoms['id'] == row[1], 'structural name'].values[0]
+                    name_k = df_atoms.loc[df_atoms['id'] == row[2], 'structural name'].values[0]
+                    if (name_j == "C" and name_k == "CA") or (name_j == "CA" and name_k == "C"):
+                        #add
+                        filtered_rows.append(row)
+                        continue
+    
+    
+    df_filtered = pd.DataFrame(filtered_rows)
+    
+    
+    return bricksStorage.df2ll(df_filtered)

@@ -5,6 +5,7 @@ import tempfile
 from cleanpipe import bricksFileSystem
 from cleanpipe import bricksStorage
 from cleanpipe import lltools
+from cleanpipe import bricksGRO
 
 
 def getMoleculeName(top_file_path, order=1):
@@ -979,4 +980,313 @@ def discover_molecule_name_from_global_id(s_top, n_id_global):
 
     # Raise an error if no molecule matches
     raise ValueError(f"No molecule name found for global ID: {n_id_global}")
+
+def put_lines_at_the_proper_place_of_directive(ll_original, s_directive, ll_replacement):
+    """
+    The inputs are a list of lists representing a original parsed directive,
+    and a list of lists with replacement items that should update the original list.
+    
+    the original list will be uptaded so that, if the atom ids are present, that line will be replaced. but
+    if the atom ids are not present, they will be added at the end
+
+
+
+    for example, 
+    
+    and this is a ll_replacement with new values, that should go into the original ll:
+    [['2', '1', '5', '6', '10'],
+     ['4', '1', '5', '6', '9', '0.1', '0.2'],
+     ['50', '32', '45', '66', '10']]
+    
+    
+    this is a ll_original:
+    [['2', '1', '5', '6', '9'], <-this will be replaced
+     ['2', '1', '5', '7', '9'],
+     ['2', '1', '5', '20', '9'],
+     ['3', '1', '5', '6', '9'],
+     ['3', '1', '5', '7', '9'],
+     ['3', '1', '5', '20', '9'],
+     ['4', '1', '5', '6', '9'], <-this will be replaced
+     ['4', '1', '5', '6', '9']]  
+                                <-there will also be and addition here, for that element that was not found
+
+
+    EXAMPLE USAGE:
+    ll_dihedrals_improper_updated = cl.put_lines_at_the_proper_place_of_directive(ll_dihedrals_improper, '[ dihedrals ]', ll_gro_diherals_backbone)
+
+    
+    """
+    # Check if all inputs are lists of lists
+    for ll_input in [ll_original, ll_replacement]:
+        if not isinstance(ll_input, list):
+            raise ValueError(f"Expected input to be a list of lists, but got {type(ll_input).__name__}.")
+        if any(not isinstance(row, list) for row in ll_input):
+            raise ValueError("Expected input to be a list of lists. Every element in the input list must also be a list")
+
+
+    #define the number of columns that define the atoms, for each type of directive
+    if s_directive in ['[ bonds ]','[ pairs ]','[ constraints ]','[ distance_restraints ]']:
+        n_columns_with_atom_ids = 2
+    elif s_directive == '[ angles ]':
+        n_columns_with_atom_ids = 3
+    elif s_directive in ['[ dihedrals ]','[ dihedral_restraints ]']:
+        n_columns_with_atom_ids = 4
+    elif s_directive == '[ cmap ]':
+        n_columns_with_atom_ids = 5
+    elif s_directive == '[ position_restraints ]':
+        n_columns_with_atom_ids = 1
+    else:
+        raise ValueError(f"directive {s_directive} not recognized by the function replace_specific_lines_of_directive")
+    
+    # Create a copy of the original list to avoid in-place modifications
+    new_ll = [row.copy() for row in ll_original]
+
+    
+    # Convert replacement list-of-lists into a DataFrame (make sure ll2df is defined)
+    df = bricksStorage.ll2df(ll_replacement)
+    
+    # Create a dictionary mapping key (atom aids as strings) to the row index in new_ll
+    table_lookup = {
+        tuple(str(item) for item in row[:n_columns_with_atom_ids]): idx
+        for idx, row in enumerate(new_ll)
+    }
+    
+    # Iterate over each row in the dataframe to update the table
+    for _, df_row in df.iterrows():
+        # Create key from the atom ids (converted to strings)
+        key = tuple(str(x) for x in df_row.iloc[:n_columns_with_atom_ids])
+        # Convert the entire dataframe row into a list
+        new_row = list(df_row)
+        if key in table_lookup:
+            new_ll[table_lookup[key]] = new_row
+        else:
+            # handle the case where the key is not found
+            new_ll.append(new_row)
+
+    return new_ll
+
+def add_lines_at_the_end_of_directive(s_top_file,s_top_file_out, s_directive, ll_lines_to_add, directive_position='first'):
+    """
+    Inserts a table (list of lists) at the end of a specific directive in a top file.
+    
+    If more than one occurrence of the directive is found, a warning is printed and the function
+    operates on the occurrence specified by the 'directive_position' argument, which can be either 
+    'first' or 'last' (default is 'first').
+
+    For example, if the current content of the chosen directive in the top file is:
+
+    [ bonds ]
+    1 2 1 1
+    2 3 1 1       
+               <- ...here is where the lines will be added
+
+    Example usage:
+    ll_lines_to_add = [
+        ["1", "2", "1", "1"],
+        ["2", "3", "1", "1"]
+    ]
+    s_directive = "[ bonds ]"
+    top_file = "oi.top"
+    cl.add_lines_at_the_end_of_directive(s_top_file,s_top_file_out, s_directive, ll_lines_to_add, directive_position='first')
+    """
+    # Validate the directive_position argument.
+    if directive_position not in ('first', 'last'):
+        raise ValueError("directive_position must be either 'first' or 'last'.")
+
+    # Read the file's content.
+    with open(s_top_file, 'r') as file:
+        lines = file.readlines()
+
+    # Find all occurrences of the directive.
+    directive_indices = [i for i, line in enumerate(lines) if line.strip() == s_directive.strip()]
+
+    if not directive_indices:
+        raise ValueError("Directive not found in the file.")
+
+    if len(directive_indices) > 1:
+        print(f"Warning: More than one occurrence of directive '{s_directive}' found. Using the {directive_position} occurrence.")
+
+    # Choose the desired occurrence.
+    directive_index = directive_indices[0] if directive_position == 'first' else directive_indices[-1]
+
+    # Determine the insertion point: the first subsequent line that starts a new directive (i.e. [ ... ])
+    # or the end of the file if no new directive is found.
+    insertion_index = len(lines)
+    for i in range(directive_index + 1, len(lines)):
+        stripped_line = lines[i].strip()
+        if stripped_line.startswith('[') and stripped_line.endswith(']'):
+            insertion_index = i
+            break
+
+    # Convert every cell in each row to a string
+    def format_cell(cell):
+        if isinstance(cell, float):
+            return f"{cell:.4f}"
+        return str(cell)
+    
+    formatted_ll_lines_to_add = [[format_cell(cell) for cell in row] for row in ll_lines_to_add]
+    
+    # Join each row into a single line (with a newline at the end)
+    new_lines = ["   ".join(row) + "\n" for row in formatted_ll_lines_to_add]
+
+    # Insert the new lines.
+    updated_lines = lines[:insertion_index] + new_lines + ["\n"] + lines[insertion_index:]
+
+    # Write the updated content back to the file.
+    with open(s_top_file_out, 'w') as file:
+        file.writelines(updated_lines)
+
+
+def replace_all_lines_of_directive(s_top_file,s_top_file_out, s_directive, ll_lines_to_add, directive_position='first'):
+    """
+    Replaces the lines under a specific directive in a top file with a new table (list of lists).
+    
+    If more than one occurrence of the directive is found, a warning is printed and the function
+    operates on the occurrence specified by the 'directive_position' argument, which can be either 
+    'first' or 'last' (default is 'first').
+
+    For example, if the current content of the chosen directive in the top file is:
+
+    [ bonds ] 
+                <- ...here is where the lines will be added...
+    1 2 1 1     <- ...this line will be deleted
+    2 3 1 1     <- ...this line will be deleted 
+               
+    Example usage:
+    ll_lines_to_put_there = [
+    ['20', '5', '22', '21', '2'],
+    ['22', '20', '24', '23', '2'],
+    ['30', '24', '32', '31', '2'],
+    ['32', '30', '34', '33', '2'],
+    ['79', '64', '81', '80', '2'],
+    ['1', '5', '20', '22', '2', -47.04540848888724, '5000'],
+    ['20', '22', '24', '30', '2', -57.99694175027113, '5000'],
+    ['22', '24', '30', '32', '2', -46.481456565006184, '5000'],
+    ['52', '54', '60', '62', '2', -46.956430692430864, '5000'],
+    ['60', '62', '64', '79', '2', -57.83680231864055, '5000']]
+
+    s_itp_file     = r"//wsl$/Ubuntu/home/bioinformatician/MD/pepticat9_truss_in_water/pepticat9_truss_in_water_Protein_chain_A.itp"
+    s_itp_file_out = r"//wsl$/Ubuntu/home/bioinformatician/MD/pepticat9_truss_in_water/pepticat9_truss_in_water_Protein_chain_A_edited.top"
+    
+    cl.replace_all_lines_of_directive(s_itp_file,s_itp_file_out, '[ dihedrals ]', ll_lines_to_put_there, 'last')
+    """
+    # Validate the directive_position argument.
+    if directive_position not in ('first', 'last'):
+        raise ValueError("directive_position must be either 'first' or 'last'.")
+
+    # Read the file's content.
+    with open(s_top_file, 'r') as file:
+        lines = file.readlines()
+
+    # Find all occurrences of the directive.
+    directive_indices = [i for i, line in enumerate(lines) if line.strip() == s_directive.strip()]
+
+    if not directive_indices:
+        raise ValueError("Directive not found in the file.")
+
+    if len(directive_indices) > 1:
+        print(f"Warning: More than one occurrence of directive '{s_directive}' found. Using the {directive_position} occurrence.")
+
+    # Choose the desired occurrence.
+    directive_index = directive_indices[0] if directive_position == 'first' else directive_indices[-1]
+
+    # Determine the end of the directive block.
+    block_end_index = len(lines)
+    for i in range(directive_index + 1, len(lines)):
+        stripped_line = lines[i].strip()
+        if stripped_line.startswith('[') and stripped_line.endswith(']'):
+            block_end_index = i
+            break
+
+    # Convert every cell in each row to a string
+    def format_cell(cell):
+        if isinstance(cell, float):
+            return f"{cell:.4f}"
+        return str(cell)
+    
+    formatted_ll_lines_to_add = [[format_cell(cell) for cell in row] for row in ll_lines_to_add]
+    
+    # Join each row into a single line (with a newline at the end)
+    new_lines = ["   ".join(row) + "\n" for row in formatted_ll_lines_to_add]
+
+    # Replace the lines between the directive header and the block end.
+    updated_lines = lines[:directive_index + 1] + new_lines + ["\n"] + lines[block_end_index:]
+
+    # Write the updated content back to the file.
+    with open(s_top_file_out, 'w') as file:
+        file.writelines(updated_lines)
+
+
+
+def freeze_phi_psi_dihedrals(s_gro_file,s_top_file, restraining_force,s_molename,s_file_to_be_edited, s_out_file_name):
+    """
+
+    the goal is to set a dihedral potential in [ dihedrals ] so that the current dihedral angles (according to the first molecule on the top) will remain the same
+   
+    to acomplish that, for the give molecule, the function will the phi and psi dihedrals, look the gro so to find the real angles,
+    and then add those angles as manualy added parameters, togeher with the defined force.
+    the funcional is se to be type 2. This is the one that is used for "improper dihedrals", but actually type 2 is just a harmonic potential
+    The harmonic potential is the only way to really freeze the dihedral without it being able to rotate because of periodical potentials
+    
+
+    the output will be a file where the improper dihedral directive is edited so to add those frozen psi and phi. this file can be either a itp or a top
+    depending on where are the dihedral definitions for the chosen molecule
+
+    s_file_to_be_edited. 
+    s_out_file_name is 
+
+
+    s_gro_file             file where the real dihedrals values will be obtained
+    s_top_file             file that will inform the ids of the dihedrals of the chosen molecule
+    restraining_force      the forceon the harmonic potential. e.g. 5000
+    s_molename             the chosen molecule. e.g. 'Protein_chain_A'
+    s_file_to_be_edited    the file with information to be edited is. this input exists because sometimes the info is in the top, and sometimes in a itp
+    s_out_file_name        just the name of the new file that will be generated. If its the same as s_file_to_be_edited, will override. If its different, the original will be kept
+    
+
+    EXAMPLE USAGE:
+
+    s_gro_file     = r"//wsl$/Ubuntu/home/bioinformatician/MD/pepticat9_truss_in_water/pepticat9_truss_in_water.gro"
+    s_top_file     = r"//wsl$/Ubuntu/home/bioinformatician/MD/pepticat9_truss_in_water/pepticat9_truss_in_water.top"
+    
+    restraining_force = 7000
+    s_molename = 'Protein_chain_A'
+    
+    s_file_to_be_edited = r"//wsl$/Ubuntu/home/bioinformatician/MD/pepticat9_truss_in_water/pepticat9_truss_in_water_Protein_chain_A.itp"
+    s_out_file_name = r"//wsl$/Ubuntu/home/bioinformatician/MD/pepticat9_truss_in_water/pepticat9_truss_in_water_Protein_chain_A_edited.itp"
+    
+    freeze_phi_psi_dihedrals(s_gro_file,s_top_file, restraining_force,s_molename,s_file_to_be_edited, s_out_file_name)
+
+    """
+    
+    #parse all the molecules
+    s_top_file_with_inclusions = expand_includes_to_temp_file(s_top_file)
+    dll_parsed_molecules = parse_directives_inside_each_and_every_molecule(s_top_file_with_inclusions)
+    bricksFileSystem.delete(s_top_file_with_inclusions)
+
+    #get dihedralls for the molecule of interest
+    ll_dihedrals = dll_parsed_molecules[s_molename]['[ dihedrals ]']
+    _ , ll_dihedrals_improper           = lltools.split_ll_diherals_into_proper_and_improper(ll_dihedrals) 
+
+    #get also the atoms, to be able to find each atom name
+    ll_atoms     = dll_parsed_molecules[s_molename]['[ atoms ]']
+
+    #extract all dihedrals from gro
+    ll_gro_diherals            = bricksGRO.extract_all_dihedrals_from_gro(s_gro_file,s_top_file,s_molename)
+
+    #and select just the ones in the backbone
+    ll_gro_diherals_backbone   = lltools.filter_dihedrals_to_keep_only_phi_and_psi(ll_gro_diherals ,ll_atoms)
+    
+    # organize the list with the backbone dihedrals so we have i,j,k,l,functional,angle,force. all in the correct order
+    for row in ll_gro_diherals_backbone:
+        angle =row[4]
+        row[4]='2'  #will se the functional to 2 (harmonic potentials, suited for improper dihedrals, but also the best option to never twist)
+        row.append(angle)# put the angle after the functional
+        row.append(str(restraining_force)) #add the restraining force
+    
+    #update the just the improper dihedral list. this is because the dihedral forces had to be set as improper dihedrals
+    ll_dihedrals_improper_updated       = put_lines_at_the_proper_place_of_directive(ll_dihedrals_improper, '[ dihedrals ]', ll_gro_diherals_backbone)
+
+    #insert the update improper dihedrals in the top
+    replace_all_lines_of_directive(s_file_to_be_edited,s_out_file_name, '[ dihedrals ]', ll_dihedrals_improper_updated, 'last')
 
