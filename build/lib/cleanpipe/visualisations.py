@@ -833,6 +833,61 @@ def see_interactions(s_top,s_gro,s_mol_name):
     print("CLEAN PIPE creating list of tcl commands")
     l_tcl_commads = [] #create list of lists to store all lines of a tcl script that will be sent in the end
 
+
+
+
+    # generate a list of atom ids to write the local and global atom ids
+    l_atom_ids = [row[0] for row in ll_atoms]
+    #write local and global ids
+    if l_atom_ids !=[]:
+        print("CLEAN PIPE processing ids")
+
+
+        #write local ids
+        l_tcl_commads.append(f"mol load graphics {{{s_mol_name[0:5]}-local ids}}")
+        l_tcl_commads.append("display resetview")#required after creating a new molecule so it doesnt have different coordinates and transformations
+        l_tcl_commads.append("graphics top material Opaque")
+        l_tcl_commads.append("graphics top color green")
+
+
+        # go throught all the instantiations of molecules of a certain type that are present in the gro, appending plotting commands
+        n_index_prev_mol = n_first_id -1
+        for n_molecule_counter in range(1,n_molecules+1):
+
+            for atom_id in l_atom_ids:
+
+                coords_i = df_coordinates.loc[str(int(atom_id)+n_index_prev_mol), ['x', 'y', 'z']].astype(float).to_dict()
+
+                l_tcl_commads.append(f'graphics top text {{{coords_i.get("x")*10+0.3:.3f} {coords_i.get("y")*10+0.3:.3f} {coords_i.get("z")*10+0.3:.3f}}} "{str(atom_id)}" size 1')
+                l_tcl_commads.append("display update")
+                l_tcl_commads.append("mol off top")
+
+            #the for loop that goes trought all molecules of a certain type ends after this line that updates the n_index_prev_mol to be used in the next iteration
+            n_index_prev_mol = n_index_prev_mol + n_atoms_in_mol
+
+        #write global ids
+        l_tcl_commads.append(f"mol load graphics {{{s_mol_name[0:5]}-global ids}}")
+        l_tcl_commads.append("display resetview")#required after creating a new molecule so it doesnt have different coordinates and transformations
+        l_tcl_commads.append("graphics top material Opaque")
+        l_tcl_commads.append("graphics top color green")
+
+        
+
+        n_index_prev_mol = n_first_id -1
+        for n_molecule_counter in range(1,n_molecules+1):
+
+            for atom_id in l_atom_ids:
+
+                coords_i = df_coordinates.loc[str(int(atom_id)+n_index_prev_mol), ['x', 'y', 'z']].astype(float).to_dict()
+
+                l_tcl_commads.append(f'graphics top text {{{coords_i.get("x")*10+0.3:.3f} {coords_i.get("y")*10+0.3:.3f} {coords_i.get("z")*10+0.3:.3f}}} "{str(int(atom_id)+n_index_prev_mol)}" size 1')
+                l_tcl_commads.append("display update")
+                l_tcl_commads.append("mol off top")
+
+
+            #the for loop that goes trought all molecules of a certain type ends after this line that updates the n_index_prev_mol to be used in the next iteration
+            n_index_prev_mol = n_index_prev_mol + n_atoms_in_mol
+
     
     if "[ bonds ]" in what_to_plot and ll_bonds_filled !=[]:
         print("CLEAN PIPE processing [ bonds ]")
