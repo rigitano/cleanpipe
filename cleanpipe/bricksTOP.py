@@ -168,7 +168,7 @@ def update_molecule_quantity(top_file, molecule_name, new_quantity):
             split_line = line.split()
             if len(split_line) == 2 and split_line[0] == molecule_name:
                 # Replace the quantity with the new one
-                new_line = f"{molecule_name}    {new_quantity}\n"
+                new_line = f"{molecule_name}    {str(new_quantity)}\n"
                 new_lines.append(new_line)
             else:
                 new_lines.append(line)
