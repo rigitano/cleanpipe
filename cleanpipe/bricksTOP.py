@@ -940,87 +940,7 @@ def discover_molecule_name_from_global_id(s_top, n_id_global):
     # Raise an error if no molecule matches
     raise ValueError(f"No molecule name found for global ID: {n_id_global}")
 
-def put_lines_at_the_proper_place_of_directive(ll_original, s_directive, ll_replacement):
-    """
-    The inputs are a list of lists representing a original parsed directive,
-    and a list of lists with replacement items that should update the original list.
-    
-    the original list will be uptaded so that, if the atom ids are present, that line will be replaced. but
-    if the atom ids are not present, they will be added at the end
 
-
-
-    for example, 
-    
-    and this is a ll_replacement with new values, that should go into the original ll:
-    [['2', '1', '5', '6', '10'],
-     ['4', '1', '5', '6', '9', '0.1', '0.2'],
-     ['50', '32', '45', '66', '10']]
-    
-    
-    this is a ll_original:
-    [['2', '1', '5', '6', '9'], <-this will be replaced
-     ['2', '1', '5', '7', '9'],
-     ['2', '1', '5', '20', '9'],
-     ['3', '1', '5', '6', '9'],
-     ['3', '1', '5', '7', '9'],
-     ['3', '1', '5', '20', '9'],
-     ['4', '1', '5', '6', '9'], <-this will be replaced
-     ['4', '1', '5', '6', '9']]  
-                                <-there will also be and addition here, for that element that was not found
-
-
-    EXAMPLE USAGE:
-    ll_dihedrals_improper_updated = cl.put_lines_at_the_proper_place_of_directive(ll_dihedrals_improper, '[ dihedrals ]', ll_gro_diherals_backbone)
-
-    
-    """
-    # Check if all inputs are lists of lists
-    for ll_input in [ll_original, ll_replacement]:
-        if not isinstance(ll_input, list):
-            raise ValueError(f"Expected input to be a list of lists, but got {type(ll_input).__name__}.")
-        if any(not isinstance(row, list) for row in ll_input):
-            raise ValueError("Expected input to be a list of lists. Every element in the input list must also be a list")
-
-
-    #define the number of columns that define the atoms, for each type of directive
-    if s_directive in ['[ bonds ]','[ pairs ]','[ constraints ]','[ distance_restraints ]']:
-        n_columns_with_atom_ids = 2
-    elif s_directive == '[ angles ]':
-        n_columns_with_atom_ids = 3
-    elif s_directive in ['[ dihedrals ]','[ dihedral_restraints ]']:
-        n_columns_with_atom_ids = 4
-    elif s_directive == '[ cmap ]':
-        n_columns_with_atom_ids = 5
-    elif s_directive == '[ position_restraints ]':
-        n_columns_with_atom_ids = 1
-    else:
-        raise ValueError(f"directive {s_directive} not recognized by the function replace_specific_lines_of_directive")
-    
-    # Create a copy of the original list to avoid in-place modifications
-    new_ll = [row.copy() for row in ll_original]
-
-    
-    # Convert replacement list-of-lists into a DataFrame (make sure ll2df is defined)
-    df = bricksStorage.ll2df(ll_replacement)
-    
-    # Create a dictionary mapping key (atom aids as strings) to the row index in new_ll
-    table_lookup = {
-        tuple(str(item) for item in row[:n_columns_with_atom_ids]): idx
-        for idx, row in enumerate(new_ll)
-    }
-    
-    # Iterate over each row in the dataframe to update the table
-    for _, df_row in df.iterrows():
-        # Create key from the atom ids (converted to strings)
-        key = tuple(str(x) for x in df_row.iloc[:n_columns_with_atom_ids])
-        # Convert the entire dataframe row into a list
-        new_row = list(df_row)
-        if key in table_lookup:
-            new_ll[table_lookup[key]] = new_row
-        else:
-            # handle the case where the key is not found
-            new_ll.append(new_row)
 
     return new_ll
 
@@ -1175,6 +1095,96 @@ def replace_all_lines_of_directive(s_top_file,s_top_file_out, s_directive, ll_li
     with open(s_top_file_out, 'w') as file:
         file.writelines(updated_lines)
 
+def put_lines_at_the_proper_place_of_directive(s_file_to_be_edited, s_out_file_name, s_directive, ll_replacement):
+    """
+    The inputs are a list of lists representing a original parsed directive,
+    and a list of lists with replacement items that should update the original list.
+    
+    the original list will be uptaded so that, if the atom ids are present, that line will be replaced. but
+    if the atom ids are not present, they will be added at the end
+
+
+
+    for example, 
+    
+    and this is a ll_replacement with new values, that should go into the original ll:
+    [['2', '1', '5', '6', '10'],
+     ['4', '1', '5', '6', '9', '0.1', '0.2'],
+     ['50', '32', '45', '66', '10']]
+    
+    
+    this is a ll_original:
+    [['2', '1', '5', '6', '9'], <-this will be replaced
+     ['2', '1', '5', '7', '9'],
+     ['2', '1', '5', '20', '9'],
+     ['3', '1', '5', '6', '9'],
+     ['3', '1', '5', '7', '9'],
+     ['3', '1', '5', '20', '9'],
+     ['4', '1', '5', '6', '9'], <-this will be replaced
+     ['4', '1', '5', '6', '9']]  
+                                <-there will also be and addition here, for that element that was not found
+
+
+    EXAMPLE USAGE:
+    cl.put_lines_at_the_proper_place_of_directive('protein_in_water.top', 'protein_in_water_new.top', '[ dihedrals ]', ll_gro_diherals_backbone)
+
+    
+    """
+
+
+    ll_original = parse_directive(s_file_to_be_edited, s_directive)
+
+
+    # Check if all inputs are lists of lists
+    for ll_input in [ll_original, ll_replacement]:
+        if not isinstance(ll_input, list):
+            raise ValueError(f"Expected input to be a list of lists, but got {type(ll_input).__name__}.")
+        if any(not isinstance(row, list) for row in ll_input):
+            raise ValueError("Expected input to be a list of lists. Every element in the input list must also be a list")
+
+
+    #define the number of columns that define the atoms, for each type of directive
+    if s_directive in ['[ bonds ]','[ pairs ]','[ constraints ]','[ distance_restraints ]']:
+        n_columns_with_atom_ids = 2
+    elif s_directive == '[ angles ]':
+        n_columns_with_atom_ids = 3
+    elif s_directive in ['[ dihedrals ]','[ dihedral_restraints ]']:
+        n_columns_with_atom_ids = 4
+    elif s_directive == '[ cmap ]':
+        n_columns_with_atom_ids = 5
+    elif s_directive == '[ position_restraints ]':
+        n_columns_with_atom_ids = 1
+    else:
+        raise ValueError(f"directive {s_directive} not recognized by the function replace_specific_lines_of_directive")
+    
+    # Create a copy of the original list to avoid in-place modifications
+    new_ll = [row.copy() for row in ll_original]
+
+    
+    # Convert replacement list-of-lists into a DataFrame (make sure ll2df is defined)
+    df = bricksStorage.ll2df(ll_replacement)
+    
+    # Create a dictionary mapping key (atom aids as strings) to the row index in new_ll
+    table_lookup = {
+        tuple(str(item) for item in row[:n_columns_with_atom_ids]): idx
+        for idx, row in enumerate(new_ll)
+    }
+    
+    # Iterate over each row in the dataframe to update the table
+    for _, df_row in df.iterrows():
+        # Create key from the atom ids (converted to strings)
+        key = tuple(str(x) for x in df_row.iloc[:n_columns_with_atom_ids])
+        # Convert the entire dataframe row into a list
+        new_row = list(df_row)
+        if key in table_lookup:
+            new_ll[table_lookup[key]] = new_row
+        else:
+            # handle the case where the key is not found
+            new_ll.append(new_row)
+
+
+    #insert the update improper dihedrals in the top
+    replace_all_lines_of_directive(s_file_to_be_edited,s_out_file_name, '[ dihedrals ]', new_ll, 'last')
 
 
 def freeze_phi_psi_dihedrals(s_gro_file,s_top_file, restraining_force,s_molename,s_file_to_be_edited, s_out_file_name):
