@@ -1095,6 +1095,7 @@ def replace_all_lines_of_directive(s_top_file,s_top_file_out, s_directive, ll_li
     with open(s_top_file_out, 'w') as file:
         file.writelines(updated_lines)
 
+
 def put_lines_at_the_proper_place_of_directive(s_file_to_be_edited, s_out_file_name, s_directive, ll_replacement):
     """
     The inputs are a list of lists representing a original parsed directive,
