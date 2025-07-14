@@ -10,7 +10,6 @@ from cleanpipe import bricksGRO
 
 def getMoleculeName(top_file_path, order=1):
     """
-    xxx duplicado?
     obtains the name of a molecule inside a top file. 
     You have to give the top file
     You can give the molecule order, if there are several molecules in the top file. To get the last, give -1. 
@@ -180,52 +179,6 @@ def update_molecule_quantity(top_file, molecule_name, new_quantity):
     with open(top_file, 'w') as file:
         file.writelines(new_lines)
 
-
-
-def add_lines_at_the_end_of_directive(s_top_file, s_directive, ll_lines_to_add):
-    """
-    xxx duplicado?
-    will insert a list of lists representing a table at the end of a specific directive in a specific top file
-
-    for example, if this is the current content of the chosen directive in the chosen top file...
-    [ bonds ]
-    1 2 1 1
-    2 3 1 1       
-               <- ...here is where the lines will be added
-    
-
-               
-    example usage
-    ll_lines_to_add = [
-        ["1", "2", "1", "1"],
-        ["2", "3", "1", "1"]
-    ]
-    directive = "[ bonds ]"
-    top_file = "oi.top"
-    add_lines_at_the_end_of_directive(s_top_file, s_directive, ll_lines_to_add)
-    """
-
-
-def replace_lines_of_directive(s_top_file, s_directive, ll_lines_to_add):
-    """
-    xxx duplicado?
-    will insert a list of lists representing a table in a specific directive in a specific top file
-
-    for example, if this is the current content of the chosen directive in the chosen top file...
-    [ bonds ] 
-                <- ...here is where the lines will be added...
-    1 2 1 1     <- ...this line will be deleted
-    2 3 1 1     <- ...this line will be deleted 
-               
-    example usage
-    ll_lines_to_add = [
-        ["1", "2", "1", "1"],
-        ["2", "3", "1", "1"]
-    ]
-    directive = "[ bonds ]"
-    top_file = "oi.top"
-    replace_lines_of_directive(s_top_file, s_directive, ll_lines_to_add)
-    """
 
 
 
