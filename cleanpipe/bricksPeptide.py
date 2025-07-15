@@ -93,6 +93,8 @@ def add_amide_to_Cterminus(peptide):
 def add_truss(peptide, p1, p2):
     """
 
+    xxx there is a duplicate function in bricksPDB
+
     vertices, edges = add_truss(peptide,[0, 0, 0], [1, 1, 1])
     print(vertices)
     print(edges)
