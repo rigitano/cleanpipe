@@ -10,11 +10,11 @@ import os
 
 
 
-def pdb2box_full_of_that(s_pdbfile, s_forceField):
+def pdb2box_full_of_that(s_pdbfile, s_forceField, s_box_size, n_mol_max):
     """
 
     usage example:
-    cl.pdb2box_full_of_that("octn.pdb","charmm36-jul2022")
+    cl.pdb2box_full_of_that("octn.pdb","charmm36-jul2022", "5 5 5", 1000)
 
     create a 5x5x5 box system filled with a lot of copies of the molecule
 
@@ -42,8 +42,8 @@ def pdb2box_full_of_that(s_pdbfile, s_forceField):
     bricksFileSystem.delete("posres.itp")
     bricksTOP.remove_posres_inclusion(f"{s_outPathAndName}.top")
 
-    #manipulate the GRO file to create a 5x5x5 box and fill it with copyes of the molecule
-    captured_output = bricksFileSystem.run_and_capture(f"gmx insert-molecules -ci {s_outPathAndName}_just1mol.gro -nmol 1000 -rot xyz -box 5 5 5 -o {s_outPathAndName}.gro")
+    #manipulate the GRO file to create a and fill it with copyes of the molecule
+    captured_output = bricksFileSystem.run_and_capture(f"gmx insert-molecules -ci {s_outPathAndName}_just1mol.gro -nmol {str(n_mol_max)} -rot xyz -box {s_box_size} -o {s_outPathAndName}.gro")
     print(f"\nCLEANPIPE MESSAGE\ngro file written: \n                     {s_outPathAndName}.gro")
 
     #now we have the final gro with a lot of molecules. its time to delete the initial one
