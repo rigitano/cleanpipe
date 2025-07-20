@@ -23,6 +23,7 @@ setup(
     ],
     include_package_data=True, # Normally pip install consider only .py files. this will alow it to see the mdp files in the mdp folder
     package_data={
-        'cleanpipe.mdp': ['*.mdp']
+        'cleanpipe.mdp': ['*.mdp'],
+        'cleanpipe.bash': ['*.sh'],
     },
 )
