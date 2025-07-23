@@ -6,6 +6,7 @@ import socket
 import subprocess
 import tempfile
 import os
+import platform
 
 
 from cleanpipe import lltools
@@ -404,13 +405,33 @@ def open_vmd_with_socket():
         temp_script_path = temp_script.name
 
     try:
-        # Call VMD with the temporary script in a separate process
-        subprocess.Popen(
-            ["C:\\Program Files\\VMD\\vmd", "-e", temp_script_path],
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-            close_fds=True
-        )
+        system = platform.system()
+
+        if system == "Windows":
+            # Windows: direct path to VMD executable
+            vmd_command = [
+                "C:\\Program Files\\VMD\\vmd",
+                "-e", temp_script_path
+            ]
+            subprocess.Popen(
+                vmd_command,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                close_fds=True
+            )
+
+        elif system == "Linux":
+            # Linux: run bash as login shell so ~/.bashrc gets sourced
+            bash_command = f"vmd -e {temp_script_path}"
+            subprocess.Popen(
+                ["/bin/bash", "-l", "-c", bash_command],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                close_fds=True
+            )
+
+        else:
+            raise OSError(f"vmd is not in 'C:\\Program Files\\VMD\\vmd' (for windows), nor callable using 'module load vmd' (for linux). This is your system: {system}")
     finally:
         # Ensure the temporary file is deleted
         if os.path.exists(temp_script_path):
