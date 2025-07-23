@@ -422,13 +422,27 @@ def open_vmd_with_socket():
 
         elif system == "Linux":
             # Linux: run bash as login shell so ~/.bashrc gets sourced
-            bash_command = f"vmd -e {temp_script_path}"
-            subprocess.Popen(
+            bash_command = f"source /etc/profile.d/modules.sh && module load vmd && vmd -e {temp_script_path}"
+
+            #env = os.environ.copy()
+            #env["DISPLAY"] = ":1"
+
+            #print("Trying to launch VMD with:")
+            #print("Command:", bash_command)
+            #print("Environment DISPLAY:", env["DISPLAY"])
+
+            
+            process = subprocess.Popen(
                 ["/bin/bash", "-l", "-c", bash_command],
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL,
                 close_fds=True
+                
             )
+            #stdout, stderr = process.communicate(timeout=10)
+            #print("STDOUT:", stdout.decode())
+            #print("STDERR:", stderr.decode())
+
 
         else:
             raise OSError(f"vmd is not in 'C:\\Program Files\\VMD\\vmd' (for windows), nor callable using 'module load vmd' (for linux). This is your system: {system}")
@@ -436,6 +450,8 @@ def open_vmd_with_socket():
         # Ensure the temporary file is deleted
         if os.path.exists(temp_script_path):
             #os.remove(temp_script_path)
+            print(f"DISPLAY: {os.environ.get('DISPLAY')}")
+
             print("ok")
 
 
