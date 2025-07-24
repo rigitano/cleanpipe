@@ -130,11 +130,13 @@ def procv_ll(data_ll, data_key_spec, lookup_ll, lookup_key_spec, lookup_return_c
     
     # Convert the left table to a DataFrame; leave column names as their default integers.
     df_data = pd.DataFrame(data_ll)
+    df_data = df_data.fillna("")
     
     # Convert the lookup table to a DataFrame and rename its columns (to avoid collisions)
     global df_lookup
     
     df_lookup = pd.DataFrame(lookup_ll)
+    df_lookup = df_lookup.fillna("")
     n_lookup_cols = df_lookup.shape[1]
     lookup_col_names = ['L_' + str(i) for i in range(n_lookup_cols)]
     df_lookup.columns = lookup_col_names

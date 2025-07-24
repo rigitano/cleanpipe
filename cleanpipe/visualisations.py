@@ -607,7 +607,8 @@ def see_interactions(s_top,s_gro,s_mol_name):
         # BONDS
         ll_bonds_named = lltools.procv_ll(ll_bonds,[0],ll_atoms,[0],[1])
         ll_bonds_named = lltools.procv_ll(ll_bonds_named,[1],ll_atoms,[0],[1])
-       
+
+
         #ANGLES
         ll_angles_named = lltools.procv_ll(ll_angles,[0],ll_atoms,[0],[1])
         ll_angles_named = lltools.procv_ll(ll_angles_named,[1],ll_atoms,[0],[1])
