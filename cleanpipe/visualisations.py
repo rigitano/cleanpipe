@@ -496,6 +496,10 @@ def see_interactions(s_top,s_gro,s_mol_name):
     
     """
 
+
+
+
+
     print("CLEAN PIPE excecuting function see_topology_of_one_molecule")
 
 
@@ -575,7 +579,6 @@ def see_interactions(s_top,s_gro,s_mol_name):
     #obtain parsed directives of a certain molecule. Im using gte because some molecule might not have a certain directive. this is not a problem.
 
     ll_atoms      = dd_parsed_mols.get(s_mol_name, {}).get('[ atoms ]', [])
-
     ll_bonds      = dd_parsed_mols.get(s_mol_name, {}).get('[ bonds ]', [])
     ll_angles     = dd_parsed_mols.get(s_mol_name, {}).get('[ angles ]', [])
     ll_dihedrals  = dd_parsed_mols.get(s_mol_name, {}).get('[ dihedrals ]', [])

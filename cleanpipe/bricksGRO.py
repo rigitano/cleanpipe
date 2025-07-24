@@ -28,13 +28,21 @@ def parse_gro(s_gro_file):
             raise ValueError("The .gro file must have at least three lines.")
         for line in lines[2:-1]:  # Skip the first two lines (header) and the last line (box size)
 
-            line_parts = line.split()
-            s_residue         = line_parts[0]
-            s_structural_name = line_parts[1]
-            s_atom_id         = line_parts[2]
-            s_x               = line_parts[3]
-            s_y               = line_parts[4]
-            s_z               = line_parts[5]
+            # Fixed-width fields (1-based columns in GROMACS spec):
+            #  1–5:   residue number
+            #  6–10:  residue name
+            # 11–15:  atom name   (we ignore this column in your output)
+            # 16–20:  atom number
+            # 21–28:  x coordinate
+            # 29–36:  y coordinate
+            # 37–44:  z coordinate
+
+            s_residue         = line[0:5].strip()
+            s_structural_name = line[5:10].strip()
+            s_atom_id         = line[15:20].strip()
+            s_x               = line[20:28].strip()
+            s_y               = line[28:36].strip()
+            s_z               = line[36:44].strip()
 
             atom_info = {
                 'residue': s_residue,
