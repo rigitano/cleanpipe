@@ -21,14 +21,14 @@ mol addrep top
 
 # Visualize molecules within hydrogen bond range of the protein
 
-mol selection {not protein within 3.5 of protein}
+mol selection {not protein and within 3.5 of protein}
 mol representation Licorice
 mol color Name
 mol material Opaque
 mol addrep top
 
 # Visualize hydrogen bonds using Hbonds drawing method
-mol selection {protein or (not protein within 3.5 of protein)}
+mol selection {protein or (not protein and within 3.5 of protein)}
 mol representation Hbonds
 mol color ColorID 27 ;# magenta
 mol material Opaque
