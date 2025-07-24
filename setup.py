@@ -25,5 +25,6 @@ setup(
     package_data={
         'cleanpipe.mdp': ['*.mdp'],
         'cleanpipe.bash': ['*.sh'],
+        'cleanpipe.tcl': ['*.tcl'],
     },
 )
