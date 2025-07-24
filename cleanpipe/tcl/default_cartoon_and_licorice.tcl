@@ -14,7 +14,7 @@ mol addrep top
 
 # Add a cartoon representation for the backbone
 mol selection {protein}
-mol representation cartoon
+mol representation NewCartoon
 mol color ColorID 2 ;# grey
 mol material Opaque
 mol addrep top
