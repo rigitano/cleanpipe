@@ -7,7 +7,7 @@ import Geometry
 
 
 
-def add_acetyl_to_Nterminus(peptide):
+def add_ACE_to_Nterminus(peptide):
     
     chain = peptide[0]['A']
     l_residues = list(chain.get_residues())
@@ -16,10 +16,10 @@ def add_acetyl_to_Nterminus(peptide):
     first_residue = l_residues[0]
     coordsN = first_residue['N'].get_coord()
     coordsCA = first_residue['CA'].get_coord()
-    coordsCB = first_residue['CB'].get_coord()
+    coordsC = first_residue['C'].get_coord()#oi
 
     # Create the first C of ACE
-    coords = algelin.find_new_atom_coord(coordsN, coordsCA, coordsCB, 1.5, -60, 0)
+    coords = algelin.find_new_atom_coord(coordsN, coordsCA, coordsC, 1.5, 40, -40)
     acetyl_c1 = Bio.PDB.Atom.Atom("C", coords, 0.0, 1.0, ' ', 'C', 1001, 'C')
 
     # Create the second C, and the O of ACE
@@ -49,7 +49,7 @@ def add_acetyl_to_Nterminus(peptide):
         residue.id = (residue.id[0], i, residue.id[2])
         chain.add(residue)
 
-def add_amide_to_Cterminus(peptide):
+def add_NME_to_Cterminus(peptide):
     
     chain = peptide[0]['A']
     l_residues = list(chain.get_residues())

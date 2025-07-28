@@ -31,7 +31,7 @@ def create_peptide(s_outName, s_aminoacids, l_phi, l_psi_im1, s_nTerminusCAP, s_
     """
     
     example:
-    cl.create_peptide("pepticat2.pdb","AAAAAA", [-57.8,-57.8,-57.8,-57.8,-57.8,-57.8], [-47.0,-47.0,-47.0,-47.0,-47.0,-47.0], "acyl","amide" )
+    cl.create_peptide("pepticat2.pdb","AAAAAA", [-57.8,-57.8,-57.8,-57.8,-57.8,-57.8], [-47.0,-47.0,-47.0,-47.0,-47.0,-47.0], "ACE","NME" )
     or
     cl.create_peptide("pepticat2.pdb","AAAAAA", [-57.8,-57.8,-57.8,-57.8,-57.8,-57.8], [-47.0,-47.0,-47.0,-47.0,-47.0,-47.0], "","" )
     """
@@ -59,11 +59,11 @@ def create_peptide(s_outName, s_aminoacids, l_phi, l_psi_im1, s_nTerminusCAP, s_
 
 
     #################################### add termini ###################################
-    if s_nTerminusCAP == "acyl":
-        bricksPeptide.add_acetyl_to_Nterminus(peptide)
+    if s_nTerminusCAP == "ACE":
+        bricksPeptide.add_ACE_to_Nterminus(peptide)
 
-    if s_cTerminusCAP == "amide":
-        bricksPeptide.add_amide_to_Cterminus(peptide)
+    if s_cTerminusCAP == "NME":
+        bricksPeptide.add_NME_to_Cterminus(peptide)
 
 
     #################################### create system. (ps this will add hydrogens) ###################################

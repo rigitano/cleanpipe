@@ -6,12 +6,12 @@ def find_new_atom_coord(atom1, atom2, atom3, distance, angle_in_plane_deg, angle
     """
     
     code in python to find those x y and z coordinates using as inputs: 
-    a list with the coordinates of atom 1, 
-    a list with the coordinates of atom 2, 
-    a list with the coordinates of atom 3, 
+    coordinates of atom 1, 
+    coordinates of atom 2, 
+    coordinates of atom 3, 
     a distance from atom 1, 
-    an angle (referenced from the line formed from the the line between atoms 1 and 2) within the plane formed by the 3 atoms, 
-    and a second angle (referenced from the line formed from the the line between atoms 1 and 2) within the plane formed by the 3 atoms
+    first  angle (0 is the line between atoms 1 and 2) within the plane formed by the 3 atoms, 
+    second angle normal to the plane formed by the 3 atoms
 
     """
 
