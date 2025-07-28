@@ -19,13 +19,13 @@ def add_ACE_to_Nterminus(peptide):
     coordsC = first_residue['C'].get_coord()#oi
 
     # Create the first C of ACE
-    coords = algelin.find_new_atom_coord(coordsN, coordsCA, coordsC, 1.5, 40, -40)
+    coords = algelin.find_new_atom_coord(coordsN, coordsCA, coordsC, 1.4, 40, -40)
     acetyl_c1 = Bio.PDB.Atom.Atom("C", coords, 0.0, 1.0, ' ', 'C', 1001, 'C')
 
     # Create the second C, and the O of ACE
-    coords = algelin.find_new_atom_coord(acetyl_c1.coord, coordsN, coordsCA, 1.5, -45, -90)
+    coords = algelin.find_new_atom_coord(acetyl_c1.coord, coordsN, coordsCA, 1.4, -45, -90)
     acetyl_c2 = Bio.PDB.Atom.Atom("CH3", coords, 0.0, 1.0, ' ', 'CH3', 1002, 'C')
-    coords = algelin.find_new_atom_coord(acetyl_c1.coord, coordsN, coordsCA, 1.5, 75, 0)
+    coords = algelin.find_new_atom_coord(acetyl_c1.coord, coordsN, coordsCA, 1.4, 75, 0)
     acetyl_o = Bio.PDB.Atom.Atom("O", coords, 0.0, 1.0, ' ', 'O', 1003, 'O')
 
     #IMPORTANT: THE NAMES OF THE ATOMS IN ACE HAVE TO MATCH THE NAMES OF THE FORCEFIELD YOU WILL CHOSE IN THE FUTURE
@@ -61,12 +61,12 @@ def add_NME_to_Cterminus(peptide):
     coordsCA = last_residue['CA'].get_coord()
     coords0 = last_residue['O'].get_coord()
 
-    # Create the first C of ACE
-    coords = algelin.find_new_atom_coord(coordsC, coordsCA, coords0, 1.5, -45, 90)
+    # Create the first C of NME
+    coords = algelin.find_new_atom_coord(coordsC, coordsCA, coords0, 1.4, -45, 90)
     acetyl_n = Bio.PDB.Atom.Atom("N", coords, 0.0, 1.0, ' ', 'N', 1001, 'N')
 
-    # Create the second C, and the O of ACE
-    coords = algelin.find_new_atom_coord(acetyl_n.coord, coordsC, coords0, 1.5, +45, 0)
+    # Create the second C, and the O of NME
+    coords = algelin.find_new_atom_coord(acetyl_n.coord, coordsC, coords0, 1.4, +45, 0)
     acetyl_c = Bio.PDB.Atom.Atom("CH3", coords, 0.0, 1.0, ' ', 'CH3', 1002, 'C')
 
 
