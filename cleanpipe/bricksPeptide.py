@@ -1,9 +1,15 @@
 from cleanpipe import algelin
 import Bio
-from Bio.PDB import PDBParser, PDBIO
+
 import numpy as np
 import PeptideBuilder
 import Geometry
+
+from Bio.PDB import Atom, Residue, Chain, PDBParser, PDBIO
+
+from PeptideBuilder import Geometry
+from PeptideBuilder import PeptideBuilder
+import Bio.PDB
 
 
 
@@ -16,16 +22,16 @@ def add_ACE_to_Nterminus(peptide):
     first_residue = l_residues[0]
     coordsN = first_residue['N'].get_coord()
     coordsCA = first_residue['CA'].get_coord()
-    coordsC = first_residue['C'].get_coord()#oi
+    coordsC = first_residue['C'].get_coord()
 
     # Create the first C of ACE
-    coords = algelin.find_new_atom_coord(coordsN, coordsCA, coordsC, 1.4, 40, -40)
+    coords = algelin.find_new_atom_coord(coordsN, coordsCA, coordsC, 1.5, -60, 0)
     acetyl_c1 = Bio.PDB.Atom.Atom("C", coords, 0.0, 1.0, ' ', 'C', 1001, 'C')
 
     # Create the second C, and the O of ACE
-    coords = algelin.find_new_atom_coord(acetyl_c1.coord, coordsN, coordsCA, 1.4, -45, -90)
+    coords = algelin.find_new_atom_coord(acetyl_c1.coord, coordsN, coordsCA, 1.5, -45, -90)
     acetyl_c2 = Bio.PDB.Atom.Atom("CH3", coords, 0.0, 1.0, ' ', 'CH3', 1002, 'C')
-    coords = algelin.find_new_atom_coord(acetyl_c1.coord, coordsN, coordsCA, 1.4, 75, 0)
+    coords = algelin.find_new_atom_coord(acetyl_c1.coord, coordsN, coordsCA, 1.5, 75, 0)
     acetyl_o = Bio.PDB.Atom.Atom("O", coords, 0.0, 1.0, ' ', 'O', 1003, 'O')
 
     #IMPORTANT: THE NAMES OF THE ATOMS IN ACE HAVE TO MATCH THE NAMES OF THE FORCEFIELD YOU WILL CHOSE IN THE FUTURE
@@ -61,19 +67,19 @@ def add_NME_to_Cterminus(peptide):
     coordsCA = last_residue['CA'].get_coord()
     coords0 = last_residue['O'].get_coord()
 
-    # Create the first C of NME
-    coords = algelin.find_new_atom_coord(coordsC, coordsCA, coords0, 1.4, -45, 90)
+    # Create the N of NME
+    coords = algelin.find_new_atom_coord(coordsC, coordsCA, coords0, 1.5, -45, 90)
     acetyl_n = Bio.PDB.Atom.Atom("N", coords, 0.0, 1.0, ' ', 'N', 1001, 'N')
 
-    # Create the second C, and the O of NME
-    coords = algelin.find_new_atom_coord(acetyl_n.coord, coordsC, coords0, 1.4, +45, 0)
+    # Create the C of NME
+    coords = algelin.find_new_atom_coord(acetyl_n.coord, coordsC, coords0, 1.5, +45, 0)
     acetyl_c = Bio.PDB.Atom.Atom("CH3", coords, 0.0, 1.0, ' ', 'CH3', 1002, 'C')
 
 
     #IMPORTANT: THE NAMES OF THE ATOMS IN ACE HAVE TO MATCH THE NAMES OF THE FORCEFIELD YOU WILL CHOSE IN THE FUTURE
     #THE NAMES "CH3", "C" AND "O" COMM FROM "CHARMM36". THEY CAN BE FOUND IN THE FILE "aminoacids.hdb" 
 
-    # Create the new ACE residue
+    # Create the new NME residue
     nme_residue = Bio.PDB.Residue.Residue((' ', len(l_residues)+1, ' '), 'NME', '    ')
     nme_residue.add(acetyl_n)
     nme_residue.add(acetyl_c)

@@ -1,5 +1,6 @@
 from cleanpipe import bricksFileSystem
 from cleanpipe import bricksTOP
+from cleanpipe import bricksPDB
 
 import subprocess
 import os
@@ -27,15 +28,13 @@ def ensure_original_directory(func):
 
 
 @ensure_original_directory
-def pdb2system(s_pdbfile,s_outName,s_forceField,s_boxSize,b_addterminal=True):
+def pdb2system(s_pdbfile, s_outName, s_forceField, s_boxSize):
     """
     creates a new folder with the system name. and a gro and top files inside it with that same system name
     the top will be a socked top, all the molecules will be outside
 
     
 
-    b_addterminal : True to add the standard termini and avoid dangling bonds, False to use when there are already termini in the input pdb, so no extra termini addition is required
-    
     """
 
 
@@ -53,7 +52,7 @@ def pdb2system(s_pdbfile,s_outName,s_forceField,s_boxSize,b_addterminal=True):
     try:
         bricksFileSystem.run_and_capture(f"cp -r toppar {s_outName.rstrip('/')}/")#copy the forcefield to the new folder
     except:
-        print("CLEANPIPE MESSAGEtoppar folder not found, so it was not copied to the new folder")
+        print("CLEANPIPE MESSAGE toppar folder not found, so it was not copied to the new folder")
     #original_directory = os.getcwd()#original folder is stored so I can go back to it at the very end of this function
     os.chdir(f"{s_outName}")
 
@@ -61,14 +60,30 @@ def pdb2system(s_pdbfile,s_outName,s_forceField,s_boxSize,b_addterminal=True):
 
     ################################## create gro and top from pdb. then add the box size to the gro ###########################
 
-    #pdb2gmx
 
-    if b_addterminal == True:
-        #standar option, that adds the correct termini in proteins
-        bricksFileSystem.run_and_capture(f"gmx pdb2gmx -f temp.pdb -o {s_outName}.gro -p {s_outName}.top -i {s_molName}.posres.itp -missing -ignh -water none -ff {s_forceField}")
-    elif b_addterminal == False:
-        #this option will leave dangling bonds. its usefull just in case I will add termini manually
+    #check if there are caps in the peptide, because pdb2gmx have to know that
+    b_has_n_term_cap, b_has_c_term_cap = bricksPDB.check_pdb_caps("temp.pdb")
+
+    #pdb2gmx
+    if b_has_n_term_cap and b_has_c_term_cap:
+        print("CLEANPIPE MESSAGE 2 caps found in pdb\n")
+        #this option would leave dangling bonds. (N:none and C:none) its the way to go if I have caps in the termini
         bricksFileSystem.run_and_capture(f"printf '8\n7\n' | gmx pdb2gmx -f temp.pdb -o {s_outName}.gro -p {s_outName}.top -i {s_molName}.posres.itp -missing -ter -ignh -water none -ff {s_forceField}")
+    elif b_has_n_term_cap and not b_has_c_term_cap:
+        print("CLEANPIPE MESSAGE cap found in N terminus\n")
+        # this option sets N:none and C:COO-
+        bricksFileSystem.run_and_capture(f"printf '8\n0\n' | gmx pdb2gmx -f temp.pdb -o {s_outName}.gro -p {s_outName}.top -i {s_molName}.posres.itp -missing -ter -ignh -water none -ff {s_forceField}")
+    elif not b_has_n_term_cap and b_has_c_term_cap:
+        print("CLEANPIPE MESSAGE cap found in C terminus\n")
+        # this option sets N:NH3+ and C:none
+        bricksFileSystem.run_and_capture(f"printf '0\n7\n' | gmx pdb2gmx -f temp.pdb -o {s_outName}.gro -p {s_outName}.top -i {s_molName}.posres.itp -missing -ter -ignh -water none -ff {s_forceField}")
+    else:
+        print("CLEANPIPE MESSAGE no caps found in pdb\n")
+        #standard option, that adds the correct termini in proteins. I think its N:NH3+ and C:COO-, I thing this could also be achieved with printf '0\n0\n'
+        bricksFileSystem.run_and_capture(f"gmx pdb2gmx -f temp.pdb -o {s_outName}.gro -p {s_outName}.top -i {s_molName}.posres.itp -missing -ignh -water none -ff {s_forceField}")
+
+
+
     
 
     #pdb2gmx is stupid, so by default it and givesa weird name to the molecule from the pdb. most times is "Other_chain_O". lets replace it by the real molecule name, that I took from the pdb file name

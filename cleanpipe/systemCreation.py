@@ -85,7 +85,7 @@ def pdb2molecule_in_solvent(s_pdbfile, s_outSytemName, s_solvent, s_forceField, 
     # check if the filename inside s_pdbfile is valid
     bricksFileSystem.check_extention(s_pdbfile,['.pdb']) 
 
-    # create gro and top from pdb. then add the box size to the gro
+    # create gro, itps and top in a folder with the name of the system
     bricksGROMACS.pdb2system(s_pdbfile,s_outSytemName,s_forceField,s_boxSize)
 
     # add solvent to the system. I have 2 options here: tip3p or filled box

@@ -7,6 +7,50 @@ from cleanpipe import bricksPeptide
 import subprocess
 import string
 
+def check_pdb_caps(pdb_file):
+    """Check if a PDB file has non-standard residues at termini (caps)."""
+    print("CLEANPIPE MESSAGE called function:\n check_pdb_caps\n")
+
+    first_residue = None
+    last_residue = None
+
+    STANDARD_AA = {
+        'ALA', 'ARG', 'ASN', 'ASP', 'CYS',
+        'GLN', 'GLU', 'GLY', 'HIS', 'ILE',
+        'LEU', 'LYS', 'MET', 'PHE', 'PRO',
+        'SER', 'THR', 'TRP', 'TYR', 'VAL'
+    }
+
+    
+    with open(pdb_file, 'r') as f:
+        for line in f:
+            if line.startswith(('ATOM', 'HETATM')):
+                res_name = line[17:20].strip()
+                if first_residue is None:
+                    first_residue = res_name
+                last_residue = res_name  # Update until last ATOM/HETATM
+    
+    if not first_residue or not last_residue:
+        print("CLEANPIPE Error: No ATOM/HETATM records found in PDB file.")
+        return
+    
+
+    
+    # Check if first/last residue is a standard AA
+    has_n_term_cap = first_residue not in STANDARD_AA
+    has_c_term_cap = last_residue not in STANDARD_AA
+    
+    if has_n_term_cap:
+        print(f"CLEANPIPE MESSAGE: N-terminal cap detected (non-standard residue: {first_residue})")
+    else:
+        print("CLEANPIPE MESSAGE: No N-terminal cap detected (standard amino acid).")
+    
+    if has_c_term_cap:
+        print(f"CLEANPIPE MESSAGE: C-terminal cap detected (non-standard residue: {last_residue})\n")
+    else:
+        print("CLEANPIPE MESSAGE: No C-terminal cap detected (standard amino acid).\n")
+    
+    return has_n_term_cap, has_c_term_cap
 
 
 def download_and_clean_pdb(s_molecule_name):
