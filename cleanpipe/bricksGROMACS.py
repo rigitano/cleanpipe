@@ -86,9 +86,9 @@ def pdb2system(s_pdbfile, s_outName, s_forceField, s_boxSize):
 
     
 
-    #pdb2gmx is stupid, so by default it and givesa weird name to the molecule from the pdb. most times is "Other_chain_O". lets replace it by the real molecule name, that I took from the pdb file name
-    #uglyMolName = bricksTOP.getMoleculeName(f"{s_outName}.top")
-    #bricksTOP.replaceMoleculeName(f"{s_outName}.top", uglyMolName, s_molName)
+    #pdb2gmx gives a weird name to the molecule from the pdb (ex: "Other_chain_O"), because he is stupid. lets replace it by the real molecule name, that I took from the pdb file name
+    uglyMolName = bricksTOP.getMoleculeName(f"{s_outName}.top")
+    bricksTOP.replaceMoleculeName(f"{s_outName}.top", uglyMolName, s_molName)
 
     #define box size inside the gro file. s_boxSize contains the user definition (ex: "3 3 3")
     bricksFileSystem.run_and_capture(f"gmx editconf -f {s_outName}.gro -o {s_outName}.gro -c -box {s_boxSize} -bt cubic")
