@@ -61,30 +61,13 @@ def pdb2system(s_pdbfile, s_outName, s_forceField, s_boxSize):
     ################################## create gro and top from pdb. then add the box size to the gro ###########################
 
 
-    #check if there are caps in the peptide, because pdb2gmx have to know that
-    b_has_n_term_cap, b_has_c_term_cap = bricksPDB.check_pdb_caps("temp.pdb")
-
-    #pdb2gmx
-    if b_has_n_term_cap and b_has_c_term_cap:
-        print("CLEANPIPE MESSAGE 2 caps found in pdb\n")
-        #this option would leave dangling bonds. (N:none and C:none) its the way to go if I have caps in the termini
-        bricksFileSystem.run_and_capture(f"printf '8\n7\n' | gmx pdb2gmx -f temp.pdb -o {s_outName}.gro -p {s_outName}.top -missing -ter -ignh -water none -ff {s_forceField}")
-    elif b_has_n_term_cap and not b_has_c_term_cap:
-        print("CLEANPIPE MESSAGE cap found in N terminus\n")
-        # this option sets N:none and C:COO-
-        bricksFileSystem.run_and_capture(f"printf '8\n0\n' | gmx pdb2gmx -f temp.pdb -o {s_outName}.gro -p {s_outName}.top -missing -ter -ignh -water none -ff {s_forceField}")
-    elif not b_has_n_term_cap and b_has_c_term_cap:
-        print("CLEANPIPE MESSAGE cap found in C terminus\n")
-        # this option sets N:NH3+ and C:none
-        bricksFileSystem.run_and_capture(f"printf '0\n7\n' | gmx pdb2gmx -f temp.pdb -o {s_outName}.gro -p {s_outName}.top -missing -ter -ignh -water none -ff {s_forceField}")
-    else:
-        print("CLEANPIPE MESSAGE no caps found in pdb\n")
-        #standard option, that adds the correct termini in proteins. I think its N:NH3+ and C:COO-, I thing this could also be achieved with printf '0\n0\n'
-        bricksFileSystem.run_and_capture(f"gmx pdb2gmx -f temp.pdb -o {s_outName}.gro -p {s_outName}.top -missing -ignh -water none -ff {s_forceField}")
+    #check if there are caps in the peptide, because pdb2gmx have to know that, generating the proper choices a user would have to make during pdb2gmx. for example '0\n0\n' to put NH3+ and COO- in the N and C tips
+    s_choices_for_termini = bricksPDB.check_pdb_caps("temp.pdb")
 
 
-    #-i {s_molName}.posres.itp
-    
+    #pdb2gmx!!!!!!!!!!!!!
+    bricksFileSystem.run_and_capture(f"printf '{s_choices_for_termini}' | gmx pdb2gmx -f temp.pdb -o {s_outName}.gro -p {s_outName}.top -missing -ter -ignh -water none -ff {s_forceField}") #-i {s_molName}.posres.itp
+
 
     #pdb2gmx gives a weird name to the molecule from the pdb (ex: "Other_chain_O"), because he is stupid. lets replace it by the real molecule name, that I took from the pdb file name
     #removed because there might be more than one chain in the pdb file

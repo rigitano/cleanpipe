@@ -6,13 +6,22 @@ from cleanpipe import bricksFileSystem
 from cleanpipe import bricksPeptide
 import subprocess
 import string
+from collections import defaultdict
 
 def check_pdb_caps(pdb_file):
-    """Check if a PDB file has non-standard residues at termini (caps)."""
-    print("CLEANPIPE MESSAGE called function:\n check_pdb_caps\n")
+    r"""
+    Scan a PDB file and for each protein chain return a 2‑digit code:
+      <N‑cap?><C‑cap?>
+    where:
+      N‑cap?   = '8\n' if the N‑terminal residue is non‑standard, '0\n' otherwise
+      C‑cap?   = '7\n' if the C‑terminal residue is non‑standard, '0\n' otherwise
+      
 
-    first_residue = None
-    last_residue = None
+    these correspont to the pdb2gmx options for termini setup for proteins
+
+    Codes for all protein chains (chains with at least one ATOM record) are
+    concatenated (in ascending chain ID order) into a single string.
+    """
 
     STANDARD_AA = {
         'ALA', 'ARG', 'ASN', 'ASP', 'CYS',
@@ -21,36 +30,64 @@ def check_pdb_caps(pdb_file):
         'SER', 'THR', 'TRP', 'TYR', 'VAL'
     }
 
-    
+    # chain_id -> ordered mapping of (res_seq, ins_code) -> res_name
+    chain_residues = defaultdict(dict)
+
     with open(pdb_file, 'r') as f:
         for line in f:
-            if line.startswith(('ATOM', 'HETATM')):
-                res_name = line[17:20].strip()
-                if first_residue is None:
-                    first_residue = res_name
-                last_residue = res_name  # Update until last ATOM/HETATM
-    
-    if not first_residue or not last_residue:
-        print("CLEANPIPE Error: No ATOM/HETATM records found in PDB file.")
-        return
-    
+            if line.startswith("ATOM"):
+                chain_id = line[21]
+                res_seq   = int(line[22:26])
+                ins_code  = line[26]
+                res_name  = line[17:20].strip()
+                key = (res_seq, ins_code)
+                # only record the first time we see this residue
+                if key not in chain_residues[chain_id]:
+                    chain_residues[chain_id][key] = res_name
 
-    
-    # Check if first/last residue is a standard AA
-    has_n_term_cap = first_residue not in STANDARD_AA
-    has_c_term_cap = last_residue not in STANDARD_AA
-    
-    if has_n_term_cap:
-        print(f"CLEANPIPE MESSAGE: N-terminal cap detected (non-standard residue: {first_residue})")
-    else:
-        print("CLEANPIPE MESSAGE: No N-terminal cap detected (standard amino acid).")
-    
-    if has_c_term_cap:
-        print(f"CLEANPIPE MESSAGE: C-terminal cap detected (non-standard residue: {last_residue})\n")
-    else:
-        print("CLEANPIPE MESSAGE: No C-terminal cap detected (standard amino acid).\n")
-    
-    return has_n_term_cap, has_c_term_cap
+    codes = []
+    for chain_id in sorted(chain_residues):
+        residues = chain_residues[chain_id]
+        # skip any chain that has no residues (shouldn't happen) or no standard AAs
+        if not residues:
+            continue
+        # check if this chain really contains protein residues
+        if not any(r in STANDARD_AA for r in residues.values()):
+            continue
+
+        # get first & last residue names in insertion/seq order
+        ordered_keys = sorted(residues)
+        first_res = residues[ordered_keys[0]]
+        last_res  = residues[ordered_keys[-1]]
+
+        has_n_cap = first_res not in STANDARD_AA
+        has_c_cap = last_res  not in STANDARD_AA
+
+
+        #print
+        print(f"CLEANPIPE MESSAGE: analysing caps in chain_id= {chain_id} \n")
+
+        if has_n_cap:
+            print(f"  for N-terminal, a cap was detected (non-standard residue: {first_res})")
+        else:
+            print("  for N-terminal, no cap was detected.")
+        
+        if has_c_cap:
+            print(f"  for C-terminal, a cap was detected (non-standard residue: {last_res})\n")
+        else:
+            print("  for No C-terminal, no cap was detected.")
+
+        print("\n")
+
+
+        # build code: C‑cap? then N‑cap?
+        code = ("8\\n" if has_n_cap else "0\\n") + ("7\\n" if has_c_cap else "0\\n")
+        codes.append(code)
+
+    return "".join(codes)
+
+
+
 
 
 def download_and_clean_pdb(s_molecule_name):
