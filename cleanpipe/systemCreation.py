@@ -92,7 +92,7 @@ def pdb2molecule_in_solvent(s_pdbfile, s_outSytemName, s_solvent, s_forceField, 
     bricksGROMACS.solvate_and_neutralize(s_outSytemName,s_solvent,s_forceField)
 
     # set the the name of the system in the top file 
-    bricksTOP.setSystemName(f"{s_outSytemName}/{s_outSytemName}.top", f"{s_outSytemName} (molecule from {s_pdbfile}, inserted in {s_solvent} solvent)" )
+    bricksTOP.setSystemName(f"{s_outSytemName}/{s_outSytemName}.top", f"{s_outSytemName} ; molecule from \"{s_pdbfile}\", inserted in solvent box of \"{s_solvent}\"" )
 
 
 

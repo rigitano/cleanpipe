@@ -68,31 +68,32 @@ def pdb2system(s_pdbfile, s_outName, s_forceField, s_boxSize):
     if b_has_n_term_cap and b_has_c_term_cap:
         print("CLEANPIPE MESSAGE 2 caps found in pdb\n")
         #this option would leave dangling bonds. (N:none and C:none) its the way to go if I have caps in the termini
-        bricksFileSystem.run_and_capture(f"printf '8\n7\n' | gmx pdb2gmx -f temp.pdb -o {s_outName}.gro -p {s_outName}.top -i {s_molName}.posres.itp -missing -ter -ignh -water none -ff {s_forceField}")
+        bricksFileSystem.run_and_capture(f"printf '8\n7\n' | gmx pdb2gmx -f temp.pdb -o {s_outName}.gro -p {s_outName}.top -missing -ter -ignh -water none -ff {s_forceField}")
     elif b_has_n_term_cap and not b_has_c_term_cap:
         print("CLEANPIPE MESSAGE cap found in N terminus\n")
         # this option sets N:none and C:COO-
-        bricksFileSystem.run_and_capture(f"printf '8\n0\n' | gmx pdb2gmx -f temp.pdb -o {s_outName}.gro -p {s_outName}.top -i {s_molName}.posres.itp -missing -ter -ignh -water none -ff {s_forceField}")
+        bricksFileSystem.run_and_capture(f"printf '8\n0\n' | gmx pdb2gmx -f temp.pdb -o {s_outName}.gro -p {s_outName}.top -missing -ter -ignh -water none -ff {s_forceField}")
     elif not b_has_n_term_cap and b_has_c_term_cap:
         print("CLEANPIPE MESSAGE cap found in C terminus\n")
         # this option sets N:NH3+ and C:none
-        bricksFileSystem.run_and_capture(f"printf '0\n7\n' | gmx pdb2gmx -f temp.pdb -o {s_outName}.gro -p {s_outName}.top -i {s_molName}.posres.itp -missing -ter -ignh -water none -ff {s_forceField}")
+        bricksFileSystem.run_and_capture(f"printf '0\n7\n' | gmx pdb2gmx -f temp.pdb -o {s_outName}.gro -p {s_outName}.top -missing -ter -ignh -water none -ff {s_forceField}")
     else:
         print("CLEANPIPE MESSAGE no caps found in pdb\n")
         #standard option, that adds the correct termini in proteins. I think its N:NH3+ and C:COO-, I thing this could also be achieved with printf '0\n0\n'
-        bricksFileSystem.run_and_capture(f"gmx pdb2gmx -f temp.pdb -o {s_outName}.gro -p {s_outName}.top -i {s_molName}.posres.itp -missing -ignh -water none -ff {s_forceField}")
+        bricksFileSystem.run_and_capture(f"gmx pdb2gmx -f temp.pdb -o {s_outName}.gro -p {s_outName}.top -missing -ignh -water none -ff {s_forceField}")
 
 
-
+    #-i {s_molName}.posres.itp
     
 
     #pdb2gmx gives a weird name to the molecule from the pdb (ex: "Other_chain_O"), because he is stupid. lets replace it by the real molecule name, that I took from the pdb file name
-    uglyMolName = bricksTOP.getMoleculeName(f"{s_outName}.top")
-    bricksTOP.replaceMoleculeName(f"{s_outName}.top", uglyMolName, s_molName)
+    #removed because there might be more than one chain in the pdb file
+    #uglyMolName = bricksTOP.getMoleculeName(f"{s_outName}.top")
+    #bricksTOP.replaceMoleculeName(f"{s_outName}.top", uglyMolName, s_molName)
 
     #define box size inside the gro file. s_boxSize contains the user definition (ex: "3 3 3")
     bricksFileSystem.run_and_capture(f"gmx editconf -f {s_outName}.gro -o {s_outName}.gro -c -box {s_boxSize} -bt cubic")
-    bricksFileSystem.delete(f"\\#{s_outName}.gro.1\\#")# I chose to overwrite the old gro
+    bricksFileSystem.delete(f"#{s_outName}.gro.1#")# I chose to overwrite the old gro
 
     #decompose the original top into a new top and a itp. the new top will contain just sytem information, the itp will describe the protagonist molecule
     bricksTOP.decompose_TOP_file_into_TOP_and_ITPs(f"{s_outName}.top")
@@ -139,8 +140,8 @@ def solvate_and_neutralize(s_systemFolder,s_solventName,s_forceField):
         os.chdir(f"{s_systemFolder}")
 
         bricksFileSystem.run_and_capture(f"gmx solvate -cp {s_groName}.gro -cs spc216.gro -p {s_topName}.top -o {s_groName}.gro") # spc216.gro is a pre-equilibrated box of a 3 point water model that can be used by any other 3 point model
-        bricksFileSystem.delete(f"\\#{s_groName}.gro.1\\#")#I choose to overwrite the old gro
-        bricksFileSystem.delete(f"\\#{s_topName}.top.1\\#")#I choose to overwrite the old top
+        bricksFileSystem.delete(f"#{s_groName}.gro.1#")#I choose to overwrite the old gro
+        bricksFileSystem.delete(f"#{s_topName}.top.1#")#I choose to overwrite the old top
 
 
 
@@ -175,8 +176,8 @@ def solvate_and_neutralize(s_systemFolder,s_solventName,s_forceField):
 
         #insert the solvent in gro. and inform quantity added in top
         bricksFileSystem.run_and_capture(f"gmx solvate -cp {s_groName}.gro -cs {s_solventFolder}/3_NPT/{s_solbox_groName} -p {s_topName}.top -o {s_groName}.gro")
-        bricksFileSystem.delete(f"\\#{s_groName}.gro.1\\#")#I choose to overwrite the old gro
-        bricksFileSystem.delete(f"\\#{s_topName}.top.1\\#")#I choose to overwrite the old top
+        bricksFileSystem.delete(f"#{s_groName}.gro.1#")#I choose to overwrite the old gro
+        bricksFileSystem.delete(f"#{s_topName}.top.1#")#I choose to overwrite the old top
 
         #when gmx solvate inform the quantity added in the top, its possible that it chooses a weird name. lets make sure its the name of the itp file
         #badmolName = bricksTOP.getMoleculeName(f"{s_topName}.top", order=-1)#get name of the last molecule in the directive [ molecules ]
