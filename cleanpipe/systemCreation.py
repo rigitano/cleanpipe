@@ -7,8 +7,26 @@ import subprocess
 import re
 import sys
 import os
+import functools
 
-
+def ensure_original_directory(func):
+    """
+    this is a function to use as a decorator in all the functions that change the directory where the python process is run.
+    this happens, for example in some functions that use gromacs but I want the output to be saved in a new folder, created just beside the input file. 
+    this decorator guarantees we go out of that folder even if the function crashes
+    
+    """
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        # Store the original directory
+        original_directory = os.getcwd()
+        try:
+            # Execute the function
+            return func(*args, **kwargs)
+        finally:
+            # Return to the original directory, even if an error occurred
+            os.chdir(original_directory)
+    return wrapper
 
 def pdb2box_full_of_that(s_pdbfile, s_forceField, s_box_size, n_mol_max):
     """
@@ -73,7 +91,7 @@ def pdb2molecule_in_solvent(s_pdbfile, s_outSytemName, s_solvent, s_forceField, 
     """
     s_pdbfile       : string with the pdb name. for example "insulin.pdb", this will be the main molecule in the system.
     s_outSytemName  : string with the name of the system, for example "alaHW". a folder with that name will be created, and inside it, all the files, for example: alaHW.gro and alaHW.top
-    s_solvent       : choose a water model, for example as "tip3p", or a folder, for example "octn_filledbox". The folder have to contain a system with a solvent box, in other words, it has to contain a octn_filledbox.gro and a octn.itp
+    s_solvent       : choose a water model, for example as "tip3p", or a folder, for example "box_full_of_octn". The folder have to contain a system with a solvent box, in other words, it has to contain a octn_filledbox.gro and a octn.itp
     s_forceField    : one of the gromacs recognized force fields, for example "charmm36-jul2022"
     s_boxSize       : string with x y z sizes, for example "3 3 3"
 
@@ -94,6 +112,72 @@ def pdb2molecule_in_solvent(s_pdbfile, s_outSytemName, s_solvent, s_forceField, 
     # set the the name of the system in the top file 
     bricksTOP.setSystemName(f"{s_outSytemName}/{s_outSytemName}.top", f"{s_outSytemName} ; molecule from \"{s_pdbfile}\", inserted in solvent box of \"{s_solvent}\"" )
 
+
+
+@ensure_original_directory
+def pdb2molecule_in_two_solvents(s_pdbfile, s_folderName, s_outSytemName1, s_outSytemName2, s_solvent1, s_solvent2, s_forceField, s_boxSize):
+    """
+    s_pdbfile       : string with the pdb name. for example "insulin.pdb", this will be the main molecule in the system.
+    s_folderName    : string with the name of the folder, for example "ala6Hdihr200-transfer". this folder will be created, and inside it, the two systems will be created inside it
+    s_outSytemName1  : string with the name of the system, for example "ala6Hdih200_in_octane". a folder with that name will be created, and inside it, all the files, for example: ala6Hdihres200.gro and ala6Hdihres200.top
+    s_outSytemName2  : string with the name of the system, for example "ala6Hdih200_in_water". a folder with that name will be created, and inside it, all the files, for example:ala6Hdihres200.gro and ala6Hdihres200.top
+    s_solvent1       : for example "box_full_of_octn" folder with system with a solvent box, in other words, it has to contain a octn_filledbox.gro and a octn.itp
+    s_solvent2       : for example as "tip3p"
+    s_forceField    : one of the gromacs recognized force fields, for example "charmm36-jul2022"
+    s_boxSize       : string with x y z sizes, for example "3 3 3"
+
+    example:
+    cl.pdb2molecule_in_two_solvents("normal_peptide.pdb", "ala6Hdih200-transfer", "ala6Hdih200_in_octane", "ala6Hdih200_in_water", "box_full_of_octn", "tip3p", "charmm36-jul2022", "3 3 3")
+
+    """
+
+    # check if the filename inside s_pdbfile is valid
+    bricksFileSystem.check_extention(s_pdbfile,['.pdb']) 
+
+    
+    #create output folder in parael with the pdb input. it will contain two folders. we will cd into each one of those do everithing there
+    bricksFileSystem.create_folder(s_folderName)
+
+    bricksFileSystem.run_and_capture(f"cp {s_pdbfile} {s_folderName}/temp.pdb")
+
+
+    bricksFileSystem.run_and_capture(f"cp -r {s_forceField}.ff {s_folderName.rstrip('/')}/")#copy the forcefield to the new folder
+
+    #I know in the example usage the first solvent is "box_full_of_octn", so I moove the folder. xxx this must be done differently
+    bricksFileSystem.run_and_capture(f"cp -r {s_solvent1} {s_folderName.rstrip('/')}/")#copy the forcefield to the new folder
+
+    try:
+        bricksFileSystem.run_and_capture(f"cp -r toppar {s_folderName.rstrip('/')}/")#copy the forcefield to the new folder
+    except:
+        print("CLEANPIPE MESSAGE toppar folder not found, so it was not copied to the new folder")
+    
+
+    #go to the folder where the two systems will be created
+    #original_directory = os.getcwd()#original folder is stored so I can go back to it at the very end of this function
+    os.chdir(f"{s_folderName}")
+    
+
+    # CREATE FIRST SYSTEM (SOLVENT 1)
+    bricksGROMACS.pdb2system("temp.pdb",s_outSytemName1,s_forceField,s_boxSize)   # create
+    bricksGROMACS.solvate_and_neutralize(s_outSytemName1,s_solvent1,s_forceField) # solvate
+    bricksTOP.setSystemName(f"{s_outSytemName1}/{s_outSytemName1}.top", f"{s_outSytemName1} ; molecule from \"{s_pdbfile}\", inserted in solvent box of \"{s_solvent1}\"" ) # set name
+
+    # CREATE SECOND SYSTEM (SOLVENT 2)
+    bricksGROMACS.pdb2system("temp.pdb",s_outSytemName2,s_forceField,s_boxSize)  # create
+    bricksGROMACS.solvate_and_neutralize(s_outSytemName2,s_solvent2,s_forceField)# solvate
+    bricksTOP.setSystemName(f"{s_outSytemName2}/{s_outSytemName2}.top", f"{s_outSytemName2} ; molecule from \"{s_pdbfile}\", inserted in solvent box of \"{s_solvent2}\"" ) # set name
+
+
+    #remove files from the parante folder (the one that stores the two systems)
+    bricksFileSystem.run_and_capture(f"rm temp.pdb")
+    #I know in the example usage the first solvent is "box_full_of_octn", so I moove the folder. xxx this must be done differently
+    bricksFileSystem.run_and_capture(f"rm -r {s_solvent1}")
+
+    bricksFileSystem.run_and_capture(f"rm -r toppar")
+    bricksFileSystem.run_and_capture(f"rm -r {s_forceField}.ff")
+
+    #go back to the original folder
+    #os.chdir(original_directory)
 
 
 def create_tube_in_vacum(lipidsList, s_radius, s_thickness, s_box, s_outSysName, s_ff_location):

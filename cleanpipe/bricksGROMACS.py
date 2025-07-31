@@ -141,8 +141,9 @@ def solvate_and_neutralize(s_systemFolder,s_solventName,s_forceField):
 
 
     elif bricksFileSystem.check_folder(os.path.abspath(s_solventName)) == True:
+        print(f"\nCLEANPIPE MESSAGE user chose a solvent box ({s_solventName})\n")
         # this mean the user has chosen a folder (ex: path/to/folder)
-        # that folder shoulrd contain a system that is a box filled with solvent. it should be pre-equilibrated 
+        # that folder should contain a system that is a box filled with solvent. it should be pre-equilibrated 
         # so, the solvent name is something like box_full_of_octn, and that folder should contain a octn.itp and a 3_NPT/box_full_of_octn.gro
         # but dont worry about the gro and file names. the important is that they are present in the correct place. the name will be obtained
 
@@ -152,8 +153,9 @@ def solvate_and_neutralize(s_systemFolder,s_solventName,s_forceField):
         #obtain the names of the top and itp files in the SOLVENT BOX folder
         s_solbox_groName = bricksFileSystem.get_single_gro(f"{s_solventFolder}/3_NPT")
         l_solbox_itpNames = bricksFileSystem.get_all_itps(s_solventFolder)
+        print(l_solbox_itpNames)
 
-        #go to system folder. the current folder is savad so to go back to it just before the end of the function
+        #go to system folder. the current folder is saved so to go back to it just before the end of the function
         #original_directory = os.getcwd()
         os.chdir(f"{s_systemFolder}")
 
@@ -168,11 +170,11 @@ def solvate_and_neutralize(s_systemFolder,s_solventName,s_forceField):
 
         #edit top to insert a line including a reference of the solvent itp before the [ system ] directive
         for s_sol_itpName in l_solbox_itpNames:
-            subprocess.run(rf'''awk -v line='#include "{s_sol_itpName}"' '/\[ system \]/{{print line"\n"; i=2}}i&&!--i{{next}}1' {s_topName}.top > temp.top && mv temp.top {s_topName}.top''', shell=True, check=True)
+            bricksFileSystem.run_and_capture(rf'''awk -v line='#include "{s_sol_itpName}"' '/\[ system \]/{{print line"\n"; i=2}}i&&!--i{{next}}1' {s_topName}.top > temp.top && mv temp.top {s_topName}.top''')
 
         #copy all the itp files from the original folder to the current system folder
         for s_sol_itpName in l_solbox_itpNames:
-            subprocess.run(f"cp {s_solventFolder}/{s_sol_itpName} ./" , shell=True, check=True)
+            bricksFileSystem.run_and_capture(f"cp {s_solventFolder}/{s_sol_itpName} ./")
 
 
     else:

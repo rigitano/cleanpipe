@@ -7,7 +7,7 @@ import multiprocessing
 import psutil
 import shutil
 from pathlib import Path
-
+import threading
 
 
 
@@ -246,7 +246,98 @@ def run_and_capture_old_version_that_works_but_doesnt_stop_code_that_called_it_i
 
     #return captured_output + captured_error
 
+
+
+
 def run_and_capture(command):
+    """
+    Executes a shell command while capturing and displaying stdout/stderr in real-time.
+    Adds stream identification prefixes to avoid confusion in Jupyter notebooks.
+    """
+    # Print and flush command message immediately
+    print(f"\nCLEANPIPE MESSAGE ### TERMINAL COMMAND ###: {command}", flush=True)
+    #print(f"{command}", flush=True)
+    
+    # Start the process
+    process = subprocess.Popen(
+        command,
+        shell=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        bufsize=1
+    )
+    
+    # Prepare capture variables and synchronization lock
+    captured_output = []
+    captured_error = []
+    output_lock = threading.Lock()
+    
+    def stream_reader(stream, capture_list, is_stderr=False):
+        """Read lines from a stream and handle output with synchronization."""
+        while True:
+            line = stream.readline()
+            if not line:
+                break
+            with output_lock:
+                # Add stream identification prefix
+                prefix = "STDERR: " if is_stderr else "STDOUT: "
+                full_line = prefix + line
+                
+                # Write to appropriate sys stream
+                if is_stderr:
+                    sys.stderr.write(full_line)
+                    sys.stderr.flush()
+                else:
+                    sys.stdout.write(full_line)
+                    sys.stdout.flush()
+                # Capture the original line
+                capture_list.append(line)
+
+    # Create and start threads for stdout/stderr
+    stdout_thread = threading.Thread(
+        target=stream_reader,
+        args=(process.stdout, captured_output, False)
+    )
+    stderr_thread = threading.Thread(
+        target=stream_reader,
+        args=(process.stderr, captured_error, True)
+    )
+    
+    stdout_thread.start()
+    stderr_thread.start()
+    
+    # Wait for threads to finish
+    stdout_thread.join()
+    stderr_thread.join()
+    
+    # Ensure process completion
+    process.wait()
+    
+    # Convert captured lines to strings
+    final_output = ''.join(captured_output)
+    final_error = ''.join(captured_error)
+    
+    # Print completion message
+    print(f"CLEANPIPE MESSAGE exit {process.returncode} (ok)\n", flush=True)
+    
+    # Handle errors
+    if process.returncode != 0:
+        print(f"CLEANPIPE MESSAGE exit {process.returncode} (fail)\n")
+        if final_error:
+            print(f"\nCLEANPIPE MESSAGE final standard error output after failiure:\n{final_error}\n")
+        raise subprocess.CalledProcessError(
+            process.returncode,
+            command,
+            output=final_output,
+            stderr=final_error
+        )
+    
+    return final_output
+
+
+
+def run_and_capture_before_adra(command):
     """
     Executes a shell command, capturing both its normal output (stdout) and error output (stderr) in real-time.
     If the command fails (returns a non-zero code), an exception is raised to stop further execution.
@@ -340,7 +431,7 @@ def diagnostics():
 
 def concatenate_files(s_file1, s_file2, s_out_file):
     """
-    this have the same result as the bas code:
+    this have the same result as the bash code:
     cat a.txt b.txt > out.txt
 
 
