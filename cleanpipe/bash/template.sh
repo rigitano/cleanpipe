@@ -67,6 +67,6 @@ ccc_mprun gmx_mpi mdrun -nice 0 -s $ROOTNAME -deffnm $ROOTNAME.$cycle -v -stepou
 #   gpus (the program, ex: groamcs, will use cuda code to paralilize the workload)
 
 #so to summarize. to paralelize is a good idea to leverage the spread out nature of clusters. but who does the paralilization? if its amongst gpus, its a cuda code somewere. if its amongst cpu1-the program, by itself, using a comunication protocol called mpi, or 2-openMP algorithm, or 3-the program by itself using cuda code
-# here are a possible example on how to device total values for the program to then decide how to divide the workload: -nmpi will set the part done by gromacs (that used mpi to comunicate) & -tomp will set the part done by openmp & /-gputasks/-nb gpu/-bonded gpu/-pme gpu/ will set the part done by gromacs using cuda code to talk to the hardware
+# here are a possible example on how to device total values for the program to then decide how to divide the workload: -nmpi will set the part done by gromacs (that used mpi to comunicate) & -tomp will set the part done by openmp & /-gputasks/-nb gpu/-bonded gpu/-pme gpu -npme 1/-update gpu will set the part done by gromacs using cuda code to talk to the hardware (this should be able to simulate the entire viral capsid)
 
 #a scheduler, like slurm, assign the cores to me, so that roshan will not use them at the same time.  of course the number of assigned cores (gpus and cpus) have to match the paralelization previsouly decided 
