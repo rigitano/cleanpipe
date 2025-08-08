@@ -1,14 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=full_md_pipeline
-#SBATCH --nodes=1
-#SBATCH --ntasks-per-node=8
-#SBATCH --cpus-per-task=2
-#SBATCH --time=3-00:00:00
-#SBATCH --output=logs/%x_%A_%a.out
-#SBATCH --array=1-N   #################### xxx  Replace N with number of systems
 
-
-# this script has no arguments. you have to modify the two places with "xxx"
+# this script has no arguments. you have to modify the 3 sections with "xxx"
 # its just the number of systems, the folder where the system are, and the output folder names you want
 # the goal here is to choose a folder that contains several protein+ligant systems, 
 # where the only difference is the ligant. we are doing a ligant screening after all. the
@@ -17,8 +9,23 @@
 # these is a cool logic here, where after all are run. a analysis scritp will be automatically louched
 # the goal of the anaysis is to show a table telling the binding energy of all ligand canditates
 
+
 # =====================================================================
-# Configuration - xxx MODIFY THESE VALUES, THEY ARE FOLDER NAMES (INPUT FOLDER AND OUTPUT FOLDERS)
+# xxx SET SLURM KEYWORDS
+# =====================================================================
+#SBATCH --job-name=full_md_pipeline
+#SBATCH --nodes=1 #################### change as needed
+#SBATCH --ntasks-per-node=8 #################### change as needed
+#SBATCH --cpus-per-task=2 #################### change as needed
+#SBATCH --time=3-00:00:00 #################### change as needed
+#SBATCH --output=logs/%x_%A_%a.out
+#SBATCH --array=1-N   #################### Replace N with number of systems
+
+
+
+
+# =====================================================================
+# Configuration - xxx SET FOLDER NAMES (INPUT FOLDER AND OUTPUT FOLDERS)
 # =====================================================================
 INPUT_DIR="input_systems"      # Parent directory with system subfolders
 # this is how the INPUT_DIR should look like:
@@ -50,114 +57,6 @@ MMGBSA_OUT="mmgbsa_analysis"   # Final MMGBSA results directory
 
 
 
-
-
-
-# =====================================================================
-# MDP Files content
-# =====================================================================
-EM_MDP=$(cat <<EOF
-; Energy minimization
-integrator               = steep
-nsteps                   = 5000
-emtol                    = 100.0
-emstep                   = 0.01
-nstxout                  = 100
-cutoff-scheme            = Verlet
-vdwtype                  = Cut-off
-vdw-modifier             = Force-switch
-rvdw                     = 1.2
-rvdw-switch              = 1.0
-coulombtype              = PME
-rcoulomb                 = 1.2
-constraints              = none
-EOF
-)
-
-NVT_MDP=$(cat <<EOF
-; NVT Equilibration
-integrator               = md
-nsteps                   = 50000
-dt                       = 0.002
-nstxout                  = 1000
-nstvout                  = 1000
-nstenergy                = 1000
-nstlog                   = 1000
-cutoff-scheme            = Verlet
-vdwtype                  = Cut-off
-vdw-modifier             = Force-switch
-rvdw                     = 1.2
-rvdw-switch              = 1.0
-coulombtype              = PME
-rcoulomb                 = 1.2
-constraints              = h-bonds
-tcoupl                   = V-rescale
-tc-grps                  = System
-tau-t                    = 0.1
-ref-t                    = 298
-EOF
-)
-
-NPT_MDP=$(cat <<EOF
-; NPT Equilibration
-integrator               = md
-nsteps                   = 100000
-dt                       = 0.002
-nstxout                  = 1000
-nstvout                  = 1000
-nstenergy                = 1000
-nstlog                   = 1000
-cutoff-scheme            = Verlet
-vdwtype                  = Cut-off
-vdw-modifier             = Force-switch
-rvdw                     = 1.2
-rvdw-switch              = 1.0
-coulombtype              = PME
-rcoulomb                 = 1.2
-constraints              = h-bonds
-tcoupl                   = V-rescale
-tc-grps                  = System
-tau-t                    = 0.1
-ref-t                    = 298
-pcoupl                   = Parrinello-Rahman
-pcoupltype               = isotropic
-tau-p                    = 1.0
-ref-p                    = 1.0
-compressibility          = 4.5e-5
-EOF
-)
-
-PROD_MDP=$(cat <<EOF
-; Production MD
-integrator               = md
-nsteps                   = 5000000 ; 10 ns
-dt                       = 0.002
-nstxout                  = 0
-nstvout                  = 0
-nstenergy                = 5000
-nstlog                   = 5000
-nstxout-compressed       = 5000
-cutoff-scheme            = Verlet
-vdwtype                  = Cut-off
-vdw-modifier             = Force-switch
-rvdw                     = 1.2
-rvdw-switch              = 1.0
-coulombtype              = PME
-rcoulomb                 = 1.2
-constraints              = h-bonds
-continuation             = yes
-tcoupl                   = V-rescale
-tc-grps                  = System
-tau-t                    = 0.1
-ref-t                    = 298
-pcoupl                   = Parrinello-Rahman
-pcoupltype               = isotropic
-tau-p                    = 1.0
-ref-p                    = 1.0
-compressibility          = 4.5e-5
-EOF
-)
-
 # =====================================================================
 # Folders and files construction
 # =====================================================================
@@ -173,15 +72,343 @@ WORK_DIR="${OUTPUT_BASE}/${SYSTEM_NAME}"
 LOG_DIR="${OUTPUT_BASE}/logs"
 mkdir -p ${WORK_DIR} ${LOG_DIR}
 
+# Convert to absolute paths for reliability
+SYSTEM_DIR=$(realpath ${SYSTEM_DIR})
+WORK_DIR=$(realpath ${WORK_DIR})
+
+# =====================================================================
+# things that impact on mdp xxx maybe change PRODUCTION_DURATION (ns), GROUPS_TO_MONITOR and TEMPERATURES
+# =====================================================================
+
+PRODUCTION_DURATION=100
+STEPS=$(( (PRODUCTION_DURATION * 1000000) / 2 ))
+echo "Duration of production MD : ${PRODUCTION_DURATION} ns"
+echo "Steps for that duration : ${STEPS} (time x 1000 / 0.002)"
+
+
+GROUPS_TO_MONITOR= "Protein Non-Protein"
+echo "Groups to monitor : ${GROUPS_TO_MONITOR}"
+CLEAN_STRING=$(echo "$GROUPS_TO_MONITOR" | tr '\t' ' ' | xargs)
+WORD_COUNT=$(echo "$CLEAN_STRING" | wc -w)
+TEMPERATURES=$(yes 310 | head -n "$WORD_COUNT" | paste -sd ' ' -)
+ONES=$(yes 1 | head -n "$WORD_COUNT" | paste -sd ' ' -)
+echo "Temperature for each group: ${TEMPERATURES}"
+echo "Tau_t for each group: ${ONES}"
+
+
+
+
+#automatic check top and itps for [ distance_restraints ] or [ dihedral_restraints ]
+echo "looking for restraints in the topology files..."
+TOP=${SYSTEM_DIR}/topol.top
+# === Config ===
+DIHRE_OPTION="no"
+DISRE_OPTION="no"
+# === Ensure TOP is defined ===
+if [[ -z "$TOP" ]]; then
+    echo "Error: TOP variable is not set."
+    exit 1
+fi
+# === Gather files ===
+ITP_FILES=( ./*.itp )
+ALL_FILES=( "${ITP_FILES[@]}" "$TOP" )
+# === Check restraints in all files ===
+for file in "${ALL_FILES[@]}"; do
+    [[ -f "$file" ]] || continue  # Skip if not a real file
+
+    if grep -q '\[ *dihedral_restraints *\]' "$file"; then
+        DIHRE_OPTION="yes"
+    fi
+    if grep -q '\[ *distance_restraints *\]' "$file"; then
+        DISRE_OPTION="simple"
+    fi
+done
+# === Output ===
+echo "Included .itp files:"
+for itp in "${ITP_FILES[@]}"; do
+    echo "  $itp"
+done
+echo ""
+echo "DIHRE_OPTION=$DIHRE_OPTION"
+echo "DISRE_OPTION=$DISRE_OPTION"
+
+
+
+# =====================================================================
+# MDP Files content
+# =====================================================================
+EM_MDP=$(cat <<EOF
+Integrator =	steep
+emtol      =	1000 ;100
+emstep     =	0.01
+nsteps     =    100000 ; this is the max value to be used just if emtol is never reached
+
+;box configuration	
+pbc            = xyz
+
+; fix distances
+disre = ${DISRE_OPTION}
+disre_fc = 1000
+; fix dihedrals
+dihre = ${DIHRE_OPTION}
+dihre_fc = 1000
+
+;LONG RANGE ESTIMATION	
+rcoulomb       =	1.2
+coulombtype    =	PME
+;pme options	
+pme_order      =	4
+fourierspacing =	0.12
+ewald_rtol     =	1.00E-05
+
+rvdw           =	1.2
+vdw_type       =	cutoff
+;cutoff workarounds	
+vdw-modifier   =	force-switch
+rvdw-switch    =	1
+DispCorr       =	no
+EOF
+)
+
+NVT_MDP=$(cat <<EOF
+Integrator =	md	
+dt         =	0.002
+nsteps     =	50 ;50000 ; (100 ps)
+
+;box configuration	
+pbc                     = 	xyz
+
+; activate pinning of proteins or water flexibility	
+define               =	-DPOSRES
+refcoord_scaling     = 
+; stiffen bonds	
+constraints          =	h-bonds
+constraint_algorithm =	lincs
+lincs_iter           =	1
+lincs_order          =	4
+; fix distances
+disre = ${DISRE_OPTION}
+disre_fc = 1000
+; fix dihedrals
+dihre = ${DIHRE_OPTION}
+dihre_fc = 1000
+
+;LONG RANGE ESTIMATION	
+rcoulomb       =	1.2
+coulombtype    =	PME
+;pme options	
+pme_order      =	4
+fourierspacing =	0.12
+ewald_rtol     =	1.00E-05
+	
+rvdw           =	1.2
+vdw_type       =	cutoff
+;cutoff workarounds	
+vdw-modifier   =	force-switch
+rvdw-switch    =	1
+DispCorr       =	EnerPres
+	
+;NEIGHBOUR TRACKING	
+cutoff-scheme  =	Verlet
+ns_type        = 	grid
+rlist          =	1.2
+
+; velocity assingment	
+continuation =	no
+gen_vel      =	yes
+gen_temp     =	310
+
+; Temperature coupling	
+tcoupl    =	V-rescale
+tc-grps   =	${GROUPS_TO_MONITOR}
+ref_t     = ${TEMPERATURES}
+tau_t     =	${ONES}
+
+; Pressure coupling	
+pcoupl                  = 	no
+
+; output control	
+; TRR	
+nstxout    =	50000
+nstvout    =	50000
+nstfout    =	
+; EDR	
+nstenergy  =	50000
+energygrps =	
+; LOG	
+nstlog     =	50000
+; XTC instead of TRR	
+nstxout-compressed =	
+compressed-x-grps =	
+EOF
+)
+
+NPT_MDP=$(cat <<EOF
+Integrator =	md	
+dt         =	0.002
+nsteps     =	50 ;50000 ; (100 ps)
+
+;box configuration	
+pbc                     = 	xyz
+
+; activate pinning of proteins or water flexibility	
+define               =  -DPOSRES
+refcoord_scaling     =  com
+; stiffen bonds	
+constraints          =	h-bonds
+constraint_algorithm =	lincs
+lincs_iter           =	1
+lincs_order          =	4
+; fix distances
+disre = ${DISRE_OPTION}
+disre_fc = 1000
+; fix dihedrals
+dihre = ${DIHRE_OPTION}
+dihre_fc = 1000
+
+;LONG RANGE ESTIMATION	
+
+rcoulomb       =	1.2
+coulombtype    =	PME
+;pme options	
+pme_order      =	4
+fourierspacing =	0.12
+ewald_rtol     =	1.00E-05
+	
+rvdw           =	1.2
+vdw_type       =	cutoff
+;cutoff workarounds	
+vdw-modifier   =	force-switch
+rvdw-switch    =	1
+DispCorr       =	EnerPres
+	
+;NEIGHBOUR TRACKING	
+cutoff-scheme  =	Verlet
+ns_type        = 	grid
+rlist          =	1.2
+
+; velocity assingment	
+continuation =	yes
+gen_vel      =	no
+gen_temp     =	
+
+; Temperature coupling	
+tcoupl    =	V-rescale
+tc-grps   =	${GROUPS_TO_MONITOR}
+ref_t     = ${TEMPERATURES}
+tau_t     =	${ONES}
+
+; Pressure coupling	
+pcoupl          =	C-rescale
+pcoupltype      =	isotropic
+ref_p           =	1
+tau_p           =	5
+compressibility =	4.50E-05
+
+; output control	
+; TRR	
+nstxout            =	50000
+nstvout            =	50000
+nstfout            =	
+; EDR	
+nstenergy          =	50000
+energygrps         =	
+; LOG	
+nstlog             =	50000
+; XTC instead of TRR	
+nstxout-compressed =	
+compressed-x-grps  =	
+EOF
+)
+
+PROD_MDP=$(cat <<EOF
+Integrator =	md	
+dt         =	0.002 ; 2 femtoseconds. without lincs this would have to be 0.0001
+nsteps     =	${STEPS}
+
+;box configuration	
+pbc                     = 	xyz
+
+; activate pinning of proteins or water flexibility	
+define               =  
+refcoord_scaling     =  
+; stiffen bonds	
+constraints          =	h-bonds
+constraint_algorithm =	lincs
+lincs_iter           =	1
+lincs_order          =	4
+; fix distances
+disre = ${DISRE_OPTION}
+disre_fc = 1000
+; fix dihedrals
+dihre = ${DIHRE_OPTION}
+dihre_fc = 1000
+
+;LONG RANGE ESTIMATION	
+
+rcoulomb       =	1.2
+coulombtype    =	PME
+;pme options	
+pme_order      =	4
+fourierspacing =	0.12
+ewald_rtol     =	1.00E-05
+	
+rvdw           =	1.2
+vdw_type       =	cutoff
+;cutoff workarounds	
+vdw-modifier   =	force-switch
+rvdw-switch    =	1
+DispCorr       =	EnerPres
+	
+;NEIGHBOUR TRACKING	
+cutoff-scheme  =	Verlet
+ns_type        = 	grid
+rlist          =	1.2
+
+; velocity assingment	
+continuation =	yes
+gen_vel      =	no
+gen_temp     =	
+
+; Temperature coupling	
+tcoupl    =	V-rescale
+tc-grps   =	${GROUPS_TO_MONITOR}
+ref_t     = ${TEMPERATURES}
+tau_t     =	${ONES}
+
+; Pressure coupling	
+pcoupl          =	C-rescale
+pcoupltype      =	isotropic
+ref_p           =	1
+tau_p           =	5
+compressibility =	4.50E-05
+
+; output control	
+; TRR	
+nstxout            =	50000
+nstvout            =	50000
+nstfout            =	50000
+; EDR	
+nstenergy          =	50000
+energygrps         =	
+; LOG	
+nstlog             =	50000
+; XTC instead of TRR	
+nstxout-compressed =	5000
+compressed-x-grps  =	System
+EOF
+)
+
 # Generate MDP files
 echo "${EM_MDP}" > ${WORK_DIR}/em.mdp
 echo "${NVT_MDP}" > ${WORK_DIR}/nvt.mdp
 echo "${NPT_MDP}" > ${WORK_DIR}/npt.mdp
 echo "${PROD_MDP}" > ${WORK_DIR}/prod.mdp
 
-# Convert to absolute paths for reliability
-SYSTEM_DIR=$(realpath ${SYSTEM_DIR})
-WORK_DIR=$(realpath ${WORK_DIR})
+
+
+
+
 
 # =====================================================================
 # Simulations
