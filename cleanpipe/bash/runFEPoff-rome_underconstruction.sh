@@ -1,7 +1,8 @@
 #!/bin/bash
 
 # xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-# xxx manual paralelization settings
+# xxxxxxxxxxxxxxxxxxxxxxxxx manual paralelization settings xxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+# xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 # Note that sometimes it is advisable especially for small simulations to use more open MP
 # threads and less MPI ranks. However, for large systems this appears to be the most
 # efficent and reasonably fast setting.
@@ -114,7 +115,7 @@ for i in $(seq -w 0 20); do #lambdas
 file_em_mdp="1_em.mdp"
 file_nvt_mdp="2_nvt.mdp"
 file_npt_mdp="3_npt.mdp"
-file_prod_mdp="prod.mdp"
+file_prod_mdp="4_prod.mdp"
 
 
 echo "creating ${file_em_mdp}"
@@ -516,9 +517,9 @@ for i in $(seq -w 0 20); do # lambdas
 cd t${t}/Lambda_${i} || exit
 
 
-
-
-
+# Rootname for production files, the relouchable step
+#ROOTNAME=PROD_T${t}_L${i}
+ROOTNAME=4_prod
 
 cat <<EOT > "job.moab"
 #!/bin/bash
@@ -526,17 +527,17 @@ cat <<EOT > "job.moab"
 
 #@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ CLUSTER SETTINGS @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
-#MSUB   -r FEP${TOP}_T${t}_L${i}     # Job name
-#MSUB   -n ${MSUB_QT_PARALLEL_TASKS} # Number of tasks in parallel mode
-#MSUB   -c 1                         # Number of cores per parallel task
-#MSUB   -W yes                       # Let multiple jobs sharing same name & user run simultaneously
-#MSUB   -o useless_stdout            # standard output will go to this file
-#MSUB   -e useless_stderr            # standard erorr will go to this file
-#MSUB   -q rome                      # Partition:    rome        
-#MSUB   -A gen13458                  # Project code: gen10138 or spe00017
-#MSUB   -m scratch,work,store        # File system:  scratch,work,store
-#MSUB   -Q normal                    # Quality of Service (test,normal,long) (ccc_mqinfo)
-#MSUB   -T 86400                     # Maximum walltime in seconds
+#MSUB   -r FEP${TOP}_T${t}_L${i}                      # Job name
+#MSUB   -n ${MSUB_QT_PARALLEL_TASKS}                  # Number of tasks in parallel mode
+#MSUB   -c 1                                          # Number of cores per parallel task
+#MSUB   -W yes                                        # Let multiple jobs sharing same name & user run simultaneously
+#MSUB   -o job.FEP${TOP}_T${t}_L${i}.%I.irene.stdout  # standard output will go to this file
+#MSUB   -e job.FEP${TOP}_T${t}_L${i}.%I.irene.stderr  # standard erorr will go to this file
+#MSUB   -q rome                                       # Partition:    rome        
+#MSUB   -A gen13458                                   # Project code: gen10138 or spe00017
+#MSUB   -m scratch,work,store                         # File system:  scratch,work,store
+#MSUB   -Q normal                                     # Quality of Service (test,normal,long) (ccc_mqinfo)
+#MSUB   -T 86400                                      # Maximum walltime in seconds
 
 #@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
@@ -559,8 +560,7 @@ export I_MPI_PIN_DOMAIN=auto
 ## That value will be the maximun alowed time in rome, minus CHECK_DURATION (the time needed to check if relouching is needed).
 CHECK_DURATION=60
 
-# Rootname for production files, what will be relouched if necessary
-ROOTNAME=PROD_T${t}_L${i}
+
 
 echo "jobid is \$SLURM_JOB_ID "
 echo \$(scontrol show jobid \$SLURM_JOB_ID)
@@ -615,17 +615,17 @@ echo \$cycle >> last_cycle
 # run crashed before it writes a checkpoint, then we cannot start from it. So
 # we need to find the last checkpoint available. If there is no checkpoint,
 # then prev_cycle is 0 and we need to start from the beginning.
-while [[ (! -e "\$ROOTNAME.\${prev_cycle}.cpt") && (\${prev_cycle} -gt 0) ]]
+while [[ (! -e "${ROOTNAME}.\${prev_cycle}.cpt") && (\${prev_cycle} -gt 0) ]]
 do
     let prev_cycle--
 done
-checkpoint=\$ROOTNAME.\$prev_cycle.cpt
+checkpoint=${ROOTNAME}.\$prev_cycle.cpt
 
 # Sometime the simulation started with an other script and the checkpoint is
 # not numbered. We still want to continue from this checkpoint.
-if [[ (\$prev_cycle -eq 0) && (-e \$ROOTNAME.cpt) ]]
+if [[ (\$prev_cycle -eq 0) && (-e ${ROOTNAME}.cpt) ]]
 then 
-    checkpoint=\$ROOTNAME.cpt
+    checkpoint=${ROOTNAME}.cpt
 fi
 
 echo "We will use this checkpoint: \$checkpoint"
@@ -634,12 +634,12 @@ echo "We will use this checkpoint: \$checkpoint"
 # If the simulation already reached the number of steps requested in the TPR,
 # then it is useless to start a new run.
 # We first read the TRP file to know how many steps were requested.
-tpr_nsteps=\$(mpirun -np 1 gmx_mpi dump -s \${ROOTNAME}.tpr 2> /dev/null | grep nsteps | cut -f 2 -d = | sed 's/[^0-9]//')
-# tpr_nsteps=\$(gmx_mpi dump -s \${ROOTNAME}.tpr 2> /dev/null | \\            grep nsteps | cut -f 2 -d = | sed 's/[^0-9]//')
+tpr_nsteps=\$(mpirun -np 1 gmx_mpi dump -s ${ROOTNAME}.tpr 2> /dev/null | grep nsteps | cut -f 2 -d = | sed 's/[^0-9]//')
+# tpr_nsteps=\$(gmx_mpi dump -s ${ROOTNAME}.tpr 2> /dev/null | \\            grep nsteps | cut -f 2 -d = | sed 's/[^0-9]//')
 
 # We need to find what is the last step that has been simulated. We read it
 # from the log file of the previous cycle.
-last_step=\$(grep "Writing checkpoint" \$ROOTNAME.\$prev_cycle.part*.log | tail -n1 | cut -f 4 -d ' ')
+last_step=\$(grep "Writing checkpoint" ${ROOTNAME}.\$prev_cycle.part*.log | tail -n1 | cut -f 4 -d ' ')
 echo "Requested number of steps: \$tpr_nsteps"
 echo "Last step of the previous run: \$last_step"
 
@@ -649,7 +649,7 @@ echo "Last step of the previous run: \$last_step"
 # done with an other script. If we start from a run that used an other script,
 # then we try anyway because it is painful to detect and it will not cost much
 # anyway.
-if [[ (\$(ls \$ROOTNAME.\$prev_cycle.part*.log | wc -l) -eq 0) || \\
+if [[ (\$(ls ${ROOTNAME}.\$prev_cycle.part*.log | wc -l) -eq 0) || \\
       (\$last_step -lt \$tpr_nsteps) ]]
     then
 
@@ -689,21 +689,21 @@ fi
 
 #################### PRODUCTION  - Lambda i  #######################
 if [[ ! -f "prod.tpr" ]]; then
-    ccc_mprun gmx_mpi grompp -f prod.mdp -c "3_npt.gro" -p "../../../${TOP}" -o "${ROOTNAME}.tpr" -maxwarn 1 > PROD.grompp.stdout 2> PROD.grompp.stderr || { echo "gromacs retuned some error. check PROD.grompp.stdout and PROD.grompp.stderr at t\${t}/Lambda_\${i}"; exit 1; }
+    ccc_mprun gmx_mpi grompp -f 4_prod.mdp -c "3_npt.gro" -p "../../../${TOP}" -o "${ROOTNAME}.tpr" -maxwarn 1 > PROD.grompp.stdout 2> PROD.grompp.stderr || { echo "gromacs retuned some error. check PROD.grompp.stdout and PROD.grompp.stderr at t\${t}/Lambda_\${i}"; exit 1; }
 fi
 
 
 ccc_mprun gmx_mpi mdrun \\
         -nice 0 \\
-        -s \$ROOTNAME \\
-        -deffnm \$ROOTNAME.\$cycle \\
+        -s ${ROOTNAME} \\
+        -deffnm ${ROOTNAME}.\$cycle \\
         -v \\
         -stepout 1000 \\
         -maxh \$walltime \\
         -cpi \$checkpoint \\
         -noappend \\
         ${MDRUN_PARALELIZATION_OPTIONS} \\
-        >& \$ROOTNAME.\$cycle.runout 
+        >& ${ROOTNAME}.\$cycle.runout 
 
 
 
@@ -720,10 +720,10 @@ ccc_mprun gmx_mpi mdrun \\
 ###########################################################################################################################
 
 
-    mpirun -np 1 gmx_mpi check -f \$ROOTNAME.\$cycle.part*.xtc
+    mpirun -np 1 gmx_mpi check -f ${ROOTNAME}.\$cycle.part*.xtc
     check_xtc=\$?
     echo "XTC check output code is \$check_xtc"
-    mpirun -np 1 gmx_mpi check -e \$ROOTNAME.\$cycle.part*.edr
+    mpirun -np 1 gmx_mpi check -e ${ROOTNAME}.\$cycle.part*.edr
     check_edr=\$?
     echo "EDR check output code is \$check_edr"
     integrity=\$(( \$check_xtc + \$check_edr ))
@@ -735,7 +735,7 @@ ccc_mprun gmx_mpi mdrun \\
     fi
  
     # If we are not done, then we need to requeue a job
-    last_step=\$(grep "Writing checkpoint" \$ROOTNAME.\$cycle.part*.log | \\
+    last_step=\$(grep "Writing checkpoint" ${ROOTNAME}.\$cycle.part*.log | \\
             tail -n1 | cut -f 4 -d ' ')
     echo "Last simulated step is \$last_step"
     if [[ \$last_step -lt \$tpr_nsteps && \$integrity -eq 0 ]]
