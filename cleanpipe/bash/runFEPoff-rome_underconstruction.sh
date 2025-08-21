@@ -210,7 +210,7 @@ nstcomm                  = 50000
 ; Output control
 nstxout                  = 50000
 nstvout                  = 50000
-nstfout                  = 0
+nstfout                  = 50000
 nstlog                   = 50000
 nstenergy                = 50000
 nstxout-compressed       = 0
@@ -240,9 +240,9 @@ DispCorr            	=     no                 ; deal with that simple cutoff aft
 
 ; Temperature coupling
 ; tcoupl is implicitly handled by the sd integrator
-tc_grps                  = system
-tau_t                    = 1.0
-ref_t                    = ${t}
+tc_grps                  = protein non-protein
+tau_t                    = 2.0 2.0
+ref_t                    = ${t} ${t}
 
 ; Pressure coupling is off for NVT
 Pcoupl                   = No
@@ -310,7 +310,7 @@ nstcomm                  = 50000
 ; Output control
 nstxout                  = 50000
 nstvout                  = 50000
-nstfout                  = 0
+nstfout                  = 50000
 nstlog                   = 50000
 nstenergy                = 50000
 nstxout-compressed       = 0
@@ -339,9 +339,9 @@ DispCorr            	=     no                 ; deal with that simple cutoff aft
 
 ; Temperature coupling
 ; tcoupl is implicitly handled by the sd integrator
-tc_grps                  = system
-tau_t                    = 2.0
-ref_t                    = ${t} 
+tc_grps                  = protein non-protein
+tau_t                    = 2.0 2.0
+ref_t                    = ${t} ${t}
 ; Pressure coupling is on for NPT
 Pcoupl                   = C-rescale
 tau_p                    = 5.0
@@ -411,7 +411,7 @@ nstcomm                  = 100
 ; Output control
 nstxout                  = 500000
 nstvout                  = 500000
-nstfout                  = 0
+nstfout                  = 500000
 nstlog                   = 500000
 nstenergy                = 5000
 nstxout-compressed       = 500000
@@ -442,9 +442,9 @@ DispCorr            	=     no                 ; deal with that simple cutoff aft
 
 ; Temperature coupling
 ; tcoupl is implicitly handled by the sd integrator
-tc_grps                  = system
-tau_t                    = 2.0
-ref_t                    = ${t} 
+tc_grps                  = protein non-protein
+tau_t                    = 2.0 2.0
+ref_t                    = ${t} ${t}
 ; Pressure coupling is on for NPT
 Pcoupl                   = c-rescale 
 tau_p                    = 5.0
