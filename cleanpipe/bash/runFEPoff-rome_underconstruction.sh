@@ -521,6 +521,16 @@ cd t${t}/Lambda_${i} || exit
 #ROOTNAME=PROD_T${t}_L${i}
 ROOTNAME=4_prod
 
+# para evitar confusao, preciso avisar que o job realiza as 4 etpas (1_em 2_nvt 3_npt 4_prod)
+# mas sao somente os arqivos da etapa 4_prod que sao monitorados para ver a necessidade de
+# relancar o job. para evitar refazer as etapas anteriores, elas foram protegidas por if,
+# que soh entra se nao tiver o arquivo de output daquela etapa na pasta
+# isso tudo significa que vc vai encontrar arquivos com o nome ob.FEP${TOP}_T${t}_L${i}.%I.irene.stdout
+# mas eles vao se referir ao procedimento todo, sendo a condicao if a unica coisa que evita sobreescrever
+# as etapas 1_em 2_nvt 3_npt. enquanto que a etapa 4_prod eh a que sera efetivamente relancada
+# portanto ela sera a unica com arquivos com qauela numeracao "2.part0002" integrada no nome
+
+
 cat <<EOT > "job.moab"
 #!/bin/bash
 
