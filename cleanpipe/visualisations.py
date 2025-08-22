@@ -34,7 +34,7 @@ def view_coord(s_coord):
     """
     
     example:
-    cl.visualize_coord("pepticat.pdb")
+    cl.view_coord("pepticat.pdb")
     """
 
 
@@ -53,8 +53,6 @@ def view_coord(s_coord):
     view.add_representation('ball+stick', selection='NA', color='green', aspectRatio=10)
 
 
-
-
     return view
 
 
@@ -63,7 +61,7 @@ def view_traj(s_xtc,s_gro):
     """
     
     example:
-    cl.visualize_trajectory("pepticat2_in_water/3_NPT/npt.trr","pepticat2_in_water/2_NVT/nvt.gro")
+    cl.view_traj("pepticat2_in_water/3_NPT/npt.trr","pepticat2_in_water/2_NVT/nvt.gro")
     """
     trajectory  = md.load(s_xtc, top=s_gro)
     view = nv.show_mdtraj(trajectory)

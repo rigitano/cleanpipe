@@ -34,25 +34,31 @@ def pdb2system(s_pdbfile, s_outName, s_forceField, s_boxSize):
     the top will be a socked top, all the molecules will be outside
 
     
+    s_forceField : whats the ff file, please give also the location, relative to where the function is louched (ex: '../alanine12/v15-truss/charmm36-jul2022.ff')
 
     """
 
+    #input management
+    s_relativelocation = bricksFileSystem.get_file_location(s_forceField) # get forcefiled original location (relative to where the program was louched)
+    s_forceField       = bricksFileSystem.get_filename_without_extension(s_forceField) # now we update the variable so It will have just the ff name. without location nor extention
 
+    bricksFileSystem.check_extention(s_pdbfile,['.pdb']) #check if the filename inside s_pdbfile is valid
+    s_molName = bricksFileSystem.get_filename_without_extension(s_pdbfile)#get the pdb basename. it should be the name of the protagonist molecule
 
-    #check if the filename inside s_pdbfile is valid
-    bricksFileSystem.check_extention(s_pdbfile,['.pdb']) 
-
-    #get the pdb basename. it should be the name of the protagonist molecule
-    s_molName = s_pdbfile.replace(".pdb","")
-
-    #create output folder in parael with the pdb input. we will cd into that forder and do everithing there
+    #create output folder. and 
     bricksFileSystem.run_and_capture(f"mkdir {s_outName}")
-    bricksFileSystem.run_and_capture(f"cp {s_pdbfile} {s_outName}/temp.pdb")
-    bricksFileSystem.run_and_capture(f"cp -r {s_forceField}.ff {s_outName.rstrip('/')}/")#copy the forcefield to the new folder
+
+    # put usefull things in the output folder (the pdb, and the forcefield and the toppar, if its in the same place as the forcefield)
+    bricksFileSystem.run_and_capture(f'cp {s_pdbfile} {s_outName}/temp.pdb')
+    bricksFileSystem.run_and_capture(f'cp -r "{s_relativelocation}/{s_forceField}.ff" {s_outName.rstrip("/")}/')#copy the forcefield to the new folder
     try:
-        bricksFileSystem.run_and_capture(f"cp -r toppar {s_outName.rstrip('/')}/")#copy the forcefield to the new folder
+
+        bricksFileSystem.run_and_capture(f'cp -r "{s_relativelocation}/toppar" "{s_outName.rstrip("/")}/"')#copy the forcefield to the new folder
     except:
-        print("CLEANPIPE MESSAGE toppar folder not found, so it was not copied to the new folder")
+        print("CLEANPIPE MESSAGE toppar folder not found in the same folder as the forcefield folder")
+
+
+    #cd into the output folder we created and do everithing there
     #original_directory = os.getcwd()#original folder is stored so I can go back to it at the very end of this function
     os.chdir(f"{s_outName}")
 
@@ -88,25 +94,53 @@ def pdb2system(s_pdbfile, s_outName, s_forceField, s_boxSize):
     #os.chdir(original_directory)
 
 @ensure_original_directory
-def solvate_and_neutralize(s_systemFolder,s_solventName,s_forceField):
+def solvate_and_neutralize(s_systemFolder, solvent, s_maxsol=0, b_neutralize=False):
     """
-    there are two ways to solvate in gromacs:
 
-        "gmx solvate -cp SoluteMolecule.gro -cs preEquilibratedBoxOfSmallSolvents.gro -o outSystem.gro -p soluteMolecule.top", 
+    this is a implentation of "gmx solvate". if the user sets neutralize=True, then we do "gmx grompp" plus "gmx genion"
+    now let me try to explain how gmx solvate works:
+
+        "gmx solvate -cp SoluteMolecule.gro -cs preEquilibratedBoxOf1ResudieSolvents.gro -o outSystem.gro -p soluteMolecule.top", 
             this will insert a molecule into a box of pre equilibrated smal solvents with just one residue. 
             after the insertion overlaping molecules will be deleted, thats why this is not a good option for large molecules of solvent, such as octane. 
             but this is a great option to solvate something into a mixture of small molecules
             I hate that the option -p soluteMolecule.top will just update the solvent molecule number in the solvent top, without including the solvent itp. the itp inclusion has to be done manualy
-            if you dont put -cs, the tool will use a spc216.gro box stored in the shared/gromacs/top folder. this gro can be used to solvate any 3 other point water, such as the famous tip3p 
+            If you want to solvate with water, the force field already have some possible gros. to use one of the 3 point models (ex: "tip3p", "spc", "spce"), you put -cs spc216.gro (as it works for any 3 point water. its stored at shared/gromacs/top), and than include the proper itp in the system top. (it should be stored in the ff folder). for example: #include "./charmm36-jul2022.ff/tip3p.itp" or  
+            if you dont put -cs, the tool do the most usual setup. wich is the use a spc216.gro box (stored at shared/gromacs/top). I think in this case, the solvent itp is included automatically. doing that just in this case makes me even more angry than before
 
-    
+    Having said that, I think is good to know that solvation can also be achieved using this other command, not used in this funcion:
+
+
         "gmx insert-molecules -f SoluteMolecule.gro -ci solventMoleculeToInsert.gro -nmol 1000 -rot -box 5 5 5 -o outSystem.gro"
             will randomly insert solvent molecules around the solute
 
-        s_systemFolder :system to be solvated, this mean the input is a system with only the protagonist solute that must be solvated
-        s_solventName : the name of the solvent. It has to be one of gromacs standard water names, or a folder containing a preequilibrated system that is a box full of something. in both cases,from that name the function will find the necessary .gro and .itp somewere. the gro have to describe a box full of that solvent
+
+
+    s_systemFolder : system to be solvated, this mean the input is a system with only the protagonist solute that must be solvated. with a gro and top in its file
+
+    solvent        : well, here Im doing an odd thing to try to simplify gromacs madness:
+                     you have two options (1) to put a string with a famous model
+                     ("tip3p", "spc" or "spce"). or (2) to put a vector containing the gro file of
+                     the box of solvent, folowed by the itp files of all the molecules in that box. for example
+                     ["box_full_of_octn.gro","octn.itp"]. but these names should be set in relation to the system top folder. ex: ../box_full_of_octn.gro
+                     in option (1) I'll set the proper gro and itps myself, presuming you are 
+                     working with charmm36 and that there is a charmm36 in the system folder.
+                     what I'll do is to set -cs spc216.gro, and then add an itp to the system 
+                     top file, according to the chosen model
+                     in option (2) I'll just inser your choices. this means to set -cs "box_full_of_octn.gro"
+                     and #include "octn.itp"
+
+
+    s_maxsol       : this sets the maximum solvent molecules that will be added. here the value is optional, becasue 0 will be disconsidered by gromacs
+    b_neutralize   : a boolean that will tell to neutralyse the solvent or not
+
+
+    example usage: 
+
+
+
     """
-    print(f"\nCLEANPIPE MESSAGE called solvate_and_neutralize({s_systemFolder},{s_solventName},{s_forceField})\n")
+    print(f"\nCLEANPIPE MESSAGE called solvate_and_neutralize({s_systemFolder},{solvent},{s_maxsol},{b_neutralize})\n")
 
     #get gro basaname in system folder
     s_groName = bricksFileSystem.get_single_gro(s_systemFolder).replace('.gro','')
@@ -114,53 +148,58 @@ def solvate_and_neutralize(s_systemFolder,s_solventName,s_forceField):
     s_topName = bricksFileSystem.get_single_top(s_systemFolder).replace('.top','')
 
 
-    if s_solventName in ["tip3p", "spc", "spce"]: #this is a list of 3 point water models. their respectives .gro describing a pre-equilibrated box and .itp are already in the share/gromacs/top folder
-        print(f"\nCLEANPIPE MESSAGE user chose one of the standard water models ({s_solventName})\n")
-        #this mean the user has chosen a water model, already part of gromacs standard solvents. gromacs can find the solvent box and the respective itp automaticaly
+
+ 
+
+
+
+    if solvent in ["tip3p", "spc", "spce"]: #this is a list of 3 point water models. their respectives .gro describing a pre-equilibrated box and .itp are already in the share/gromacs/top folder
+        print(f"\nCLEANPIPE MESSAGE user chose one of the standard water models, already part of gromacs standard solvents ({solvent})\n")
+        #(ex: "tip3p"). gromacs can find the solvent box and the respective itp automaticaly
 
         #go to system folder. the current folder is savad so to go back to it just before the end of the function
         #original_directory = os.getcwd()
         os.chdir(f"{s_systemFolder}")
 
-        bricksFileSystem.run_and_capture(f"gmx solvate -cp {s_groName}.gro -cs spc216.gro -p {s_topName}.top -o {s_groName}.gro") # spc216.gro is a pre-equilibrated box of a 3 point water model that can be used by any other 3 point model
+        bricksFileSystem.run_and_capture(f"gmx solvate -cp {s_groName}.gro -cs spc216.gro -maxsol {s_maxsol} -p {s_topName}.top -o {s_groName}.gro") # spc216.gro is a pre-equilibrated box of a 3 point water model that can be used by any other 3 point model
         bricksFileSystem.delete(f"#{s_groName}.gro.1#")#I choose to overwrite the old gro
         bricksFileSystem.delete(f"#{s_topName}.top.1#")#I choose to overwrite the old top
 
 
 
         #include necessary text in the top file
-        s_text_to_insert = "\n; Include water topology\n#include \""+s_forceField+".ff/"+s_solventName+".itp\"\n\n#ifdef POSRES_WATER \n; Position restraint for each water oxygen\n[ position_restraints ]\n;  i funct       fcx        fcy        fcz\n1    1       1000       1000       1000\n#endif\n"
+        s_forceField = bricksTOP.get_forcefield_name(f"{s_topName}.top")
+        s_text_to_insert = "\n; Include water topology\n#include \""+s_forceField+"/"+solvent+".itp\"\n\n#ifdef POSRES_WATER \n; Position restraint for each water oxygen\n[ position_restraints ]\n;  i funct       fcx        fcy        fcz\n1    1       1000       1000       1000\n#endif\n"
 
         bricksTOP.insert_text_before_directive(f"{s_topName}.top", s_text_to_insert, "[ system ]")
 
 
-        # xxx add ions, to make the box neutral
-        #subprocess.run(f"gmx grompp -f ~/mdparameters/add_ions.mdp -c coord_box_sol.gro -p topol.top -o coord_box_sol_ions.tpr" , shell=True, check=True)
-        #subprocess.run(f"printf '13' | gmx  genion -s coord_box_sol_ions.tpr -o coord_box_sol_ions.gro -p topol.top -pname NA -nname CL -neutral" , shell=True, check=True)
-        #rm tpr and created backups and mdout
 
 
-    elif bricksFileSystem.check_folder(os.path.abspath(s_solventName)) == True:
-        print(f"\nCLEANPIPE MESSAGE user chose a solvent box ({s_solventName})\n")
-        # this mean the user has chosen a folder (ex: path/to/folder)
-        # that folder should contain a system that is a box filled with solvent. it should be pre-equilibrated 
-        # so, the solvent name is something like box_full_of_octn, and that folder should contain a octn.itp and a 3_NPT/box_full_of_octn.gro
-        # but dont worry about the gro and file names. the important is that they are present in the correct place. the name will be obtained
 
-        #get the full path
-        s_solventFolder = os.path.abspath(s_solventName)
+    elif isinstance(solvent, (list, tuple)) == True:
+        print(f"\nCLEANPIPE MESSAGE user chose to inform a gro and itps of the box o solvent")
+        # (ex: [box_full_of_octn","octn.itp"])
+
 
         #obtain the names of the top and itp files in the SOLVENT BOX folder
-        s_solbox_groName = bricksFileSystem.get_single_gro(f"{s_solventFolder}/3_NPT")
-        l_solbox_itpNames = bricksFileSystem.get_all_itps(s_solventFolder)
-        print(l_solbox_itpNames)
+        s_solbox_groName = solvent[0] # the gro file name should be in the first position
+        l_solbox_itpNames = solvent[1:] # the rest of the list should contain itp files. 1 or many
+        print("CLEANPIPE MESSAGE gro      ", s_solbox_groName)
+        print("CLEANPIPE MESSAGE itp list ", l_solbox_itpNames)
+
+        #copy all the itp files from the original folder to the current system folder
+        for s_sol_itpName in l_solbox_itpNames:
+            bricksFileSystem.run_and_capture(f"cp ../{s_sol_itpName} .")
+
+
 
         #go to system folder. the current folder is saved so to go back to it just before the end of the function
         #original_directory = os.getcwd()
         os.chdir(f"{s_systemFolder}")
 
         #insert the solvent in gro. and inform quantity added in top
-        bricksFileSystem.run_and_capture(f"gmx solvate -cp {s_groName}.gro -cs {s_solventFolder}/3_NPT/{s_solbox_groName} -p {s_topName}.top -o {s_groName}.gro")
+        bricksFileSystem.run_and_capture(f"gmx solvate -cp {s_groName}.gro -cs {s_solbox_groName} -p {s_topName}.top -o {s_groName}.gro")
         bricksFileSystem.delete(f"#{s_groName}.gro.1#")#I choose to overwrite the old gro
         bricksFileSystem.delete(f"#{s_topName}.top.1#")#I choose to overwrite the old top
 
@@ -170,15 +209,21 @@ def solvate_and_neutralize(s_systemFolder,s_solventName,s_forceField):
 
         #edit top to insert a line including a reference of the solvent itp before the [ system ] directive
         for s_sol_itpName in l_solbox_itpNames:
-            bricksFileSystem.run_and_capture(rf'''awk -v line='#include "{s_sol_itpName}"' '/\[ system \]/{{print line"\n"; i=2}}i&&!--i{{next}}1' {s_topName}.top > temp.top && mv temp.top {s_topName}.top''')
-
-        #copy all the itp files from the original folder to the current system folder
-        for s_sol_itpName in l_solbox_itpNames:
-            bricksFileSystem.run_and_capture(f"cp {s_solventFolder}/{s_sol_itpName} ./")
+            s_sol_itpNameWithoutLocation = bricksFileSystem.get_filename_with_extension(s_sol_itpName)
+            bricksFileSystem.run_and_capture(rf'''awk -v line='#include "{s_sol_itpNameWithoutLocation}"' '/\[ system \]/{{print line"\n"; i=2}}i&&!--i{{next}}1' {s_topName}.top > temp.top && mv temp.top {s_topName}.top''')
 
 
     else:
-        print("solvation failed")
+        print("CLEANPIPE error: in the function solvate_and_neutralize, the argument 'solvent' is not 'tip3p', 'spc', 'spce' or a vector with the box of solven info (ex: ['../box_full_of_octn','../octn.itp'])")
+
+
+
+    if b_neutralize == True:
+
+        print("CLEANPIPE I didnt build that yet!")
+        #bricksFileSystem.run_and_capture(f"gmx grompp -f ~/mdparameters/add_ions.mdp -c coord_box_sol.gro -p topol.top -o coord_box_sol_ions.tpr")
+        #bricksFileSystem.run_and_capture(f"printf '13' | gmx  genion -s coord_box_sol_ions.tpr -o coord_box_sol_ions.gro -p topol.top -pname NA -nname CL -neutral")
+        #rm tpr and created backups and mdout
 
 
 

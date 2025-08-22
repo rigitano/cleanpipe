@@ -87,17 +87,17 @@ def pdb2box_full_of_that(s_pdbfile, s_forceField, s_box_size, n_mol_max):
     bricksTOP.setSystemName(f"{s_outPathAndName}.top", f"box filled with {s_filename}" )
 
 
-def pdb2molecule_in_solvent(s_pdbfile, s_outSytemName, s_solvent, s_forceField, s_boxSize):
+def pdb2molecule_in_solvent(s_pdbfile, s_outSytemName, solvent, s_forceField, s_boxSize, s_maxsol=0):
     """
     s_pdbfile       : string with the pdb name. for example "insulin.pdb", this will be the main molecule in the system.
     s_outSytemName  : string with the name of the system, for example "alaHW". a folder with that name will be created, and inside it, all the files, for example: alaHW.gro and alaHW.top
-    s_solvent       : choose a water model, for example as "tip3p", or a folder, for example "box_full_of_octn". The folder have to contain a system with a solvent box, in other words, it has to contain a octn_filledbox.gro and a octn.itp
-    s_forceField    : one of the gromacs recognized force fields, for example "charmm36-jul2022"
+    solvent         : choose a water model, for example as "tip3p", or a list containg a gro of a box of solvents and its itp, for example ["../solvents/box_full_of_octn.gro","octn.itp], bot the file name should be set in reference to the system top
     s_boxSize       : string with x y z sizes, for example "3 3 3"
+    s_maxsol        : the maximum number of solvent molecules that will be added. this is optional here, as the 0 value mean the parameter wont be considered by gromacs
 
     example:
-    cl.pdb2molecule_in_solvent("1LZ1.pdb", "1LZ1_in_water", "tip3p", "charmm36-jul2022", "3 3 3")
-    cl.pdb2molecule_in_solvent("1LZ1.pdb", "1LZ1_in_octane", "box_full_of_octn", "charmm36-jul2022", "3 3 3")
+    cl.pdb2molecule_in_solvent("gly12.pdb", "g12HW", "tip3p", 'charmm36-jul2022', "6 6 6", "6943")
+    cl.pdb2molecule_in_solvent("gly12.pdb", "g12H_in_octane", ["../solvents/box_full_of_octn.gro","../solvents/octn.itp], 'charmm36-jul2022', "6.1 6.1 6.1", "712")
     """
 
     # check if the filename inside s_pdbfile is valid
@@ -107,22 +107,30 @@ def pdb2molecule_in_solvent(s_pdbfile, s_outSytemName, s_solvent, s_forceField, 
     bricksGROMACS.pdb2system(s_pdbfile,s_outSytemName,s_forceField,s_boxSize)
 
     # add solvent to the system. I have 2 options here: tip3p or filled box
-    bricksGROMACS.solvate_and_neutralize(s_outSytemName,s_solvent,s_forceField)
+    bricksGROMACS.solvate_and_neutralize(s_outSytemName,solvent, s_maxsol)
 
     # set the the name of the system in the top file 
-    bricksTOP.setSystemName(f"{s_outSytemName}/{s_outSytemName}.top", f"{s_outSytemName} ; molecule from \"{s_pdbfile}\", inserted in solvent box of \"{s_solvent}\"" )
+    if isinstance(solvent, str): #the user inserted a string, that should mean a water model (ex "tip3p")
+        s_solvent_text = solvent + ".gro"
+    elif isinstance(solvent, list): #the user inserted a list, that should mean a solvent gro and itps (ex ["../solvents/box_full_of_octn.gro","octn.itp])
+        s_solvent_text = bricksFileSystem.get_filename_with_extension(solvent[0])
+
+    bricksTOP.setSystemName(f"{s_outSytemName}/{s_outSytemName}.top", f"{s_outSytemName} ; molecule from \"{s_pdbfile}\", inserted in solvent from \"{s_solvent_text}\"" )
 
 
 
 @ensure_original_directory
-def pdb2molecule_in_two_solvents(s_pdbfile, s_folderName, s_outSytemName1, s_outSytemName2, s_solvent1, s_solvent2, s_forceField, s_boxSize):
+def pdb2molecule_in_two_solvents(s_pdbfile, s_folderName, s_outSytemName1, s_outSytemName2, solvent1, solvent2, s_forceField, s_boxSize):
     """
+    xxx I think I should just repeat two pdb2molecule_in_solvent functions
+
+
     s_pdbfile       : string with the pdb name. for example "insulin.pdb", this will be the main molecule in the system.
     s_folderName    : string with the name of the folder, for example "ala6Hdihr200-transfer". this folder will be created, and inside it, the two systems will be created inside it
     s_outSytemName1  : string with the name of the system, for example "ala6Hdih200_in_octane". a folder with that name will be created, and inside it, all the files, for example: ala6Hdihres200.gro and ala6Hdihres200.top
     s_outSytemName2  : string with the name of the system, for example "ala6Hdih200_in_water". a folder with that name will be created, and inside it, all the files, for example:ala6Hdihres200.gro and ala6Hdihres200.top
-    s_solvent1       : for example "box_full_of_octn" folder with system with a solvent box, in other words, it has to contain a octn_filledbox.gro and a octn.itp
-    s_solvent2       : for example as "tip3p"
+    solvent1       : for example ["../solvents/box_full_of_octn.gro","../solvents/octn.itp]
+    solvent2       : for example as "tip3p"
     s_forceField    : one of the gromacs recognized force fields, for example "charmm36-jul2022"
     s_boxSize       : string with x y z sizes, for example "3 3 3"
 
@@ -144,7 +152,7 @@ def pdb2molecule_in_two_solvents(s_pdbfile, s_folderName, s_outSytemName1, s_out
     bricksFileSystem.run_and_capture(f"cp -r {s_forceField}.ff {s_folderName.rstrip('/')}/")#copy the forcefield to the new folder
 
     #I know in the example usage the first solvent is "box_full_of_octn", so I moove the folder. xxx this must be done differently
-    bricksFileSystem.run_and_capture(f"cp -r {s_solvent1} {s_folderName.rstrip('/')}/")#copy the forcefield to the new folder
+    bricksFileSystem.run_and_capture(f"cp -r {solvent1} {s_folderName.rstrip('/')}/")#copy the forcefield to the new folder
 
     try:
         bricksFileSystem.run_and_capture(f"cp -r toppar {s_folderName.rstrip('/')}/")#copy the forcefield to the new folder
@@ -159,19 +167,19 @@ def pdb2molecule_in_two_solvents(s_pdbfile, s_folderName, s_outSytemName1, s_out
 
     # CREATE FIRST SYSTEM (SOLVENT 1)
     bricksGROMACS.pdb2system("temp.pdb",s_outSytemName1,s_forceField,s_boxSize)   # create
-    bricksGROMACS.solvate_and_neutralize(s_outSytemName1,s_solvent1,s_forceField) # solvate
-    bricksTOP.setSystemName(f"{s_outSytemName1}/{s_outSytemName1}.top", f"{s_outSytemName1} ; molecule from \"{s_pdbfile}\", inserted in solvent box of \"{s_solvent1}\"" ) # set name
+    bricksGROMACS.solvate_and_neutralize(s_outSytemName1,solvent) # solvate xxx without maxsol
+    bricksTOP.setSystemName(f"{s_outSytemName1}/{s_outSytemName1}.top", f"{s_outSytemName1} ; molecule from \"{s_pdbfile}\", inserted in solvent box of \"{solvent1}\"" ) # set name
 
     # CREATE SECOND SYSTEM (SOLVENT 2)
     bricksGROMACS.pdb2system("temp.pdb",s_outSytemName2,s_forceField,s_boxSize)  # create
-    bricksGROMACS.solvate_and_neutralize(s_outSytemName2,s_solvent2,s_forceField)# solvate
-    bricksTOP.setSystemName(f"{s_outSytemName2}/{s_outSytemName2}.top", f"{s_outSytemName2} ; molecule from \"{s_pdbfile}\", inserted in solvent box of \"{s_solvent2}\"" ) # set name
+    bricksGROMACS.solvate_and_neutralize(s_outSytemName2,solvent)# solvate xxx without maxsol
+    bricksTOP.setSystemName(f"{s_outSytemName2}/{s_outSytemName2}.top", f"{s_outSytemName2} ; molecule from \"{s_pdbfile}\", inserted in solvent box of \"{solvent2}\"" ) # set name
 
 
     #remove files from the parante folder (the one that stores the two systems)
     bricksFileSystem.run_and_capture(f"rm temp.pdb")
     #I know in the example usage the first solvent is "box_full_of_octn", so I moove the folder. xxx this must be done differently
-    bricksFileSystem.run_and_capture(f"rm -r {s_solvent1}")
+    bricksFileSystem.run_and_capture(f"rm -r {solvent1}")
 
     bricksFileSystem.run_and_capture(f"rm -r toppar")
     bricksFileSystem.run_and_capture(f"rm -r {s_forceField}.ff")

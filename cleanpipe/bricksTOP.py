@@ -2,11 +2,29 @@ import os
 import subprocess
 import re
 import tempfile
+import sys
+from pathlib import Path
 from cleanpipe import bricksFileSystem
 from cleanpipe import bricksStorage
 from cleanpipe import lltools
 from cleanpipe import bricksGRO
 
+
+
+def get_forcefield_name(top_file_path):
+    """
+    Extracts the forcefield folder name from a GROMACS topology file.
+    Example outputs: 'oplsaa.ff', 'charmm36-jul2022.ff', 'amber99sb-ildn.ff'
+    """
+    ff_pattern = re.compile(r'#include\s+"(?:\.\/)?([^/]+\.ff)/forcefield\.itp"')
+
+    with open(top_file_path, 'r') as f:
+        for line in f:
+            match = ff_pattern.search(line)
+            if match:
+                return match.group(1)  # the forcefield folder name
+
+    return None
 
 def getMoleculeName(top_file_path, order=1):
     """
