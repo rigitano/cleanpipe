@@ -323,7 +323,7 @@ def insert_text_before_directive(s_file_path, s_text_to_insert, s_directive):
     with open(s_file_path, 'w') as file:
         for line in lines:
             if s_directive in line:
-                file.write(s_text_to_insert + '\n')
+                file.write(s_text_to_insert + '\n\n')
             file.write(line)
      
 

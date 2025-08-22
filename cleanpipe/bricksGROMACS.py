@@ -169,7 +169,7 @@ def solvate_and_neutralize(s_systemFolder, solvent, s_maxsol=0, b_neutralize=Fal
 
         #include necessary text in the top file
         s_forceField = bricksTOP.get_forcefield_name(f"{s_topName}.top")
-        s_text_to_insert = "\n; Include water topology\n#include \""+s_forceField+"/"+solvent+".itp\"\n\n#ifdef POSRES_WATER \n; Position restraint for each water oxygen\n[ position_restraints ]\n;  i funct       fcx        fcy        fcz\n1    1       1000       1000       1000\n#endif\n"
+        s_text_to_insert = "\n; Include water topology\n#include \""+s_forceField+"/"+solvent+".itp\"\n\n#ifdef POSRES_WATER \n; Position restraint for each water oxygen\n[ position_restraints ]\n;  i funct       fcx        fcy        fcz\n1    1       1000       1000       1000\n#endif"
 
         bricksTOP.insert_text_before_directive(f"{s_topName}.top", s_text_to_insert, "[ system ]")
 
@@ -190,7 +190,7 @@ def solvate_and_neutralize(s_systemFolder, solvent, s_maxsol=0, b_neutralize=Fal
 
         #copy all the itp files from the original folder to the current system folder
         for s_sol_itpName in l_solbox_itpNames:
-            bricksFileSystem.run_and_capture(f"cp ../{s_sol_itpName} .")
+            bricksFileSystem.run_and_capture(f"cp {s_sol_itpName} .")
 
 
 
@@ -199,7 +199,7 @@ def solvate_and_neutralize(s_systemFolder, solvent, s_maxsol=0, b_neutralize=Fal
         os.chdir(f"{s_systemFolder}")
 
         #insert the solvent in gro. and inform quantity added in top
-        bricksFileSystem.run_and_capture(f"gmx solvate -cp {s_groName}.gro -cs {s_solbox_groName} -p {s_topName}.top -o {s_groName}.gro")
+        bricksFileSystem.run_and_capture(f"gmx solvate -cp {s_groName}.gro -cs ../{s_solbox_groName} -maxsol {s_maxsol} -p {s_topName}.top -o {s_groName}.gro") #remeber that the folder was changed, so the gro in -cs is actually in a extra parent folder
         bricksFileSystem.delete(f"#{s_groName}.gro.1#")#I choose to overwrite the old gro
         bricksFileSystem.delete(f"#{s_topName}.top.1#")#I choose to overwrite the old top
 
@@ -210,7 +210,9 @@ def solvate_and_neutralize(s_systemFolder, solvent, s_maxsol=0, b_neutralize=Fal
         #edit top to insert a line including a reference of the solvent itp before the [ system ] directive
         for s_sol_itpName in l_solbox_itpNames:
             s_sol_itpNameWithoutLocation = bricksFileSystem.get_filename_with_extension(s_sol_itpName)
-            bricksFileSystem.run_and_capture(rf'''awk -v line='#include "{s_sol_itpNameWithoutLocation}"' '/\[ system \]/{{print line"\n"; i=2}}i&&!--i{{next}}1' {s_topName}.top > temp.top && mv temp.top {s_topName}.top''')
+
+            bricksTOP.insert_text_before_directive(f"{s_topName}.top", s_sol_itpNameWithoutLocation, "[ system ]")
+            #bricksFileSystem.run_and_capture(rf'''awk -v line='#include "{s_sol_itpNameWithoutLocation}"' '/\[ system \]/{{print line"\n"; i=2}}i&&!--i{{next}}1' {s_topName}.top > temp.top && mv temp.top {s_topName}.top''')
 
 
     else:

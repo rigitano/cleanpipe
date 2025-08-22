@@ -33,7 +33,7 @@ def get_filename_without_extension(file_path):
 
 def get_filename_with_extension(file_path):
     file_name, file_extension = os.path.splitext(file_path) # os.path.splitext() returns a tuple: (filename, extension)
-    return os.path.basename(file_name) + "." + file_extension  # os.path.basename ensures we only get the filename, not the full path
+    return os.path.basename(file_name) + file_extension  # os.path.basename ensures we only get the filename, not the full path
 
 
 def get_file_location(file_path):
