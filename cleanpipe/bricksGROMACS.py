@@ -169,7 +169,7 @@ def solvate_and_neutralize(s_systemFolder, solvent, s_maxsol=0, b_neutralize=Fal
 
         #include necessary text in the top file
         s_forceField = bricksTOP.get_forcefield_name(f"{s_topName}.top")
-        s_text_to_insert = "\n; Include water topology\n#include \""+s_forceField+"/"+solvent+".itp\"\n\n#ifdef POSRES_WATER \n; Position restraint for each water oxygen\n[ position_restraints ]\n;  i funct       fcx        fcy        fcz\n1    1       1000       1000       1000\n#endif"
+        s_text_to_insert = "#include \""+s_forceField+"/"+solvent+".itp\"\n\n#ifdef POSRES_WATER \n; Position restraint for each water oxygen\n[ position_restraints ]\n;  i funct       fcx        fcy        fcz\n1    1       1000       1000       1000\n#endif"
 
         bricksTOP.insert_text_before_directive(f"{s_topName}.top", s_text_to_insert, "[ system ]")
 
@@ -190,7 +190,7 @@ def solvate_and_neutralize(s_systemFolder, solvent, s_maxsol=0, b_neutralize=Fal
 
         #copy all the itp files from the original folder to the current system folder
         for s_sol_itpName in l_solbox_itpNames:
-            bricksFileSystem.run_and_capture(f"cp {s_sol_itpName} .")
+            bricksFileSystem.run_and_capture(f"cp {s_sol_itpName} {s_systemFolder}/")
 
 
 
@@ -211,7 +211,7 @@ def solvate_and_neutralize(s_systemFolder, solvent, s_maxsol=0, b_neutralize=Fal
         for s_sol_itpName in l_solbox_itpNames:
             s_sol_itpNameWithoutLocation = bricksFileSystem.get_filename_with_extension(s_sol_itpName)
 
-            bricksTOP.insert_text_before_directive(f"{s_topName}.top", s_sol_itpNameWithoutLocation, "[ system ]")
+            bricksTOP.insert_text_before_directive(f"{s_topName}.top", "#include \""+s_sol_itpNameWithoutLocation+"\"", "[ system ]")
             #bricksFileSystem.run_and_capture(rf'''awk -v line='#include "{s_sol_itpNameWithoutLocation}"' '/\[ system \]/{{print line"\n"; i=2}}i&&!--i{{next}}1' {s_topName}.top > temp.top && mv temp.top {s_topName}.top''')
 
 

@@ -111,17 +111,13 @@ def pdb2molecule_in_solvent(s_pdbfile, s_outSytemName, solvent, s_forceField, s_
 
     # set the the name of the system in the top file 
     if isinstance(solvent, str): #the user inserted a string, that should mean a water model (ex "tip3p")
-        print("whaaaaat")
         s_solvent_text = solvent + ".gro"
     elif isinstance(solvent, list): #the user inserted a list, that should mean a solvent gro and itps (ex ["../solvents/box_full_of_octn.gro","octn.itp])
-        print("xxxxxxxxxxxxxxxxxxx THERE")
-        print(solvent[0])
         s_solvent_text = bricksFileSystem.get_filename_with_extension(solvent[0])
-        print(s_solvent_text)
     else:
         print("CLEANPIPE error, solvent content is unexpected")
 
-    print("xxxxxxxxxxxxxxxxxxx HERE")
+
     bricksTOP.setSystemName(f"{s_outSytemName}/{s_outSytemName}.top", f"{s_outSytemName} ; molecule from \"{s_pdbfile}\", inserted in solvent from \"{s_solvent_text}\"" )
 
 
