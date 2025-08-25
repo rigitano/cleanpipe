@@ -555,7 +555,7 @@ cat <<EOT > "job.moab"
 # environment settings
 set -x # echo commands
 ml purge
-module load gnu/11 mpi/openmpi/4 gromacs/2023.2
+module load gnu/11 mpi/openmpi/4 gromacs/2023.4
 export I_MPI_PIN_CELL=core
 export I_MPI_PIN_DOMAIN=auto
 
