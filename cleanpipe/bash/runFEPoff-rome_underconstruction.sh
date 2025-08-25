@@ -541,8 +541,8 @@ cat <<EOT > "job.moab"
 #MSUB   -n ${MSUB_QT_PARALLEL_TASKS}                  # Number of tasks in parallel mode
 #MSUB   -c 1                                          # Number of cores per parallel task
 #MSUB   -W yes                                        # Let multiple jobs sharing same name & user run simultaneously
-#MSUB   -o job.FEP${TOP}_T${t}_L${i}.%I.irene.stdout  # standard output will go to this file
-#MSUB   -e job.FEP${TOP}_T${t}_L${i}.%I.irene.stderr  # standard erorr will go to this file
+#MSUB   -o FEP_job%I_${TOP}_T${t}_L${i}.out  # standard output will go to this file
+#MSUB   -e FEP_job%I_${TOP}_T${t}_L${i}.err  # standard erorr will go to this file
 #MSUB   -q rome                                       # Partition:    rome        
 #MSUB   -A gen13458                                   # Project code: gen10138 or spe00017
 #MSUB   -m scratch,work,store                         # File system:  scratch,work,store
@@ -568,7 +568,7 @@ export I_MPI_PIN_DOMAIN=auto
 
 ## We will calculate the maximal time that will be set in the mdrun command. it will be called walltime
 ## That value will be the maximun alowed time in rome, minus CHECK_DURATION (the time needed to check if relouching is needed).
-CHECK_DURATION=60
+CHECK_DURATION=3600
 
 
 
@@ -666,43 +666,50 @@ if [[ (\$(ls ${ROOTNAME}.\$prev_cycle.part*.log | wc -l) -eq 0) || \\
 #############################################################################################
 ########## relauchable code, monitoring to completness of the production mdrun ###############
 #############################################################################################
-
+echo "performing the FEP pipeline"
 
 
 ######################### EM  - Lambda i #########################
-
 if [[ ! -f "1_em.tpr" ]]; then
-    ccc_mprun gmx_mpi grompp -f 1_em.mdp -c "../../../${GRO}" -p "../../../${TOP}" -o 1_em.tpr"  > 1_em.grompp.stdout 2> 1_em.grompp.stderr || { echo "gromacs retuned an error. check 1_em.grompp.stdout and 1_em.grompp.stderr at t\${t}/Lambda_\${i}"; exit 1; }
+    echo "grompp em"
+    ccc_mprun gmx_mpi grompp -f 1_em.mdp -c "../../../${GRO}" -p "../../../${TOP}" -o "1_em.tpr"  > 1_em.grompp.stdout 2> 1_em.grompp.stderr || { echo "gromacs retuned an error. check 1_em.grompp.stdout and 1_em.grompp.stderr at t\${t}/Lambda_\${i}"; exit 1; }
 fi
 
 if [[ ! -f "1_em.gro" ]]; then
+    echo "mdrun em"
     ccc_mprun gmx_mpi mdrun -deffnm "1_em" ${MDRUN_PARALELIZATION_OPTIONS} > 1_em.mdrun.stdout 2> 1_em.mdrun.stderr || { echo "gromacs retuned an error. check 1_em.mdrun.stdout and 1_em.mdrun.stderr at t\${t}/Lambda_\${i}"; exit 1; }
 fi
 
 ######################### NVT  - Lambda i  #########################
 if [[ ! -f "2_nvt.tpr" ]]; then
+    echo "grompp nvt"
     ccc_mprun gmx_mpi grompp -f 2_nvt.mdp -c "1_em.gro" -r "1_em.gro" -p "../../../${TOP}" -o "2_nvt.tpr" -maxwarn 1 > 2_nvt.grompp.stdout 2> 2_nvt.grompp.stderr || { echo "gromacs retuned an error. check 2_nvt.grompp.stdout and 2_nvt.grompp.stderr at t\${t}/Lambda_\${i}"; exit 1; }
 fi
 
 if [[ ! -f "2_nvt.gro" ]]; then
+    echo "mdrun nvt"
     ccc_mprun gmx_mpi mdrun -v -deffnm "2_nvt" ${MDRUN_PARALELIZATION_OPTIONS} > 2_nvt.mdrun.stdout 2> 2_nvt.mdrun.stderr || { echo "gromacs retuned an error. check 2_nvt.mdrun.stdout and 2_nvt.mdrun.stderr at t\${t}/Lambda_\${i}"; exit 1; }
 fi
 
 ######################### NPT  - Lambda i  #########################
 if [[ ! -f "3_npt.tpr" ]]; then
+    echo "grompp npt"
     ccc_mprun gmx_mpi grompp -f 3_npt.mdp -c "2_nvt.gro" -r "2_nvt.gro" -p "../../../${TOP}" -o "3_npt.tpr" -maxwarn 1 > 3_npt.grompp.stdout 2> 3_npt.grompp.stderr || { echo "gromacs retuned an error. check 3_npt.grompp.stdout and 3_npt.grompp.stderr at t\${t}/Lambda_\${i}"; exit 1; }
 fi
 
 if [[ ! -f "3_npt.gro" ]]; then
+    echo "mdrun mpt"
     ccc_mprun gmx_mpi mdrun -v -deffnm "3_npt" ${MDRUN_PARALELIZATION_OPTIONS} > 3_npt.mdrun.stdout 2> 3_npt.mdrun.stderr || { echo "gromacs retuned an error. check 3_npt.mdrun.stdout and 3_npt.mdrun.stderr at t\${t}/Lambda_\${i}"; exit 1; }
 fi
 
 #################### PRODUCTION  - Lambda i  #######################
 if [[ ! -f "prod.tpr" ]]; then
+    echo "grompp prod"
     ccc_mprun gmx_mpi grompp -f 4_prod.mdp -c "3_npt.gro" -p "../../../${TOP}" -o "${ROOTNAME}.tpr" -maxwarn 1 > PROD.grompp.stdout 2> PROD.grompp.stderr || { echo "gromacs retuned some error. check PROD.grompp.stdout and PROD.grompp.stderr at t\${t}/Lambda_\${i}"; exit 1; }
 fi
 
-
+echo "mdrun prod (monitored for relounch)"
+echo \$cycle
 ccc_mprun gmx_mpi mdrun \\
         -nice 0 \\
         -s ${ROOTNAME} \\
@@ -761,7 +768,7 @@ EOT
 ################  Submit job! (capturing ID). the loop will then go on, so all jobs will be run at the same time
 job_id=$(ccc_msub job.moab | grep -o '[0-9]*')
 job_ids+=("$job_id")
-echo "job submited: FEP${TOP}_T${t}_L${i} (ID: $job_id)"
+echo "job submited for ${TOP} T${t} L${i} (ID: $job_id)"
 
 cd ../.. # back to "runFEPoff" folder
 done # lambda loop
@@ -788,8 +795,8 @@ cat <<EOT > "final_analysis_job.moab"
 #MSUB   -n 1                            # Number of tasks in parallel mode
 #MSUB   -c 1                            # Number of cores per parallel task
 #MSUB   -W yes                          # Let multiple jobs sharing same name & user run simultaneously
-#MSUB   -o final_analysis_job.output    # Output file
-#MSUB   -e final_analysis_job.outerr    # Output file for errors
+#MSUB   -o final_analysis_job%I.out       # Output file
+#MSUB   -e final_analysis_job%I.err       # Output file for errors
 #MSUB   -q rome                         # Partition:    rome        
 #MSUB   -A gen13458                     # Project code: gen10138 or spe00017
 #MSUB   -m scratch,work,store           # File system:  scratch,work,store
