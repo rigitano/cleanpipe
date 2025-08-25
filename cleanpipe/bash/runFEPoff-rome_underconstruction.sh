@@ -39,6 +39,10 @@ fi
 
 GRO=$1 #name of gro
 TOP=$2 #name of top
+TOP_WITHOUT_EXTENTION="$(basename "$TOP" .${TOP##*.})"
+
+
+
 echo "GRO and TOP file names: ${GRO} ${TOP} (Those are inputs for the gromacs modelisation pipeline)"
 echo " "
 
@@ -537,12 +541,12 @@ cat <<EOT > "job.moab"
 
 #@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ CLUSTER SETTINGS @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
-#MSUB   -r FEP${TOP}_T${t}_L${i}                      # Job name
+#MSUB   -r FEP${TOP_WITHOUT_EXTENTION}_T${t}_L${i}    # Job name
 #MSUB   -n ${MSUB_QT_PARALLEL_TASKS}                  # Number of tasks in parallel mode
 #MSUB   -c 1                                          # Number of cores per parallel task
 #MSUB   -W yes                                        # Let multiple jobs sharing same name & user run simultaneously
-#MSUB   -o FEP_job%I_${TOP}_T${t}_L${i}.out  # standard output will go to this file
-#MSUB   -e FEP_job%I_${TOP}_T${t}_L${i}.err  # standard erorr will go to this file
+#MSUB   -o FEP_job%I_${TOP_WITHOUT_EXTENTION}_T${t}_L${i}.out  # standard output will go to this file
+#MSUB   -e FEP_job%I_${TOP_WITHOUT_EXTENTION}_T${t}_L${i}.err  # standard erorr will go to this file
 #MSUB   -q rome                                       # Partition:    rome        
 #MSUB   -A gen13458                                   # Project code: gen10138 or spe00017
 #MSUB   -m scratch,work,store                         # File system:  scratch,work,store
@@ -555,7 +559,7 @@ cat <<EOT > "job.moab"
 # environment settings
 set -x # echo commands
 ml purge
-module load gnu/11 mpi/openmpi/4 gromacs/2023.4
+module load gnu/11 mpi/openmpi/4 gromacs/2024.2
 export I_MPI_PIN_CELL=core
 export I_MPI_PIN_DOMAIN=auto
 
@@ -768,7 +772,7 @@ EOT
 ################  Submit job! (capturing ID). the loop will then go on, so all jobs will be run at the same time
 job_id=$(ccc_msub job.moab | grep -o '[0-9]*')
 job_ids+=("$job_id")
-echo "job submited for ${TOP} T${t} L${i} (ID: $job_id)"
+echo "job submited for ${TOP_WITHOUT_EXTENTION} T${t} L${i} (ID: $job_id)"
 
 cd ../.. # back to "runFEPoff" folder
 done # lambda loop
