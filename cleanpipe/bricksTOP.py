@@ -1273,6 +1273,9 @@ def freeze_phi_psi_dihedrals(s_gro_file,s_top_file, restraining_force,s_molename
         row.append(angle)# put the angle after the functional
         row.append(str(restraining_force)) #add the restraining force
     
-    #update the just the improper dihedral list. this is because the dihedral forces had to be set as improper dihedrals    
-    put_lines_at_the_proper_place_of_directive(s_file_to_be_edited, s_out_file_name, '[ dihedrals ]', ll_gro_diherals_backbone, 'last')
+    #add the backbone atoms to the improper dihedrals list. they were in the proper dihedral list and remain there. but now they will also apper in the improper dihedral list
+    add_lines_at_the_end_of_directive(s_file_to_be_edited,s_out_file_name, '[ dihedrals ]', ll_gro_diherals_backbone, directive_position='last')
+
+    #update the the dihedral list, but now the atoms of the backbone have improper dihedrals   
+    #put_lines_at_the_proper_place_of_directive(s_file_to_be_edited, s_out_file_name, '[ dihedrals ]', ll_gro_diherals_backbone, 'first')
     
