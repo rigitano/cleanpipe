@@ -173,7 +173,6 @@ def extract_all_dihedrals_from_gro(s_gro_file,s_top_file,s_molname):
     
     #get the gobal id of the first atom in the molecule. this alows to calculate the global id for each atom of the moleule 
     dd_mols = bricksTOP.basic_infos_of_molecules(s_top_file)
-    print(dd_mols)
     n_first_id = dd_mols[s_molname]['first_id']
     
     
