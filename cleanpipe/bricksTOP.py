@@ -1074,12 +1074,13 @@ def replace_all_lines_of_directive(s_top_file,s_top_file_out, s_directive, ll_li
     # Read the file's content.
     with open(s_top_file, 'r') as file:
         lines = file.readlines()
+        print(lines)
 
     # Find all occurrences of the directive.
     directive_indices = [i for i, line in enumerate(lines) if line.strip() == s_directive.strip()]
 
     if not directive_indices:
-        raise ValueError("Directive not found in the file.")
+        raise ValueError(f"Directive '{s_directive}' not found in the file '{s_top_file}'.")
 
     if len(directive_indices) > 1:
         print(f"Warning: More than one occurrence of directive '{s_directive}' found. Using the {directive_position} occurrence.")
@@ -1114,7 +1115,7 @@ def replace_all_lines_of_directive(s_top_file,s_top_file_out, s_directive, ll_li
         file.writelines(updated_lines)
 
 
-def put_lines_at_the_proper_place_of_directive(s_file_to_be_edited, s_out_file_name, s_directive, ll_replacement):
+def put_lines_at_the_proper_place_of_directive(s_file_to_be_edited, s_out_file_name, s_directive, ll_replacement,directive_position='first'):
     """
     The inputs are a list of lists representing a original parsed directive,
     and a list of lists with replacement items that should update the original list.
@@ -1145,7 +1146,7 @@ def put_lines_at_the_proper_place_of_directive(s_file_to_be_edited, s_out_file_n
 
 
     EXAMPLE USAGE:
-    cl.put_lines_at_the_proper_place_of_directive('protein_in_water.top', 'protein_in_water_new.top', '[ dihedrals ]', ll_gro_diherals_backbone)
+    cl.put_lines_at_the_proper_place_of_directive('protein_in_water.top', 'protein_in_water_new.top', '[ dihedrals ]', ll_gro_diherals_backbone, 'last')
 
     
     """
@@ -1202,8 +1203,8 @@ def put_lines_at_the_proper_place_of_directive(s_file_to_be_edited, s_out_file_n
             new_ll.append(new_row)
 
 
-    #insert the update improper dihedrals in the top
-    replace_all_lines_of_directive(s_file_to_be_edited,s_out_file_name, '[ dihedrals ]', new_ll, 'last')
+    #insert the updated directive in the top
+    replace_all_lines_of_directive(s_file_to_be_edited,s_out_file_name, s_directive, new_ll, directive_position)
 
 
 def freeze_phi_psi_dihedrals(s_gro_file,s_top_file, restraining_force,s_molename,s_file_to_be_edited, s_out_file_name):
@@ -1272,9 +1273,6 @@ def freeze_phi_psi_dihedrals(s_gro_file,s_top_file, restraining_force,s_molename
         row.append(angle)# put the angle after the functional
         row.append(str(restraining_force)) #add the restraining force
     
-    #update the just the improper dihedral list. this is because the dihedral forces had to be set as improper dihedrals
-    ll_dihedrals_improper_updated       = put_lines_at_the_proper_place_of_directive(ll_dihedrals_improper, '[ dihedrals ]', ll_gro_diherals_backbone)
-
-    #insert the update improper dihedrals in the top
-    replace_all_lines_of_directive(s_file_to_be_edited,s_out_file_name, '[ dihedrals ]', ll_dihedrals_improper_updated, 'last')
-
+    #update the just the improper dihedral list. this is because the dihedral forces had to be set as improper dihedrals    
+    put_lines_at_the_proper_place_of_directive(s_file_to_be_edited, s_out_file_name, '[ dihedrals ]', ll_gro_diherals_backbone, 'last')
+    
