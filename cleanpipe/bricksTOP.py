@@ -1074,7 +1074,7 @@ def replace_all_lines_of_directive(s_top_file,s_top_file_out, s_directive, ll_li
     # Read the file's content.
     with open(s_top_file, 'r') as file:
         lines = file.readlines()
-        print(lines)
+
 
     # Find all occurrences of the directive.
     directive_indices = [i for i, line in enumerate(lines) if line.strip() == s_directive.strip()]
