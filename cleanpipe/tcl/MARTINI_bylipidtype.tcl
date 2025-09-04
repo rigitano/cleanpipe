@@ -44,68 +44,119 @@ display aoambient 0.9
 display aodirect 0.4
 display projection orthographic
 display depthcue off
-axes location off
+# axes location off
 
-# --- COLOR DEFINITIONS ---
-proc vmdrestoremycolors {} {
-  set colorcmds {
-    {color Display {Background} white}
-    {color Display {FPS} white}
 
-    # Martini lipid color scheme (from MartiniGlass / M3 lipidome)
-    {color Resname {POPC} cyan}
-    {color Resname {DPPC} orange}
-    {color Resname {DSPC} pink}
-    {color Resname {DOPC} green}
-    {color Resname {DOPE} yellow}
-    {color Resname {DOPS} purple}
-    {color Resname {POPE} lightblue}
-    {color Resname {POPS} lightpink}
-    {color Resname {CHOL} purple}
-    {color Resname {SSM} limegreen}
 
-    # Water beads
-    {color Resname {W} blue}
-    # Optional: ions
-    {color Resname {NA+} red}
-    {color Resname {CL-} green}
-  }
-  foreach colcmd $colorcmds {
-    catch {eval $colcmd}
-  }
-}
-vmdrestoremycolors
+color Display Background white
 
-# --- REPRESENTATIONS ---
-# Remove default representation
-mol delrep 0 top
 
-# Lipid headgroups (phosphate, charged beads)
+
+
+
+
 mol representation Licorice 2.6 50 50
-mol selection {name NC3 PO4 ROH COO}
+set text "resname CHOL"
+mol selection $text
 mol material AOChalky
-mol color Resname
+mol color ColorID 11 ;# purple
 mol addrep top
 
-# Cholesterol
-mol representation Licorice 2.6 50 50
-mol selection {resname CHOL}
-mol material AOChalky
-mol color Resname
-mol addrep top
-
-# Lipid tails (apolar beads, generic rule)
 mol representation Licorice 2.4 50 50
-mol selection {resname POPC DPPC DSPC DOPC DOPE DOPS POPE POPS and not name NC3 PO4 ROH COO}
+mol selection {resname POPC}
 mol material AOChalky
-mol color Resname
+mol color ColorID 10 ;# cyan
 mol addrep top
+
+mol representation Licorice 2.4 50 50
+mol selection {resname DPPC}
+mol material AOChalky
+mol color ColorID 3 ;# orange
+mol addrep top
+
+mol representation Licorice 2.4 50 50
+mol selection {resname DSPC}
+mol material AOChalky
+mol color ColorID 9 ;# pink
+mol addrep top
+
+mol representation Licorice 2.4 50 50
+mol selection {resname DOPC}
+mol material AOChalky
+mol color ColorID 7 ;# green
+mol addrep top
+
+mol representation Licorice 2.4 50 50
+mol selection {resname DOPE}
+mol material AOChalky
+mol color ColorID 4 ;# yellow
+mol addrep top
+
+mol representation Licorice 2.4 50 50
+mol selection {resname DOPS}
+mol material AOChalky
+mol color ColorID 11 ;# purple
+mol addrep top
+
+mol representation Licorice 2.4 50 50
+mol selection {resname POPE}
+mol material AOChalky
+mol color ColorID 15 ;# lightblue
+mol addrep top
+
+mol representation Licorice 2.4 50 50
+mol selection {resname POPS}
+mol material AOChalky
+mol color ColorID 13 ;# lightpink
+mol addrep top
+
+mol representation Licorice 2.4 50 50
+mol selection {resname SSM}
+mol material AOChalky
+mol color ColorID 12 ;# limegreen
+mol addrep top
+
+mol representation Licorice 2.4 50 50
+mol selection {resname DBPC}
+mol material AOChalky
+mol color ColorID 14 ;# 
+mol addrep top
+
+mol representation Licorice 2.4 50 50
+mol selection {resname DLPC}
+mol material AOChalky
+mol color ColorID 21 ;# 
+mol addrep top
+
+
+
+
+
+
+
+
+
 
 # Water – transparent beads
 mol representation VDW 1.0
 mol selection {resname W}
 mol material GlassBubble
-mol color Resname
+mol color ColorID 0 ;# blue
 mol addrep top
+
+# NA+
+mol representation VDW 1.0
+mol selection {resname NA}
+mol material AOChalky
+mol color ColorID 1 ;# red
+mol addrep top
+
+# CL-
+mol representation VDW 1.0
+mol selection {resname CL}
+mol material AOChalky
+mol color ColorID 7 ;# green
+mol addrep top
+
 
 puts "Martini lipid visualization applied"
