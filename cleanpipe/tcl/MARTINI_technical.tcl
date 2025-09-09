@@ -101,7 +101,14 @@ mol color ColorID 21 ;# cyan2
 mol addrep top
 
 
+# CHOLESTEROL
 
+set text "resname CHOL"
+mol selection $text
+mol representation VDW 2.4 12
+mol material AOChalky
+mol color ColorID 25 ;# violet
+mol addrep top
 
 
 display ambientocclusion on

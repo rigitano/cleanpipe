@@ -93,16 +93,24 @@ set text "name BB"
 mol selection $text
 mol representation Licorice 1 12 12
 mol material AOChalky
-mol color ColorID 15 ;# iceblue
+mol color ColorID 15 ;# black
 mol addrep top
 
 mol selection {name regexp "^SC.*"}
 mol representation Licorice 1 12 12
 mol material AOChalky
-mol color ColorID 21 ;# cyan2
+mol color ColorID 13 ;# red
 mol addrep top
 
 
+# CHOLESTEROL
+
+set text "resname CHOL"
+mol selection $text
+mol representation Licorice 1 12 12
+mol material AOChalky
+mol color ColorID 3 ;# orange
+mol addrep top
 
 
 
