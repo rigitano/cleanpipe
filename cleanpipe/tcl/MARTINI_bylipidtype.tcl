@@ -143,28 +143,54 @@ mol addrep top
 
 
 
-
+#SOLUTION
 
 # Water – transparent beads
 # mol representation VDW 1.0
-# mol selection {resname W}
+# mol selection {name W}
 # mol material GlassBubble
 # mol color ColorID 0 ;# blue
 # mol addrep top
 
-# NA+
+# NA
 # mol representation VDW 1.0
-# mol selection {resname NA}
+# mol selection {name NA}
 # mol material AOChalky
 # mol color ColorID 1 ;# red
 # mol addrep top
 
-# CL-
+# CL
 # mol representation VDW 1.0
-# mol selection {resname CL}
+# mol selection {name CL}
 # mol material AOChalky
 # mol color ColorID 7 ;# green
 # mol addrep top
+
+# generic name ION
+# mol selection "name ION"
+# mol representation VDW 1.0
+# mol color ColorID 5   ;# tan
+# mol material AOChalky
+# mol addrep top
+
+
+
+# PROTEIN
+
+set text "name BB"
+mol selection $text
+mol representation Licorice 1 12 12
+mol material AOChalky
+mol color ColorID 2 ;# grey
+mol addrep top
+
+mol selection {name regexp "^SC.*"}
+mol representation Licorice 1 12 12
+mol material AOChalky
+mol color ColorID 2 ;# grey
+mol addrep top
+
+
 
 
 puts "Martini lipid visualization applied"

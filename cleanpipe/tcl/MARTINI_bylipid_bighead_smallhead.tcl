@@ -35,3 +35,20 @@ mol selection {resname regexp ".*(PE|PA|PS|CL)$"}
 mol material AOChalky
 mol addrep top
 
+
+
+
+# PROTEIN
+
+set text "name BB"
+mol selection $text
+mol representation Licorice 1 12 12
+mol material AOChalky
+mol color ColorID 2 ;# grey
+mol addrep top
+
+mol selection {name regexp "^SC.*"}
+mol representation Licorice 1 12 12
+mol material AOChalky
+mol color ColorID 2 ;# grey
+mol addrep top

@@ -16,7 +16,9 @@ mol material AOChalky
 mol color ColorID 2 ;# grey
 mol addrep top
 
-# now the beads will be colored accordingly
+
+
+# LIPIDS
 
 set text "name C1A C1B C2A C2B C3A C3B C4A C4B"
 mol selection $text
@@ -53,11 +55,51 @@ mol material AOChalky
 mol color ColorID 15 ;# iceblue
 mol addrep top
 
+
+
+# SOLUTION
+
 mol selection "name W"
 mol representation VDW 2.4 12
 mol color ColorID 12   ;# light blue
 mol material Transparent
 mol addrep top
+
+mol selection "name NA"
+mol representation VDW 2.4 12
+mol color ColorID 5   ;# tan
+mol material AOChalky
+mol addrep top
+
+mol selection "name CL"
+mol representation VDW 2.4 12
+mol color ColorID 5   ;# tan
+mol material AOChalky
+mol addrep top
+
+mol selection "name ION"
+mol representation VDW 2.4 12
+mol color ColorID 5   ;# tan
+mol material AOChalky
+mol addrep top
+
+
+
+# PROTEIN
+
+set text "name BB"
+mol selection $text
+mol representation Licorice 1 12 12
+mol material AOChalky
+mol color ColorID 15 ;# iceblue
+mol addrep top
+
+mol selection {name regexp "^(SC).*"}
+mol representation Licorice 1 12 12
+mol material AOChalky
+mol color ColorID 21 ;# cyan2
+mol addrep top
+
 
 
 

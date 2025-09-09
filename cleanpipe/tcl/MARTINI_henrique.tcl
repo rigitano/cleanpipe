@@ -53,10 +53,51 @@ mol material AOChalky
 mol color ColorID 15 ;# iceblue
 mol addrep top
 
+
+
+#SOLUTION
+
 mol selection "name W"
 mol representation Licorice 0.4 12 12
 mol color ColorID 0   ;# blue
 mol material AOChalky
+mol addrep top
+
+mol selection "name NA"
+mol representation Licorice 0.4 12 12
+mol color ColorID 5   ;# tan
+mol material AOChalky
+mol addrep top
+
+mol selection "name CL"
+mol representation Licorice 0.4 12 12
+mol color ColorID 5   ;# tan
+mol material AOChalky
+mol addrep top
+
+mol selection "name ION"
+mol representation Licorice 0.4 12 12
+mol color ColorID 5   ;# tan
+mol material AOChalky
+mol addrep top
+
+
+
+
+
+# PROTEIN
+
+set text "name BB"
+mol selection $text
+mol representation Licorice 1 12 12
+mol material AOChalky
+mol color ColorID 15 ;# iceblue
+mol addrep top
+
+mol selection {name regexp "^(SC).*"}
+mol representation Licorice 1 12 12
+mol material AOChalky
+mol color ColorID 21 ;# cyan2
 mol addrep top
 
 
