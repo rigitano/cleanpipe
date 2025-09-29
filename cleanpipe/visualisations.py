@@ -506,7 +506,7 @@ def see_interactions(s_top,s_gro,s_mol_name):
 
     
     
-    what_to_plot = ["[ bonds ]","[ angles ]","[ dihedrals ]","[ cmap ]","[ pairs ]","[ exclusions ]","[ position_restraints ]"]
+    what_to_plot = ["[ bonds ]","[ angles ]","[ dihedrals ]","[ cmap ]","[ pairs ]","[ exclusions ]","[ constraints ]","[ position_restraints ]"]
     #what_to_plot = ["[ bonds ]","[ dihedrals ]","[ cmap ]","[ position_restraints ]"]
     #what_to_plot = ["[ dihedrals ]","[ cmap ]","[ pairs ]","[ exclusions ]","[ position_restraints ]"]
     #what_to_plot = ["[ bonds ]","[ angles ]","[ dihedrals ]","[ cmap ]","[ pairs ]","[ exclusions ]"]
@@ -592,6 +592,7 @@ def see_interactions(s_top,s_gro,s_mol_name):
     ll_cmap       = dd_parsed_mols.get(s_mol_name, {}).get('[ cmap ]', [])
     ll_pairs      = dd_parsed_mols.get(s_mol_name, {}).get('[ pairs ]', [])
     ll_exclusions = dd_parsed_mols.get(s_mol_name, {}).get('[ exclusions ]', [])
+    ll_constraints= dd_parsed_mols.get(s_mol_name, {}).get('[ constraints ]', [])
     ll_posres     = dd_parsed_mols.get(s_mol_name, {}).get('[ position_restraints ]', [])
 
 
@@ -1090,9 +1091,9 @@ def see_interactions(s_top,s_gro,s_mol_name):
             
             #define name of molecule
             if column == id_functional:
-                l_tcl_commads.append(f"mol load graphics {{{s_mol_name[0:5]}-dihedrals(prop)-functional}}")
+                l_tcl_commads.append(f"mol load graphics {{{s_mol_name[0:5]}-dihedr(prop)-functional}}")
             else:
-                l_tcl_commads.append(f"mol load graphics {{{s_mol_name[0:5]}-dihedrals(prop)-c{count}}}")
+                l_tcl_commads.append(f"mol load graphics {{{s_mol_name[0:5]}-dihedr(prop)-c{count}}}")
                 count = count + 1
     
             #define basic properties of the molecule
@@ -1153,9 +1154,9 @@ def see_interactions(s_top,s_gro,s_mol_name):
             
             #define name of molecule
             if column == id_functional:
-                l_tcl_commads.append(f"mol load graphics {{{s_mol_name[0:5]}-dihedrals(impr)-functional}}")
+                l_tcl_commads.append(f"mol load graphics {{{s_mol_name[0:5]}-dihedr(impr)-functional}}")
             else:
-                l_tcl_commads.append(f"mol load graphics {{{s_mol_name[0:5]}-dihedrals(impr)-c{count}}}")
+                l_tcl_commads.append(f"mol load graphics {{{s_mol_name[0:5]}-dihedr(impr)-c{count}}}")
                 count = count + 1
     
             #define basic properties of the molecule
@@ -1306,6 +1307,63 @@ def see_interactions(s_top,s_gro,s_mol_name):
             n_index_prev_mol = n_index_prev_mol + n_atoms_in_mol
     
     
+
+    if "[ constraints ]" in what_to_plot and ll_constraints !=[]:
+        print("CLEAN PIPE processing [ constraints ]")
+    
+        #go throught the ids of columns that contain the functional, and the columns that contains the parameters
+        count = 1 #this is to set the molecule name if its a parameter
+        n_lenght = max(len(line) for line in ll_constraints) #this is the lenght of the biggest line
+        id_functional = 2
+        id_fist_parameter = 3
+        columns = [id_functional]+list(range(id_fist_parameter,n_lenght))#list containing the id of column with functional + the ids with parameters
+        for column in columns: 
+            
+            #define name of molecule
+            if column == id_functional:
+                l_tcl_commads.append(f"mol load graphics {{{s_mol_name[0:5]}-constr-functional}}")
+            else:
+                l_tcl_commads.append(f"mol load graphics {{{s_mol_name[0:5]}-constr-c{count}}}")
+                count = count + 1
+    
+            #define basic properties of the molecule
+            l_tcl_commads.append("display resetview")#required after creating a new molecule so it doesnt have different coordinates and transformations
+            l_tcl_commads.append("graphics top material Opaque")
+
+
+            # go throught all the instantiations of molecules of a certain type that are present in the gro, appending plotting commands
+            n_index_prev_mol = n_first_id -1
+            for n_molecule_counter in range(1,n_molecules+1):
+    
+        
+                for line in ll_constraints:
+                    
+                    coords_i = df_coordinates.loc[str(int(line[0])+n_index_prev_mol), ['x', 'y', 'z']].astype(float).to_dict()
+                    coords_j = df_coordinates.loc[str(int(line[1])+n_index_prev_mol), ['x', 'y', 'z']].astype(float).to_dict()
+                    coords_m = algelin.calc_intermediate_point(coords_i,coords_j,50)
+            
+                    
+                    try:
+                        param = line[column] #get the column, that might not exist if there are less columns that than n_lenght
+                        
+                        #define color. but it will be white if the parameter is zero
+                        if float(param) == 0:
+                            l_tcl_commads.append("graphics top color white")
+                        else:
+                            l_tcl_commads.append("graphics top color red")
+                
+                         #draw
+                        l_tcl_commads.append(f"graphics top cylinder {{{coords_i.get('x')*10:.3f} {coords_i.get('y')*10:.3f} {coords_i.get('z')*10:.3f}}} {{{coords_j.get('x')*10:.3f} {coords_j.get('y')*10:.3f} {coords_j.get('z')*10:.3f}}} radius 0.1")
+                        l_tcl_commads.append(f'graphics top text {{{coords_m.get("x")*10-0.3:.3f} {coords_m.get("y")*10-0.3:.3f} {coords_m.get("z")*10-0.3:.3f}}} "{param}" size 1')
+                        l_tcl_commads.append("display update")
+                        l_tcl_commads.append("mol off top")
+                    except:
+                        pass #if the line[column] is out of range 
+
+                #the for loop that goes trought all molecules of a certain type ends after this line that updates the n_index_prev_mol to be used in the next iteration
+                n_index_prev_mol = n_index_prev_mol + n_atoms_in_mol
+
+
     if "[ position_restraints ]" in what_to_plot and ll_posres !=[]:
         print("CLEAN PIPE processing [ position_restraints ]")
         
