@@ -548,7 +548,7 @@ def see_interactions(s_top,s_gro,s_mol_name):
     ll_bondtypes     = lltools.clean_comments_out(bricksTOP.parse_directive(s_top_with_inclusions, "[ bondtypes ]"))
     ll_angletypes    = lltools.clean_comments_out(bricksTOP.parse_directive(s_top_with_inclusions, "[ angletypes ]"))
     ll_dihedraltypes = lltools.clean_comments_out(bricksTOP.parse_directive(s_top_with_inclusions, "[ dihedraltypes ]"))
-
+    ll_dihedraltypes_proper, ll_dihedraltypes_improper       = lltools.split_ll_diherals_into_proper_and_improper(ll_dihedraltypes)
 
     #now parse each and every molecule in the top
     dd_parsed_mols = bricksTOP.parse_directives_inside_each_and_every_molecule(s_top_with_inclusions)
@@ -575,11 +575,20 @@ def see_interactions(s_top,s_gro,s_mol_name):
 
     
     #obtain parsed directives of a certain molecule. Im using gte because some molecule might not have a certain directive. this is not a problem.
+    #the outputs WILL have the content of the directive. look at the examples:
+    #for bonds
+    #[['1', '2', '1', '0.270', '1000000'], ...
+    #for angles
+    #[[ '1',  '3',  '5', '2', '96', '700'], ...
+    #for dihedrals
+    #[[ '1',  '3' , '5',  '7', '1', '-120', '400', '1'], ...
+    #PS THE PARAMETERS MIGH NOT BE THERE, IF THEY WERE NOT SET MANUALLY. THIS IS NORMAL
 
     ll_atoms      = dd_parsed_mols.get(s_mol_name, {}).get('[ atoms ]', [])
     ll_bonds      = dd_parsed_mols.get(s_mol_name, {}).get('[ bonds ]', [])
     ll_angles     = dd_parsed_mols.get(s_mol_name, {}).get('[ angles ]', [])
     ll_dihedrals  = dd_parsed_mols.get(s_mol_name, {}).get('[ dihedrals ]', [])
+    ll_dihedrals_proper, ll_dihedrals_improper = lltools.split_ll_diherals_into_proper_and_improper(ll_dihedrals)
     ll_cmap       = dd_parsed_mols.get(s_mol_name, {}).get('[ cmap ]', [])
     ll_pairs      = dd_parsed_mols.get(s_mol_name, {}).get('[ pairs ]', [])
     ll_exclusions = dd_parsed_mols.get(s_mol_name, {}).get('[ exclusions ]', [])
@@ -599,6 +608,16 @@ def see_interactions(s_top,s_gro,s_mol_name):
 
     
     #########   add atom names to the table, looking up the [ atoms ] directive ########
+    #the outputs WILL have the names of the atoms. look at the examples:
+    #for bonds
+    #[['1', '2', '1', '0.270', '1000000', 'P6', 'TC3'], ...
+    #for angles
+    #[[ '1',  '3',  '5', '2', '96', '700', 'P6', 'SP2', 'SP2'], ...
+    #for dihedrals
+    #[[ '1',  '3' , '5',  '7', '1', '-120', '400', '1', 'P6', 'SP2', 'SP2', 'SP2'], ...
+    #PS THE PARAMETERS MIGH NOT BE THERE, IF THEY WERE NOT SET MANUALLY. THIS IS NORMAL
+
+
     
     if s_mol_name != 'intermolecular_interactions': #within a certain molecule, we just lookup the [ atoms ] directive
         
@@ -617,6 +636,7 @@ def see_interactions(s_top,s_gro,s_mol_name):
         ll_dihedrals_named = lltools.procv_ll(ll_dihedrals_named,[1],ll_atoms,[0],[1])
         ll_dihedrals_named = lltools.procv_ll(ll_dihedrals_named,[2],ll_atoms,[0],[1])
         ll_dihedrals_named = lltools.procv_ll(ll_dihedrals_named,[3],ll_atoms,[0],[1])
+        ll_dihedrals_named_proper, ll_dihedrals_named_improper   = lltools.split_ll_diherals_into_proper_and_improper(ll_dihedrals_named)
     
     elif s_mol_name == 'intermolecular_interactions': 
         #it this case its a bit harder, because there's a global id, and no [ atoms ] directive, 
@@ -734,7 +754,7 @@ def see_interactions(s_top,s_gro,s_mol_name):
 
             #concatenate all the information in a single list, and append it to the table
             ll_dihedrals_named.append(line + [found_name1] + [found_name2] + [found_name3] + [found_name4]) #
-
+            ll_dihedrals_named_proper, ll_dihedrals_named_improper   = lltools.split_ll_diherals_into_proper_and_improper(ll_dihedrals_named)
 
 
     else:
@@ -742,85 +762,98 @@ def see_interactions(s_top,s_gro,s_mol_name):
     
 
 
-    ######## add parameters values to the table, looking up the info that came from the ffbonded file ########
+    ######## add parameters values to the table, looking up the info from the ffbonded file, because there are the tables of bonded parameters. ps: martini doesnt have that. all the bonds are set manualy ########
+    #the outputs WILL have the names of the atoms. look at the examples:
+    #for bonds
+    #[['1', '2', '1', '0.270', '1000000', 'P6', 'TC3', '0.270', '1000000'], ...
+    #for angles
+    #[[ '1',  '3',  '5', '2', '96', '700', 'P6', 'SP2', 'SP2', '96', '700'], ...
+    #for dihedrals
+    #[[ '1',  '3' , '5',  '7', '1', '-120', '400', '1', 'P6', 'SP2', 'SP2', 'SP2', '-120', '400', '1'], ...
+    #PS THE PARAMETERS BETWEEN THE FUNCIONAL AND NAMES MIGH NOT BE THERE, IF THEY WERE NOT SET MANUALLY. THIS IS NORMAL
 
     #BONDS
-    ll_bonds_filled = lltools.procv_ll(ll_bonds_named,[set([3,4]),2], ll_bondtypes,[set([0,1]),2], list(range(3,len(ll_bondtypes[0]))))
+    if len(ll_bondtypes) > 0: # if there are bondtypes, containing the bonded parameters, get those! if not, leave it empty for now so that the parameters will be later obtained from the the itp
+        ll_bonds_filled = lltools.procv_ll(ll_bonds_named,[set([3,4]),2], ll_bondtypes,[set([0,1]),2], list(range(3,len(ll_bondtypes[0]))))
+    else:
+        ll_bonds_filled = [None] * len(ll_bonds_named) # creates [None, None, None, ... 
 
     #ANGLES
-    ll_angles_filled = lltools.procv_ll(ll_angles_named,[set([4,6]),5,3], ll_angletypes,[set([0,2]),1,3], list(range(4,len(ll_angletypes[0]))))
+    if len(ll_angletypes) > 0: # if there are angletypes, containing the bonded parameters, get those!if not, leave it empty for now so that the parameters will be later obtained from the the itp
+        ll_angles_filled = lltools.procv_ll(ll_angles_named,[set([4,6]),5,3], ll_angletypes,[set([0,2]),1,3], list(range(4,len(ll_angletypes[0]))))
+    else:
+        ll_angles_filled = [None] * len(ll_angles_named) # creates [None, None, None, ... 
 
     #DIHEDRALS, they are more complex because of the need of spliting into proper and improper and the possiblility of atom reordering
-    
-    #split into proper and improper
-    ll_dihedraltypes_proper, ll_dihedraltypes_improper       = lltools.split_ll_diherals_into_proper_and_improper(ll_dihedraltypes)
-    ll_dihedrals_proper, ll_dihedrals_improper               = lltools.split_ll_diherals_into_proper_and_improper(ll_dihedrals)
-    ll_dihedrals_filled_proper, ll_dihedrals_filled_improper = lltools.split_ll_diherals_into_proper_and_improper(ll_dihedrals_named)
-        
-    # add paramenters for the given atomtypes for PROPER AND IMPROPER
-    ll_dihedrals_filled_proper   = lltools.procv_ll(ll_dihedrals_filled_proper,[5,6,7,8,4], ll_dihedraltypes_proper,[0,1,2,3,4], list(range(5,len(ll_dihedraltypes_proper[0]))))# add paramenters for the given atomtypes
-    ll_dihedrals_filled_improper = lltools.procv_ll(ll_dihedrals_filled_improper,[5,6,7,8,4], ll_dihedraltypes_improper,[0,1,2,3,4], list(range(5,len(ll_dihedraltypes_improper[0]))))# add paramenters for the given atomtypes
-        
-    #check the reverse order for cases not found
-    
-    ll_dihedrals_filled_proper, ll_not_found = split_ll_into_found_and_not_found(ll_dihedrals_filled_proper)
-    ll_second_try = lltools.procv_ll(ll_not_found,[8,7,6,5,4], ll_dihedraltypes_proper,[0,1,2,3,4], list(range(5,len(ll_dihedraltypes_proper[0]))))# add paramenters for the given atomtypes
-    ll_dihedrals_filled_proper = ll_dihedrals_filled_proper + ll_second_try
-    
-    ll_dihedrals_filled_improper, ll_not_found = split_ll_into_found_and_not_found(ll_dihedrals_filled_improper)
-    
-    ll_second_try = lltools.procv_ll(ll_not_found,[8,7,6,5,4], ll_dihedraltypes_improper,[0,1,2,3,4], list(range(5,len(ll_dihedraltypes_improper[0]))))# add paramenters for the given atomtypes
-    ll_dihedrals_filled_improper = ll_dihedrals_filled_improper + ll_second_try
+    if len(ll_dihedraltypes) > 0: # if there are bondtypes, containing the bonded parameters, get those! if not, leave it empty for now so that the parameters will be later obtained from the the itp
 
-
+        # add paramenters for the given atomtypes
+        ll_dihedrals_filled_proper   = lltools.procv_ll(ll_dihedrals_filled_proper,[5,6,7,8,4], ll_dihedraltypes_proper,[0,1,2,3,4], list(range(5,len(ll_dihedraltypes_proper[0]))))# add paramenters for the given atomtypes
+        ll_dihedrals_filled_improper = lltools.procv_ll(ll_dihedrals_filled_improper,[5,6,7,8,4], ll_dihedraltypes_improper,[0,1,2,3,4], list(range(5,len(ll_dihedraltypes_improper[0]))))# add paramenters for the given atomtypes
+            
+        #check the reverse order for cases not found
+        
+        ll_dihedrals_filled_proper, ll_not_found = split_ll_into_found_and_not_found(ll_dihedrals_filled_proper)
+        ll_second_try = lltools.procv_ll(ll_not_found,[8,7,6,5,4], ll_dihedraltypes_proper,[0,1,2,3,4], list(range(5,len(ll_dihedraltypes_proper[0]))))# add paramenters for the given atomtypes
+        ll_dihedrals_filled_proper = ll_dihedrals_filled_proper + ll_second_try
+        
+        ll_dihedrals_filled_improper, ll_not_found = split_ll_into_found_and_not_found(ll_dihedrals_filled_improper)
+        
+        ll_second_try = lltools.procv_ll(ll_not_found,[8,7,6,5,4], ll_dihedraltypes_improper,[0,1,2,3,4], list(range(5,len(ll_dihedraltypes_improper[0]))))# add paramenters for the given atomtypes
+        ll_dihedrals_filled_improper = ll_dihedrals_filled_improper + ll_second_try
+    else:
+        ll_dihedrals_filled_improper = [None] * len(ll_dihedrals_named_improper) # creates [None, None, None, ... 
+        ll_dihedrals_filled_proper   = [None] * len(ll_dihedrals_named_proper) # creates [None, None, None, ... 
 
     
 
 
     ######## rewrite filled list if there are manually defined parameters in the directives  #######
+    ######## this should deal with the fact that sometimes paramenters are just on the molecule itp (ex:martini3), sometimes just on the ffbonded file, sometimes in both
+
     #for now [ bonds ], [ angles ], [ dihedrals ]
-    print("CLEAN PIPE checking for used defined parameters")
+    print("CLEAN PIPE checking for redundancy between ff parameters and used defined parameters")
 
 
-    # [ bonds ]
+
     for i in range(0, len(ll_bonds)): #
         line_unfilled = ll_bonds[i] #
-        line_filled   = ll_bonds_filled[i] #
+        line_named    = ll_bonds_named[i] #
 
         n_len_line_u = len(line_unfilled)
-        n_len_line_f  = len(line_filled)
 
-        #in [ bonds ] Im looking for this type of filled columns in the current line
-        #[ bonds ]
+        # example in line_unfilled with manualy set parameters.
+        # [ bonds ]
         #;  ai    aj funct            c0            c1            c2            c3
         #   1     2     1           0.1234       0.4321
-        n_ids_and_functional = 3 # bonds shoud have 3 columns. If they have more, there are manually added pararameters 
-        if n_len_line_u > n_ids_and_functional:
+        n_ids_and_functional = 3 # bonds shoud have 3 columns. If they have more, there is redundancy between manually added pararameters and parameters that came from [ angletypes ] 
+        # if len(ll_bondtypes) == 0, there are no parameters on th ff, so we should rewrite too, because otherwise it will be empty
+        if n_len_line_u > n_ids_and_functional or len(ll_bondtypes) == 0:
             l_ids_and_functional         = line_unfilled[0:n_ids_and_functional]                                    #   1     2     1
             l_parameters_in_moleculetype = line_unfilled[n_ids_and_functional:n_len_line_u]                         # 0.1234       0.4321
-            l_atom_names                 = line_filled[n_len_line_u:(n_len_line_u+n_ids_and_functional-1)]         # CA     CB
-
+            l_atom_names                 = line_named[n_len_line_u:(n_len_line_u+n_ids_and_functional-1)]         # CA     CB
+            
             ll_bonds_filled[i] = l_ids_and_functional + l_atom_names + l_parameters_in_moleculetype #reconstruct the line
 
-    
+     
     
     # [ angles ]
     for i in range(0, len(ll_angles)): #
         line_unfilled = ll_angles[i] #
-        line_filled   = ll_angles_filled[i] #
+        line_named   = ll_angles_named[i] #
 
         n_len_line_u = len(line_unfilled)
-        n_len_line_f  = len(line_filled)
 
-        #in [ angles ] Im looking for this type of filled columns in the current line
+        # example in line_unfilled with manualy set parameters.
         #[ angles ]
         #;  ai    aj    ak funct            c0            c1            c2            c3
         #    2     1     3     5             0.1234       0.4321
-        n_ids_and_functional = 4 # angles shoud have 4 columns. If they have more, there are manually added pararameters 
-        if n_len_line_u > n_ids_and_functional:
+        n_ids_and_functional = 4 # angles shoud have 4 columns. If they have more, there is redundancy between manually added pararameters and parameters that came from [ angletypes ] 
+        # if len(ll_angletypes) == 0, there are no parameters on th ff, so we should rewrite too, because otherwise it will be empty
+        if n_len_line_u > n_ids_and_functional or len(ll_angletypes) == 0:
             l_ids_and_functional         = line_unfilled[0:n_ids_and_functional]                                    #    2     1     3     5
             l_parameters_in_moleculetype = line_unfilled[n_ids_and_functional:n_len_line_u]                         # 0.1234       0.4321
-            l_atom_names                 = line_filled[n_len_line_u:(n_len_line_u+n_ids_and_functional-1)]         # CA     CB      CD
+            l_atom_names                 = line_named[n_len_line_u:(n_len_line_u+n_ids_and_functional-1)]         # CA     CB      CD
             
             ll_angles_filled[i] = l_ids_and_functional + l_atom_names + l_parameters_in_moleculetype #reconstruct the line
 
@@ -828,20 +861,20 @@ def see_interactions(s_top,s_gro,s_mol_name):
     # [ dihedrals ] proper
     for i in range(0, len(ll_dihedrals_proper)): #
         line_unfilled = ll_dihedrals_proper[i] #
-        line_filled   = ll_dihedrals_filled_proper[i] #
+        line_named   = ll_dihedrals_named_proper[i] #
 
         n_len_line_u = len(line_unfilled)
-        n_len_line_f  = len(line_filled)
 
-        #in [ dihedrals ] Im looking for this type of filled columns in the current line
+        # example in line_unfilled with manualy set parameters.
         #[ dihedrals ]
         #;  ai    aj    ak    al funct            c0            c1            c2            c3            c4            c5
         #    2     1     5     6     9            0.1234       0.4321
-        n_ids_and_functional = 5 # dihedrals shoud have 5 columns. If they have more, there are manually added pararameters 
-        if n_len_line_u > n_ids_and_functional:
+        n_ids_and_functional = 5 # dihedrals shoud have 5 columns. If they have more, there is redundancy between manually added pararameters and parameters that came from [ dihedraltypes ] 
+        # if len(ll_dihedraltypes) == 0, there are no parameters on th ff, so we should rewrite too, because otherwise it will be empty
+        if n_len_line_u > n_ids_and_functional or len(ll_dihedraltypes) == 0:
             l_ids_and_functional         = line_unfilled[0:n_ids_and_functional]                                    #   2     1     5     6     9
             l_parameters_in_moleculetype = line_unfilled[n_ids_and_functional:n_len_line_u]                         # 0.1234       0.4321
-            l_atom_names                 = line_filled[n_len_line_u:(n_len_line_u+n_ids_and_functional-1)]         # CA     CB      CD      CE
+            l_atom_names                 = line_named[n_len_line_u:(n_len_line_u+n_ids_and_functional-1)]         # CA     CB      CD      CE
             
             ll_dihedrals_filled_proper[i] = l_ids_and_functional + l_atom_names + l_parameters_in_moleculetype #reconstruct the line
 
@@ -849,20 +882,20 @@ def see_interactions(s_top,s_gro,s_mol_name):
     # [ dihedrals ] improper
     for i in range(0, len(ll_dihedrals_improper)): #
         line_unfilled = ll_dihedrals_improper[i] #
-        line_filled   = ll_dihedrals_filled_improper[i] #
+        line_named   = ll_dihedrals_named_improper[i] #
 
         n_len_line_u = len(line_unfilled)
-        n_len_line_f  = len(line_filled)
 
-        #in [ dihedrals ] Im looking for this type of filled columns in the current line
+        # example in line_unfilled with manualy set parameters.
         #[ dihedrals ]
         #;  ai    aj    ak    al funct            c0            c1            c2            c3            c4            c5
         #    2     1     5     6     9            0.1234       0.4321
-        n_ids_and_functional = 5 # dihedrals shoud have 5 columns. If they have more, there are manually added pararameters 
-        if n_len_line_u > n_ids_and_functional:
+        n_ids_and_functional = 5 # dihedrals shoud have 5 columns. If they have more, there is redundancy between manually added pararameters and parameters that came from [ dihedraltypes ] 
+        # if len(ll_dihedraltypes) == 0, there are no parameters on th ff, so we should rewrite too, because otherwise it will be empty
+        if n_len_line_u > n_ids_and_functional or len(ll_dihedraltypes) == 0:
             l_ids_and_functional         = line_unfilled[0:n_ids_and_functional]                                    #   2     1     5     6     9
             l_parameters_in_moleculetype = line_unfilled[n_ids_and_functional:n_len_line_u]                         # 0.1234       0.4321
-            l_atom_names                 = line_filled[n_len_line_u:(n_len_line_u+n_ids_and_functional-1)]         # CA     CB      CD      CE
+            l_atom_names                 = line_named[n_len_line_u:(n_len_line_u+n_ids_and_functional-1)]         # CA     CB      CD      CE
             
             ll_dihedrals_filled_improper[i] = l_ids_and_functional + l_atom_names + l_parameters_in_moleculetype #reconstruct the line
 

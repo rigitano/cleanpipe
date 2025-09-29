@@ -598,7 +598,7 @@ def expand_includes(file_path):
                         # Recursively expand includes in the included file
                         content.append(expand_includes(include_path))
                     else:
-                        raise FileNotFoundError(f"Included file not found: {include_path}")
+                        print(f"File to be included not found: {include_path}")
                 else:
                     # If the #include line doesn't match the expected format, just keep the line.
                     content.append(line)
