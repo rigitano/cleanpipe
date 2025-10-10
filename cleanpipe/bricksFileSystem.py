@@ -37,7 +37,13 @@ def get_filename_with_extension(file_path):
 
 
 def get_file_location(file_path):
-    return os.path.dirname(file_path)
+
+    location = os.path.dirname(file_path)
+
+    if location == "":
+        location = "."
+
+    return location
 
 def check_folder(folder_path):
     # Check if the path is a valid folder

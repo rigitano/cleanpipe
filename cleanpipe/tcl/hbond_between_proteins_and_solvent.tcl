@@ -7,7 +7,7 @@ for {set i 0} {$i < $num_reps} {incr i} {
 
 # See protein as licorice
 mol selection {protein}
-mol representation Licorice
+mol representation Licorice 0.3 12 12
 mol color Type ;# by atom type
 mol material Goodsell
 mol addrep top
@@ -22,7 +22,7 @@ mol addrep top
 # Visualize molecules within hydrogen bond range of the protein
 
 mol selection {not protein and within 3.5 of protein}
-mol representation Licorice
+mol representation Licorice 0.3 12 12
 mol color Name
 mol material Opaque
 mol addrep top

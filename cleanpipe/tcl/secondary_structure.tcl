@@ -73,7 +73,7 @@ mol addrep top
 # Now highlight some important amino acids
 
 # Prolines as orange
-mol representation Licorice
+mol representation Licorice 0.3 12 12
 mol selection {resname PRO}
 mol color ColorID 3 ;# orange
 mol material Opaque
@@ -81,7 +81,7 @@ mol addrep top
 
 
 # Cysteines (backbone and side chains)
-mol representation Licorice
+mol representation Licorice 0.3 12 12
 mol selection {resname CYS}
 mol color ColorID 2 ;# gray
 mol material Opaque

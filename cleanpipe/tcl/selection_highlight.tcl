@@ -14,7 +14,7 @@ for {set i 0} {$i < $num_reps} {incr i} {
 
 # See protein as licorice
 mol selection {protein}
-mol representation Licorice
+mol representation Licorice 0.3 12 12
 mol color ColorID 2 ;# grey
 mol material Transparent
 mol addrep top
@@ -36,7 +36,7 @@ set text "(resname PRO CYS) or (name CA) or (element S) or (index 1 2 3)"
 
 # represent selection as red Licorice
 mol selection $text
-mol representation Licorice
+mol representation Licorice 0.3 12 12
 mol color ColorID 1 ;# red
 mol material Opaque
 mol addrep top

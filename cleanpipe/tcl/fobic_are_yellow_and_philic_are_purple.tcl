@@ -8,14 +8,14 @@ for {set i 0} {$i < $num_reps} {incr i} {
     # Create representation for hydrophobic residues (yelow licorice)
     mol addrep top
     mol modselect 0 top {resname ALA VAL LEU ILE MET PHE TRP PRO}
-    mol modstyle 0 top Licorice
+    mol modstyle 0 top Licorice 0.3 12 12
     mol modcolor 0 top ColorID 4
     mol modmaterial 0 top Goodsell
 
     # Create representation for hydrophilic residues (purple licorice)
     mol addrep top
     mol modselect 1 top {resname ARG ASN ASP GLN GLU HIS LYS SER THR TYR CYS}
-    mol modstyle 1 top Licorice
+    mol modstyle 1 top Licorice 0.3 12 12
     mol modcolor 1 top ColorID 11
     mol modmaterial 1 top Goodsell
 
