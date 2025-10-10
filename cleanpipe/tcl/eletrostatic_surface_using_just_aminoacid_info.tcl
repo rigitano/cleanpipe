@@ -7,7 +7,7 @@ for {set i 0} {$i < $num_reps} {incr i} {
 
 # Generate the molecular surface
     mol addrep top
-    mol modselect 0 top {protein}
+    mol modselect 0 top {not water}
     mol modstyle 0 top Surf
     mol modcolor 0 top Charge
     mol modmaterial 0 top Opaque

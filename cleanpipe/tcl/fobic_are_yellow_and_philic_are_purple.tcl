@@ -21,7 +21,7 @@ for {set i 0} {$i < $num_reps} {incr i} {
 
     # Add cartoon representation for the backbone
     mol addrep top
-    mol modselect 2 top {all}
+    mol modselect 2 top {protein}
     mol modstyle 2 top NewCartoon
     mol modcolor 2 top ColorID 2
     mol modmaterial 2 top Goodsell

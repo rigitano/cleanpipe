@@ -58,7 +58,7 @@ mol addrep top
 #SOLUTION
 
 mol selection "name W"
-mol representation Licorice 0.4 12 12
+mol representation Licorice 0.2 12 12
 mol color ColorID 0   ;# blue
 mol material AOChalky
 mol addrep top

@@ -13,7 +13,7 @@ for {set i 0} {$i < $num_reps} {incr i} {
 #UNSELECTED IS GRAY
 
 # See protein as licorice
-mol selection {protein}
+mol selection {not water}
 mol representation Licorice 0.3 12 12
 mol color ColorID 2 ;# grey
 mol material Transparent

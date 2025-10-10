@@ -6,7 +6,7 @@ for {set i 0} {$i < $num_reps} {incr i} {
     
 
 # See protein as licorice
-mol selection {protein}
+mol selection {not water}
 mol representation Licorice 0.3 12 12
 mol color Type ;# by atom type
 mol material Opaque
