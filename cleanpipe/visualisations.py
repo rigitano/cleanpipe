@@ -42,9 +42,10 @@ def view_coord(s_coord):
     view.clear()
 
     view.add_representation('cartoon', selection='protein', color='red')
-    view.add_representation('ball+stick', selection='protein')
 
-    view.add_representation('ball+stick', selection='not protein', opacity=0.1)
+    view.add_representation('ball+stick', selection='not (SOL or OCT)') #new
+
+    #view.add_representation('ball+stick', selection='not protein', opacity=0.1)
 
     view.add_representation('licorice', selection='SOL', color='blue', opacity=0.2)
     view.add_representation('licorice', selection='OCT', color='yellow', opacity=0.2)
@@ -67,8 +68,10 @@ def view_traj(s_xtc,s_gro):
     view = nv.show_mdtraj(trajectory)
     view.clear()
 
-    view.add_representation('ball+stick', selection='protein')
+    #view.add_representation('ball+stick', selection='protein')
     view.add_representation('cartoon', selection='protein')
+
+    view.add_representation('ball+stick', selection='not (SOL or OCT)') #new
 
     view.add_representation('ball+stick', selection='CL', color='yellow', aspectRatio=10)
     view.add_representation('ball+stick', selection='NA', color='green', aspectRatio=10)
