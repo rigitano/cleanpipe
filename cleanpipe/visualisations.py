@@ -792,9 +792,14 @@ def see_interactions(s_top,s_gro,s_mol_name):
     if len(ll_dihedraltypes) > 0: # if there are bondtypes, containing the bonded parameters, get those! if not, leave it empty for now so that the parameters will be later obtained from the the itp
 
         # add paramenters for the given atomtypes
-        ll_dihedrals_filled_proper   = lltools.procv_ll(ll_dihedrals_filled_proper,[5,6,7,8,4], ll_dihedraltypes_proper,[0,1,2,3,4], list(range(5,len(ll_dihedraltypes_proper[0]))))# add paramenters for the given atomtypes
-        ll_dihedrals_filled_improper = lltools.procv_ll(ll_dihedrals_filled_improper,[5,6,7,8,4], ll_dihedraltypes_improper,[0,1,2,3,4], list(range(5,len(ll_dihedraltypes_improper[0]))))# add paramenters for the given atomtypes
-            
+        print("xxxxxxxxxx")
+        print(ll_dihedraltypes_proper)
+        print("aaaaaaaaaa")
+        print(ll_dihedrals_named_proper)
+        ll_dihedrals_filled_proper   = lltools.procv_ll(ll_dihedrals_named_proper,[5,6,7,8,4], ll_dihedraltypes_proper,[0,1,2,3,4], list(range(5,len(ll_dihedraltypes_proper[0]))))# add paramenters for the given atomtypes
+        ll_dihedrals_filled_improper = lltools.procv_ll(ll_dihedrals_named_improper,[5,6,7,8,4], ll_dihedraltypes_improper,[0,1,2,3,4], list(range(5,len(ll_dihedraltypes_improper[0]))))# add paramenters for the given atomtypes
+        print("eeeee")
+        print(ll_dihedrals_filled_proper)
         #check the reverse order for cases not found
         
         ll_dihedrals_filled_proper, ll_not_found = split_ll_into_found_and_not_found(ll_dihedrals_filled_proper)
