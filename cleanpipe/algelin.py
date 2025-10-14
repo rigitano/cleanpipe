@@ -251,6 +251,6 @@ def dihedral_between_first3_and_last3(coord1: dict, coord2: dict, coord3: dict, 
     y = np.dot(np.cross(n1, n2), b2)
     angle = np.degrees(np.arctan2(y, x))
     
-    return angle
+    return round(angle, 1)
 
 

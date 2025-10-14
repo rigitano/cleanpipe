@@ -328,8 +328,9 @@ def filter_dihedrals_to_keep_only_phi_and_psi(ll_dihedrals,ll_atoms):
     
     filtered_rows = []
     for index, row in df_hihedrals.iterrows():
-        # Check if the atoms involved in the dihedarl are in phi and psi aroung the CA. this are the possibilities: 
-        # ["C N CA C","C N CA C","N CA C N","N C CA N"]
+        # Check if the atoms involved in the dihedral are in phi and psi aroung the CA. this are the possibilities: 
+        # phi: "C N CA C","C N CA C",
+        # psi" "N CA C N","N C CA N"
         #if they are, we add the line to the filtered table. if they are not, the loop goes on without adding the line
         #all the nested ifs are to avoid unecessary lookups
         name_i = df_atoms.loc[df_atoms['id'] == row[0], 'structural name'].values[0]
