@@ -25,19 +25,23 @@ mol addrep top
 
 
 
-# DBPC - bluish tone
+
+
+# reddish tone
 mol representation Licorice 2.0 12.0 12.0
-mol color ColorID 23
-mol selection {resname DBPC}
+mol color ColorID 29
+mol selection {resname SED_WILL_REPLACE_THIS}
 mol material AOChalky
 mol addrep top
 
-# DLPC - reddish tone
+# bluish tone
 mol representation Licorice 2.0 12.0 12.0
-mol color ColorID 29
-mol selection {resname DLPC}
+mol color ColorID 23
+mol selection {not resname SED_WILL_REPLACE_THIS}
 mol material AOChalky
 mol addrep top
+
+
 
 
 
