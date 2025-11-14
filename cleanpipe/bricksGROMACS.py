@@ -84,7 +84,7 @@ def pdb2system(s_pdbfile, s_outName, s_forceField, s_boxSize, s_reenforce_second
     if "martini" in s_forceField.lower(): #if the ff is martini, use martinize2
 
          ##################### martinize2 #####################
-        bricksFileSystem.run_and_capture(f"martinize2 -f temp.pdb -x {s_outName}_I_hate_that_martinize_spits_a_pdb.pdb -o {s_outName}.top -p backbone -ss {s_reenforce_secondary_structure_in_martini} -name main_molecule -from charmm -ff {s_forceField}")
+        bricksFileSystem.run_and_capture(f"martinize2 -f temp.pdb -x {s_outName}_I_hate_that_martinize_spits_a_pdb.pdb -o {s_outName}.top -p backbone -ss {s_reenforce_secondary_structure_in_martini} -name main_molecule -from charmm -ff {s_forceField} -maxwarn 1")
         #bricksFileSystem.run_and_capture(f"martinize2 -f temp.pdb -x {s_outName}.pdb -o {s_outName}.top -p backbone -dssp -name main_molecule -from charmm -ff {s_forceField}") #this is to be used if I want to keep the current secondary structure instead of reeforcing a choice of mine
         #######################################################
 
