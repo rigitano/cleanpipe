@@ -87,27 +87,42 @@ def pdb2box_full_of_that(s_pdbfile, s_forceField, s_box_size, n_mol_max):
     bricksTOP.setSystemName(f"{s_outPathAndName}.top", f"box filled with {s_filename}" )
 
 @ensure_original_directory
-def pdb2molecule_in_solvent(s_pdbfile, s_outSytemName, solvent, s_forceField, s_boxSize, s_maxsol=0):
+def pdb2molecule_in_solvent(s_pdbfile, s_outSytemName, solvent, s_forceField, s_boxSize, s_maxsol=0, s_reenforce_secondary_structure_in_martini=''):
     """
     s_pdbfile       : string with the pdb name. for example "insulin.pdb", this will be the main molecule in the system.
     s_outSytemName  : string with the name of the system, for example "alaHW". a folder with that name will be created, and inside it, all the files, for example: alaHW.gro and alaHW.top
     solvent         : choose a water model, for example as "tip3p", or a list containg a gro of a box of solvents and its itp, for example ["../solvents/box_full_of_octn.gro","octn.itp], bot the file name should be set in reference to the system top
+    s_forceField    : place where the ff is, relative to the current location, so to be copyed to the system folder. examples:
+                                                                                                                            '../alanine12/v15-truss/charmm36-jul2022.ff'
+                                                                                                                            '~/ff/martini3001'
     s_boxSize       : string with x y z sizes, for example "3 3 3"
     s_maxsol        : the maximum number of solvent molecules that will be added. this is optional here, as the 0 value mean the parameter wont be considered by gromacs
 
-    example:
-    cl.pdb2molecule_in_solvent("gly12.pdb", "g12HW", "tip3p", 'charmm36-jul2022', "6 6 6", "6943")
-    cl.pdb2molecule_in_solvent("gly12.pdb", "g12H_in_octane", ["../solvents/box_full_of_octn.gro","../solvents/octn.itp], 'charmm36-jul2022', "6.1 6.1 6.1", "712")
+    s_reenforce_secondary_structure_in_martini : this is something to be used just for martini, as this string will be a argument in martinize2. it will add restraints to keep the secondary structure of a protein. ex: 'HHHHHHHHHHHH' or 'EEEEEEEEEEEE'
+
+    examples:
+
+    cl.pdb2molecule_in_solvent("g12H.pdb", "g12HW", "tip3p", 'charmm36-jul2022', "6 6 6", "6943")
+    cl.pdb2molecule_in_solvent("g12H.pdb", "g12HO", ["../solvents/box_full_of_octn.gro","../solvents/octn.itp], 'charmm36-jul2022', "6.1 6.1 6.1", "712")
+
+    cl.pdb2molecule_in_solvent("g12H.pdb", "g12HW_cg", ["~/solvents/martini/Water-pure/water.gro","~/ff/martini3001/martini_v3.0.0_solvents_v1.itp"], '~/ff/martini3001', "6 6 6", "1736", "HHHHHHHHHHHH")
+    cl.pdb2molecule_in_solvent("g12H.pdb", "g12HO_cg", ["~/solvents/martini/Octane/OCT_PRO1.gro", "~/ff/martini3001/martini_v3.0.0_solvents_v1.itp"], '~/ff/martini3001', "6.1 6.1 6.1", "712", "HHHHHHHHHHHH")
+
     """
 
     # check if the filename inside s_pdbfile is valid
     bricksFileSystem.check_extention(s_pdbfile,['.pdb']) 
 
-    # create gro, itps and top in a folder with the name of the system
-    bricksGROMACS.pdb2system(s_pdbfile,s_outSytemName,s_forceField,s_boxSize)
 
-    # add solvent to the system. I have 2 options here: tip3p or filled box
-    bricksGROMACS.solvate_and_neutralize(s_outSytemName,solvent, s_maxsol)
+    ########################### create gro, itps and top in a folder with the name of the system ###########################
+    bricksGROMACS.pdb2system(s_pdbfile, s_outSytemName, s_forceField, s_boxSize, s_reenforce_secondary_structure_in_martini)
+    ########################################################################################################################
+
+
+    ######################### add solvent to the system. I have 2 options here: tip3p or filled box ########################
+    bricksGROMACS.solvate_and_neutralize(s_outSytemName, solvent, s_maxsol)
+    ########################################################################################################################
+
 
     # set the the name of the system in the top file 
     if isinstance(solvent, str): #the user inserted a string, that should mean a water model (ex "tip3p")

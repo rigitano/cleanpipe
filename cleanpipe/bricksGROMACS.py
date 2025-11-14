@@ -6,6 +6,7 @@ import subprocess
 import os
 import functools
 import time
+from pathlib import Path
 
 def ensure_original_directory(func):
     """
@@ -28,18 +29,27 @@ def ensure_original_directory(func):
 
 
 @ensure_original_directory
-def pdb2system(s_pdbfile, s_outName, s_forceField, s_boxSize):
+def pdb2system(s_pdbfile, s_outName, s_forceField, s_boxSize, s_reenforce_secondary_structure_in_martini=''):
     """
     creates a new folder with the system name. and a gro and top files inside it with that same system name
     the top will be a socked top, all the molecules will be outside
 
+    s_pdbfile : the input
+    s_outName : names for the gro, top and folder
     
-    s_forceField : whats the ff file, please give also the location, relative to where the function is louched (ex: '../alanine12/v15-truss/charmm36-jul2022.ff')
+    s_forceField : whats the ff file, please give also the location, relative to where the function is louched. for example:
+                                                                                                                            '../alanine12/v15-truss/charmm36-jul2022.ff'
+                                                                                                                            '~/ff/martini3001'
+
+    s_boxSize : for example "3 3 3"
+
+    s_reenforce_secondary_structure_in_martini : this is something to be used for martinize. it will add restraints to keep the secondary structure of a protein. ex: 'HHHHHHHHHHHH' or 'EEEEEEEEEEEE'
 
     """
 
     #input management
-    s_relativelocation = bricksFileSystem.get_file_location(s_forceField) # get forcefiled original location (relative to where the program was louched)
+    s_forceField = str(Path(s_forceField).expanduser().resolve()) #resolve all ../ ~/ ../../ ./ to absolute path
+    s_absoluteLocation = bricksFileSystem.get_file_location(s_forceField) # get forcefiled original location (relative to where the program was louched)
     s_forceField       = bricksFileSystem.get_filename_without_extension(s_forceField) # now we update the variable so It will have just the ff name. without location nor extention
 
     bricksFileSystem.check_extention(s_pdbfile,['.pdb']) #check if the filename inside s_pdbfile is valid
@@ -48,12 +58,17 @@ def pdb2system(s_pdbfile, s_outName, s_forceField, s_boxSize):
     #create output folder. and 
     bricksFileSystem.run_and_capture(f"mkdir {s_outName}")
 
-    # put usefull things in the output folder (the pdb, and the forcefield and the toppar, if its in the same place as the forcefield)
+    # bring the original pdb, the forcefield and eventual toppar to the system folder
     bricksFileSystem.run_and_capture(f'cp {s_pdbfile} {s_outName}/temp.pdb')
-    bricksFileSystem.run_and_capture(f'cp -r "{s_relativelocation}/{s_forceField}.ff" {s_outName.rstrip("/")}/')#copy the forcefield to the new folder
+    
     try:
+        bricksFileSystem.run_and_capture(f'cp -r "{s_absoluteLocation}/{s_forceField}" {s_outName.rstrip("/")}/')#copy the forcefield to the new folder. its a try because sometimes there is a .ff in the name
+    except:
+        bricksFileSystem.run_and_capture(f'cp -r "{s_absoluteLocation}/{s_forceField}.ff" {s_outName.rstrip("/")}/')#if it failed, lets put the .ff
 
-        bricksFileSystem.run_and_capture(f'cp -r "{s_relativelocation}/toppar" "{s_outName.rstrip("/")}/"')#copy the forcefield to the new folder
+
+    try:
+        bricksFileSystem.run_and_capture(f'cp -r "{s_absoluteLocation}/toppar" "{s_outName.rstrip("/")}/"')#copy the toppar to the new folder. its a try because it may not exist
     except:
         print("CLEANPIPE MESSAGE toppar folder not found in the same folder as the forcefield folder")
 
@@ -64,28 +79,50 @@ def pdb2system(s_pdbfile, s_outName, s_forceField, s_boxSize):
 
 
 
-    ################################## create gro and top from pdb. then add the box size to the gro ###########################
+    #=============================== create gro and top. make sure there is a box size to the gro ======================================
+
+    if "martini" in s_forceField.lower(): #if the ff is martini, use martinize2
+
+         ##################### martinize2 #####################
+        bricksFileSystem.run_and_capture(f"martinize2 -f temp.pdb -x {s_outName}_I_hate_that_martinize_spits_a_pdb.pdb -o {s_outName}.top -p backbone -ss {s_reenforce_secondary_structure_in_martini} -name main_molecule -from charmm -ff {s_forceField}")
+        #bricksFileSystem.run_and_capture(f"martinize2 -f temp.pdb -x {s_outName}.pdb -o {s_outName}.top -p backbone -dssp -name main_molecule -from charmm -ff {s_forceField}") #this is to be used if I want to keep the current secondary structure instead of reeforcing a choice of mine
+        #######################################################
+
+        #as martinize2 is not as smart as pdb2gmx, I have to add myself the forcefield inclusion on the top file
+        bricksFileSystem.run_and_capture(f"sed -i 's|#include \"martini\\.itp\"|#include \"martini3001/martini_v3\\.0\\.0\\.itp\"|' {s_outName}.top")
+
+        #define box size, this will produce a gro file to replace that idiotic pdb martinize2 that spits out. s_boxSize contains the user definition (ex: "3 3 3")
+        bricksFileSystem.run_and_capture(f"gmx editconf -f {s_outName}_I_hate_that_martinize_spits_a_pdb.pdb -o {s_outName}.gro -c -box {s_boxSize} -bt cubic")
+
+        #now lets delete the idiotic pdb that came from martinize2. there is already a gro file to replace it
+        bricksFileSystem.delete(f"{s_outName}_I_hate_that_martinize_spits_a_pdb.pdb")
 
 
-    #check if there are caps in the peptide, because pdb2gmx have to know that, generating the proper choices a user would have to make during pdb2gmx. for example '0\n0\n' to put NH3+ and COO- in the N and C tips
-    s_choices_for_termini = bricksPDB.check_pdb_caps("temp.pdb")
+        
 
 
-    #pdb2gmx!!!!!!!!!!!!!
-    bricksFileSystem.run_and_capture(f"printf '{s_choices_for_termini}' | gmx pdb2gmx -f temp.pdb -o {s_outName}.gro -p {s_outName}.top -missing -ter -ignh -water none -ff {s_forceField}") #-i {s_molName}.posres.itp
+    else: #for all the other forcefields, use pdb2gmx
 
+        #check if there are caps in the peptide, because pdb2gmx have to know that, generating the proper choices a user would have to make during pdb2gmx. for example '0\n0\n' to put NH3+ and COO- in the N and C tips
+        s_choices_for_termini = bricksPDB.check_pdb_caps("temp.pdb")
 
-    #pdb2gmx gives a weird name to the molecule from the pdb (ex: "Other_chain_O"), because he is stupid. lets replace it by the real molecule name, that I took from the pdb file name
-    #removed because there might be more than one chain in the pdb file
-    #uglyMolName = bricksTOP.getMoleculeName(f"{s_outName}.top")
-    #bricksTOP.replaceMoleculeName(f"{s_outName}.top", uglyMolName, s_molName)
+        ##################### pdb2gmx #####################
+        bricksFileSystem.run_and_capture(f"printf '{s_choices_for_termini}' | gmx pdb2gmx -f temp.pdb -o {s_outName}.gro -p {s_outName}.top -missing -ter -ignh -water none -ff {s_forceField}") #-i {s_molName}.posres.itp
+        ###################################################
 
-    #define box size inside the gro file. s_boxSize contains the user definition (ex: "3 3 3")
-    bricksFileSystem.run_and_capture(f"gmx editconf -f {s_outName}.gro -o {s_outName}.gro -c -box {s_boxSize} -bt cubic")
-    bricksFileSystem.delete(f"#{s_outName}.gro.1#")# I chose to overwrite the old gro
+        #pdb2gmx gives a weird name to the molecule from the pdb (ex: "Other_chain_O"), because he is stupid. lets replace it by the real molecule name, that I took from the pdb file name
+        #removed because there might be more than one chain in the pdb file
+        #uglyMolName = bricksTOP.getMoleculeName(f"{s_outName}.top")
+        #bricksTOP.replaceMoleculeName(f"{s_outName}.top", uglyMolName, s_molName)
 
-    #decompose the original top into a new top and a itp. the new top will contain just sytem information, the itp will describe the protagonist molecule
-    bricksTOP.decompose_TOP_file_into_TOP_and_ITPs(f"{s_outName}.top")
+        #define box size inside the gro file. s_boxSize contains the user definition (ex: "3 3 3")
+        bricksFileSystem.run_and_capture(f"gmx editconf -f {s_outName}.gro -o {s_outName}.gro -c -box {s_boxSize} -bt cubic")
+        bricksFileSystem.delete(f"#{s_outName}.gro.1#")# I chose to overwrite the old gro
+
+        #decompose the original top into a new top and a itp. the new top will contain just sytem information, the itp will describe the protagonist molecule
+        bricksTOP.decompose_TOP_file_into_TOP_and_ITPs(f"{s_outName}.top")
+
+    #=================================================================================================================================
 
     #delete the temporary pdb used by pdb2gmx as its no longer necessary
     bricksFileSystem.delete(f"temp.pdb")
@@ -182,9 +219,20 @@ def solvate_and_neutralize(s_systemFolder, solvent, s_maxsol=0, b_neutralize=Fal
         # (ex: [box_full_of_octn","octn.itp"])
 
 
+
+
+
         #obtain the names of the top and itp files in the SOLVENT BOX folder
         s_solbox_groName = solvent[0] # the gro file name should be in the first position
         l_solbox_itpNames = solvent[1:] # the rest of the list should contain itp files. 1 or many
+
+        #resolve into absolute paths
+        s_solbox_groName  = str(Path(s_solbox_groName).expanduser().resolve())
+        l_solbox_itpNames = [str(Path(p).expanduser().resolve()) for p in l_solbox_itpNames]
+
+        
+
+
         print("CLEANPIPE MESSAGE gro      ", s_solbox_groName)
         print("CLEANPIPE MESSAGE itp list ", l_solbox_itpNames)
 
@@ -198,8 +246,8 @@ def solvate_and_neutralize(s_systemFolder, solvent, s_maxsol=0, b_neutralize=Fal
         #original_directory = os.getcwd()
         os.chdir(f"{s_systemFolder}")
 
-        #insert the solvent in gro. and inform quantity added in top
-        bricksFileSystem.run_and_capture(f"gmx solvate -cp {s_groName}.gro -cs ../{s_solbox_groName} -maxsol {s_maxsol} -p {s_topName}.top -o {s_groName}.gro") #remeber that the folder was changed, so the gro in -cs is actually in a extra parent folder
+        ###########insert the solvent in gro. and inform quantity added in top###########
+        bricksFileSystem.run_and_capture(f"gmx solvate -cp {s_groName}.gro -cs {s_solbox_groName} -maxsol {s_maxsol} -p {s_topName}.top -o {s_groName}.gro")
         bricksFileSystem.delete(f"#{s_groName}.gro.1#")#I choose to overwrite the old gro
         bricksFileSystem.delete(f"#{s_topName}.top.1#")#I choose to overwrite the old top
 
