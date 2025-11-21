@@ -5,7 +5,7 @@ for {set i 0} {$i < $num_reps} {incr i} {
 }
 
 
-
+display projection orthographic
 display shadows on
 display ambientocclusion on
 display aoambient 1.0

@@ -5,7 +5,7 @@ for {set i 0} {$i < $num_reps} {incr i} {
 }
 
 
-
+display projection orthographic
 
 # Colors for each type of secondary structure
 

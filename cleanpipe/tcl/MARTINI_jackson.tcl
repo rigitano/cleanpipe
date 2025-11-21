@@ -5,7 +5,7 @@ for {set i 0} {$i < $num_reps} {incr i} {
 }
 
 
-
+display projection orthographic
 
 # first Ill set everithing as grey
 

@@ -3,7 +3,8 @@ set num_reps [molinfo top get numreps]
 for {set i 0} {$i < $num_reps} {incr i} {
     mol delrep 0 top
 }
-    
+
+display projection orthographic 
 
 # See protein as licorice
 mol selection {not water}

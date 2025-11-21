@@ -5,7 +5,7 @@ for {set i 0} {$i < $num_reps} {incr i} {
 }
 
 
-
+display projection orthographic
 
 # see the connections as grey. but they will be actualy hidden inside the beads
 
