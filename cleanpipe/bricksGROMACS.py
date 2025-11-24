@@ -84,8 +84,7 @@ def pdb2system(s_pdbfile, s_outName, s_forceField, s_boxSize, s_martinize_aditio
     if "martini" in s_forceField.lower(): #if the ff is martini, use martinize2
 
          ##################### martinize2 #####################
-        bricksFileSystem.run_and_capture(f"martinize2 -f temp.pdb -x {s_outName}_I_hate_that_martinize_spits_a_pdb.pdb -o {s_outName}.top -p backbone -name main_molecule -from charmm -ff {s_forceField} -maxwarn 1 {s_martinize_aditional_arguments}")
-        #bricksFileSystem.run_and_capture(f"martinize2 -f temp.pdb -x {s_outName}.pdb -o {s_outName}.top -p backbone -dssp -name main_molecule -from charmm -ff {s_forceField}") #this is to be used if I want to keep the current secondary structure instead of reeforcing a choice of mine
+        bricksFileSystem.run_and_capture(f"martinize2 -f temp.pdb -x {s_outName}_martinize2_output.pdb -o {s_outName}.top -p backbone -name main_molecule -from charmm -ff {s_forceField} -maxwarn 1 {s_martinize_aditional_arguments}")
         #######################################################
 
         #if the user inserted the water-bias argument, its necessary to edit the file martini_v3.0.0.itp to include those biases 
@@ -96,10 +95,10 @@ def pdb2system(s_pdbfile, s_outName, s_forceField, s_boxSize, s_martinize_aditio
         bricksFileSystem.run_and_capture(f"sed -i 's|#include \"martini\\.itp\"|#include \"martini3001/martini_v3\\.0\\.0\\.itp\"|' {s_outName}.top")
 
         #define box size, this will produce a gro file to replace that idiotic pdb martinize2 that spits out. s_boxSize contains the user definition (ex: "3 3 3")
-        bricksFileSystem.run_and_capture(f"gmx editconf -f {s_outName}_I_hate_that_martinize_spits_a_pdb.pdb -o {s_outName}.gro -c -box {s_boxSize} -bt cubic")
+        bricksFileSystem.run_and_capture(f"gmx editconf -f {s_outName}_martinize2_output.pdb -o {s_outName}.gro -c -box {s_boxSize} -bt cubic")
 
         #now lets delete the idiotic pdb that came from martinize2. there is already a gro file to replace it
-        bricksFileSystem.delete(f"{s_outName}_I_hate_that_martinize_spits_a_pdb.pdb")
+        bricksFileSystem.delete(f"{s_outName}_martinize2_output.pdb")
 
 
         
@@ -198,7 +197,7 @@ def solvate_and_neutralize(s_systemFolder, solvent, s_maxsol=0, b_neutralize=Fal
         print(f"\nCLEANPIPE MESSAGE user chose one of the standard water models, already part of gromacs standard solvents ({solvent})\n")
         #(ex: "tip3p"). gromacs can find the solvent box and the respective itp automaticaly
 
-        #go to system folder. the current folder is savad so to go back to it just before the end of the function
+        #go to system folder. the current folder is saved so to go back to it just before the end of the function
         #original_directory = os.getcwd()
         os.chdir(f"{s_systemFolder}")
 

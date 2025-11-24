@@ -8,6 +8,10 @@ import re
 import sys
 import os
 import functools
+import shutil
+
+from pathlib import Path
+
 
 def ensure_original_directory(func):
     """
@@ -132,9 +136,22 @@ def pdb2molecule_in_solvent(s_pdbfile, s_outSytemName, solvent, s_forceField, s_
         s_solvent_text = bricksFileSystem.get_filename_with_extension(solvent[0])
     else:
         print("CLEANPIPE error, solvent content is unexpected")
-
-
     bricksTOP.setSystemName(f"{s_outSytemName}/{s_outSytemName}.top", f"{s_outSytemName} ; molecule from \"{s_pdbfile}\", inserted in solvent from \"{s_solvent_text}\"" )
+
+
+    #copy usefull scripts to the system folder
+    files_to_copy = [
+        "runFEPoff.sh",
+        "runREALISTIC.sh",
+    ]
+    module_path = Path(__file__).parent # Where the cl module lives
+    source_dir = module_path / "bash" # Folder containing the source files
+    dest_dir = Path(s_outSytemName) # Destination folder
+    for filename in files_to_copy:
+        src = source_dir / filename
+        dst = dest_dir / filename
+        shutil.copy(src, dst)
+
 
 
 
