@@ -570,7 +570,7 @@ if [[ $ARCHITECTURE == "rome" ]]; then # insert the rome header, if the user cho
 cat <<EOT >> "script.${NAME}.sh"
 
 #MSUB   -r ${NAME}.realistic       # Job name
-#MSUB   -n 40                      # Number of tasks in parallel mode
+#MSUB   -n 8                       # Number of tasks in parallel mode
 #MSUB   -c 1                       # Number of cores per parallel task
 #MSUB   -W yes                     # Let multiple jobs sharing same name & user run simultaneously
 #MSUB   -o out.scheduler.%I.${NAME}            # Output file

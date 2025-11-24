@@ -194,15 +194,15 @@ def pdb2molecule_in_water_and_octane(s_pdbfile, s_folderName, s_forceField, s_ma
 
     # create the two systems
     s_molname = bricksFileSystem.get_filename_without_extension(s_pdbfile)
-    pdb2molecule_in_solvent(s_pdbfile, s_molname + "_inWater", solvent1, s_forceField, s_boxSize1, s_maxsol1, s_martinize_aditional_arguments)
-    pdb2molecule_in_solvent(s_pdbfile, s_molname + "_inOctane", solvent2, s_forceField, s_boxSize2, s_maxsol2, s_martinize_aditional_arguments)
+    pdb2molecule_in_solvent(s_pdbfile, s_molname + "_inW", solvent1, s_forceField, s_boxSize1, s_maxsol1, s_martinize_aditional_arguments)
+    pdb2molecule_in_solvent(s_pdbfile, s_molname + "_inO", solvent2, s_forceField, s_boxSize2, s_maxsol2, s_martinize_aditional_arguments)
 
     #now put the two systems in the same folder
     bricksFileSystem.run_and_capture(f"mkdir {s_folderName}")
-    bricksFileSystem.run_and_capture(f"rsync -av *_inWater/* {s_folderName}")
-    bricksFileSystem.run_and_capture(f"rsync -av *_inOctane/* {s_folderName}")
-    bricksFileSystem.run_and_capture(f"rm -r *_inWater")
-    bricksFileSystem.run_and_capture(f"rm -r *_inOctane")
+    bricksFileSystem.run_and_capture(f"rsync -av *_inW/* {s_folderName}")
+    bricksFileSystem.run_and_capture(f"rsync -av *_inO/* {s_folderName}")
+    bricksFileSystem.run_and_capture(f"rm -r *_inW")
+    bricksFileSystem.run_and_capture(f"rm -r *_inO")
 
 
 
