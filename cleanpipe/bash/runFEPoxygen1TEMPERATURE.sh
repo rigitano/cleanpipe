@@ -79,7 +79,7 @@ fi
 mkdir "${NAME}__runFEP"
 cd "${NAME}__runFEP" || exit
 
-for t in 283 298 313; do
+for t in 298; do
 
     mkdir "t${t}"
     cd "t${t}" || exit
@@ -108,7 +108,7 @@ echo "folder structure created"
 
 
 
-for t in 283 298 313; do
+for t in 298; do
 for i in $(seq -w 0 20); do # from 00 to 20. this impacts the mdp pararamenter init_lambda_state
 
 
@@ -607,7 +607,7 @@ echo "all mdp files created"
 
 
 
-for t in 283 298 313; do
+for t in 298; do
 cd "t${t}"
 for i in $(seq -w 0 20); do 
 

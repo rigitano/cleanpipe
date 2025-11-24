@@ -128,8 +128,14 @@ set -x #[IreneRome] echo launched commands
 ##################### load gromacs and set variables  ############################
 ############# in principle, no changes needed beyond this point ##################
 
-ml purge
-module load gnu/11 mpi/openmpi/4 gromacs/2023.2
+module purge  # retire tous les modules déchargeables de l'environnement
+module load gnu/11 # charge gnu/11 et définit gnu/11 comme compilateur dans votre environnement
+module load nvhpc/24.3 # besoin de mettre avant OpenMPI comme ce dernier charge un cuda qui n'est pas compatible avec nvhpc/24.3
+module load mpi/openmpi/4 # charge la souche OpenMPI
+module load gromacs/2025.0 # charge le produit
+
+
+
 # Note that sometimes it is advisable especially for small simulations to use more open MP
 # threads and less MPI ranks. However, for large systems this appears to be the most
 # efficent and reasonably fast setting.
@@ -249,7 +255,7 @@ if [[ (\$(ls \$ROOTNAME.\$prev_cycle.part*.log | wc -l) -eq 0) || \\
     # Launch the parallel job
     \$MDRUN -nice 0 -s \$ROOTNAME -deffnm \$ROOTNAME.\$cycle -v \\
            -stepout 1000 -maxh \$walltime -cpi \$checkpoint -noappend \\
-           \$MDRUN_OPT >& \$ROOTNAME.\$cycle.runout 
+           \$MDRUN_OPT -nsteps 50000 >& \$ROOTNAME.\$cycle.runout 
 
     # Check if the trajectory and the energy file are not corrupted. We will
     # not relaunch a run if a corruption occured.
