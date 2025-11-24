@@ -87,7 +87,7 @@ def pdb2box_full_of_that(s_pdbfile, s_forceField, s_box_size, n_mol_max):
     bricksTOP.setSystemName(f"{s_outPathAndName}.top", f"box filled with {s_filename}" )
 
 @ensure_original_directory
-def pdb2molecule_in_solvent(s_pdbfile, s_outSytemName, solvent, s_forceField, s_boxSize, s_maxsol=0, s_reenforce_secondary_structure_in_martini=''):
+def pdb2molecule_in_solvent(s_pdbfile, s_outSytemName, solvent, s_forceField, s_boxSize, s_maxsol=0, s_martinize_aditional_arguments=''):
     """
     s_pdbfile       : string with the pdb name. for example "insulin.pdb", this will be the main molecule in the system.
     s_outSytemName  : string with the name of the system, for example "alaHW". a folder with that name will be created, and inside it, all the files, for example: alaHW.gro and alaHW.top
@@ -98,24 +98,25 @@ def pdb2molecule_in_solvent(s_pdbfile, s_outSytemName, solvent, s_forceField, s_
     s_boxSize       : string with x y z sizes, for example "3 3 3"
     s_maxsol        : the maximum number of solvent molecules that will be added. this is optional here, as the 0 value mean the parameter wont be considered by gromacs
 
-    s_reenforce_secondary_structure_in_martini : this is something to be used just for martini, as this string will be a argument in martinize2. it will add restraints to keep the secondary structure of a protein. ex: 'HHHHHHHHHHHH' or 'EEEEEEEEEEEE'
+    s_martinize_aditional_arguments : add extra arguments in martinize. for example "-water-bias -water-bias-eps E:-0.5 H:-1.0 -ss HHHHHHHHHHHH"
 
     examples:
 
     cl.pdb2molecule_in_solvent("g12H.pdb", "g12HW", "tip3p", 'charmm36-jul2022', "6 6 6", "6943")
     cl.pdb2molecule_in_solvent("g12H.pdb", "g12HO", ["../solvents/box_full_of_octn.gro","../solvents/octn.itp], 'charmm36-jul2022', "6.1 6.1 6.1", "712")
 
-    cl.pdb2molecule_in_solvent("g12H.pdb", "g12HW_cg", ["~/solvents/martini/Water-pure/water.gro","~/ff/martini3001/martini_v3.0.0_solvents_v1.itp"], '~/ff/martini3001', "6 6 6", "1736", "HHHHHHHHHHHH")
-    cl.pdb2molecule_in_solvent("g12H.pdb", "g12HO_cg", ["~/solvents/martini/Octane/OCT_PRO1.gro", "~/ff/martini3001/martini_v3.0.0_solvents_v1.itp"], '~/ff/martini3001', "6.1 6.1 6.1", "712", "HHHHHHHHHHHH")
+    cl.pdb2molecule_in_solvent("g12H.pdb", "g12HW_cg", ["~/solvents/martini/Water-pure/water.gro","~/ff/martini3001/martini_v3.0.0_solvents_v1.itp"], '~/ff/martini3001', "6 6 6", "1736", "-ss HHHHHHHHHHHH")
+    cl.pdb2molecule_in_solvent("g12H.pdb", "g12HO_cg", ["~/solvents/martini/Octane/OCT_PRO1.gro", "~/ff/martini3001/martini_v3.0.0_solvents_v1.itp"], '~/ff/martini3001', "6.1 6.1 6.1", "712", "-ss HHHHHHHHHHHH")
 
     """
+    print("CLEANPIPE called function pdb2molecule_in_solvent")
 
     # check if the filename inside s_pdbfile is valid
     bricksFileSystem.check_extention(s_pdbfile,['.pdb']) 
 
 
     ########################### create gro, itps and top in a folder with the name of the system ###########################
-    bricksGROMACS.pdb2system(s_pdbfile, s_outSytemName, s_forceField, s_boxSize, s_reenforce_secondary_structure_in_martini)
+    bricksGROMACS.pdb2system(s_pdbfile, s_outSytemName, s_forceField, s_boxSize, s_martinize_aditional_arguments)
     ########################################################################################################################
 
 
@@ -138,72 +139,55 @@ def pdb2molecule_in_solvent(s_pdbfile, s_outSytemName, solvent, s_forceField, s_
 
 
 @ensure_original_directory
-def pdb2molecule_in_two_solvents(s_pdbfile, s_folderName, s_outSytemName1, s_outSytemName2, solvent1, solvent2, s_forceField, s_boxSize):
+def pdb2molecule_in_water_and_octane(s_pdbfile, s_folderName, s_forceField, s_martinize_aditional_arguments=''):
     """
-    xxx I think I should just repeat two pdb2molecule_in_solvent functions
-
+    this function is perfect for canclulations of free energies of transfer. there will be two systems in the same folder. 
+    but for DG transfer, this actualy makes things easyer. you can run two runREALISTIC scrits, and then two runFEPoff scripts. and all the data you need will be there
 
     s_pdbfile       : string with the pdb name. for example "insulin.pdb", this will be the main molecule in the system.
     s_folderName    : string with the name of the folder, for example "ala6Hdihr200-transfer". this folder will be created, and inside it, the two systems will be created inside it
-    s_outSytemName1  : string with the name of the system, for example "ala6Hdih200_in_octane". a folder with that name will be created, and inside it, all the files, for example: ala6Hdihres200.gro and ala6Hdihres200.top
-    s_outSytemName2  : string with the name of the system, for example "ala6Hdih200_in_water". a folder with that name will be created, and inside it, all the files, for example:ala6Hdihres200.gro and ala6Hdihres200.top
-    solvent1       : for example ["../solvents/box_full_of_octn.gro","../solvents/octn.itp]
-    solvent2       : for example as "tip3p"
     s_forceField    : one of the gromacs recognized force fields, for example "charmm36-jul2022"
     s_boxSize       : string with x y z sizes, for example "3 3 3"
 
     example:
-    cl.pdb2molecule_in_two_solvents("normal_peptide.pdb", "ala6Hdih200-transfer", "ala6Hdih200_in_octane", "ala6Hdih200_in_water", "box_full_of_octn", "tip3p", "charmm36-jul2022", "3 3 3")
+    cl.pdb2molecule_in_two_solvents("normal_peptide.pdb", "ala6Hdih200-transfer", "charmm36-jul2022")
+    cl.pdb2molecule_in_water_and_octane("g12H.pdb", "g12Hbias1-transfer", '~/ff/martini3001', s_martinize_aditional_arguments='-water-bias -water-bias-eps E:-0.5 H:-1.0 -ss HHHHHHHHHHHH')
+
 
     """
+    print("CLEANPIPE called function pdb2molecule_in_water_and_octane")
 
-    # check if the filename inside s_pdbfile is valid
-    bricksFileSystem.check_extention(s_pdbfile,['.pdb']) 
+
+    if "martini" in s_forceField.lower():
+        solvent1 = ["~/solvents/martini/Water-pure/water.gro","~/ff/martini3001/martini_v3.0.0_solvents_v1.itp"]
+        solvent2 = ["~/solvents/martini/Octane/OCT_PRO1.gro", "~/ff/martini3001/martini_v3.0.0_solvents_v1.itp"]
+        s_boxSize1 = "6 6 6"
+        s_boxSize2 = "6.1 6.1 6.1"
+        s_maxsol1 = "1736"
+        s_maxsol2 = "712"
+    elif "charmm" in s_forceField.lower():
+        solvent1 = "tip3p"
+        solvent2 = ["octane_box_npt.gro","octn.itp"]
+        s_boxSize1 = "6 6 6"
+        s_boxSize2 = "6.1 6.1 6.1"
+        s_maxsol1 = "6943"
+        s_maxsol2 = "712"
 
     
-    #create output folder in parael with the pdb input. it will contain two folders. we will cd into each one of those do everithing there
-    bricksFileSystem.create_folder(s_folderName)
 
-    bricksFileSystem.run_and_capture(f"cp {s_pdbfile} {s_folderName}/temp.pdb")
+    # create the two systems
+    s_molname = bricksFileSystem.get_filename_without_extension(s_pdbfile)
+    pdb2molecule_in_solvent(s_pdbfile, s_molname + "_inWater", solvent1, s_forceField, s_boxSize1, s_maxsol1, s_martinize_aditional_arguments)
+    pdb2molecule_in_solvent(s_pdbfile, s_molname + "_inOctane", solvent2, s_forceField, s_boxSize2, s_maxsol2, s_martinize_aditional_arguments)
 
-
-    bricksFileSystem.run_and_capture(f"cp -r {s_forceField}.ff {s_folderName.rstrip('/')}/")#copy the forcefield to the new folder
-
-    #I know in the example usage the first solvent is "box_full_of_octn", so I moove the folder. xxx this must be done differently
-    bricksFileSystem.run_and_capture(f"cp -r {solvent1} {s_folderName.rstrip('/')}/")#copy the forcefield to the new folder
-
-    try:
-        bricksFileSystem.run_and_capture(f"cp -r toppar {s_folderName.rstrip('/')}/")#copy the forcefield to the new folder
-    except:
-        print("CLEANPIPE MESSAGE toppar folder not found, so it was not copied to the new folder")
-    
-
-    #go to the folder where the two systems will be created
-    #original_directory = os.getcwd()#original folder is stored so I can go back to it at the very end of this function
-    os.chdir(f"{s_folderName}")
-    
-
-    # CREATE FIRST SYSTEM (SOLVENT 1)
-    bricksGROMACS.pdb2system("temp.pdb",s_outSytemName1,s_forceField,s_boxSize)   # create
-    bricksGROMACS.solvate_and_neutralize(s_outSytemName1,solvent) # solvate xxx without maxsol
-    bricksTOP.setSystemName(f"{s_outSytemName1}/{s_outSytemName1}.top", f"{s_outSytemName1} ; molecule from \"{s_pdbfile}\", inserted in solvent box of \"{solvent1}\"" ) # set name
-
-    # CREATE SECOND SYSTEM (SOLVENT 2)
-    bricksGROMACS.pdb2system("temp.pdb",s_outSytemName2,s_forceField,s_boxSize)  # create
-    bricksGROMACS.solvate_and_neutralize(s_outSytemName2,solvent)# solvate xxx without maxsol
-    bricksTOP.setSystemName(f"{s_outSytemName2}/{s_outSytemName2}.top", f"{s_outSytemName2} ; molecule from \"{s_pdbfile}\", inserted in solvent box of \"{solvent2}\"" ) # set name
+    #now put the two systems in the same folder
+    bricksFileSystem.run_and_capture(f"mkdir {s_folderName}")
+    bricksFileSystem.run_and_capture(f"rsync -av *_inWater/* {s_folderName}")
+    bricksFileSystem.run_and_capture(f"rsync -av *_inOctane/* {s_folderName}")
+    bricksFileSystem.run_and_capture(f"rm -r *_inWater")
+    bricksFileSystem.run_and_capture(f"rm -r *_inOctane")
 
 
-    #remove files from the parante folder (the one that stores the two systems)
-    bricksFileSystem.run_and_capture(f"rm temp.pdb")
-    #I know in the example usage the first solvent is "box_full_of_octn", so I moove the folder. xxx this must be done differently
-    bricksFileSystem.run_and_capture(f"rm -r {solvent1}")
-
-    bricksFileSystem.run_and_capture(f"rm -r toppar")
-    bricksFileSystem.run_and_capture(f"rm -r {s_forceField}.ff")
-
-    #go back to the original folder
-    #os.chdir(original_directory)
 
 
 def create_tube_in_vacum(lipidsList, s_radius, s_thickness, s_box, s_outSysName, s_ff_location):

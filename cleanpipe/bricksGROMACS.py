@@ -29,7 +29,7 @@ def ensure_original_directory(func):
 
 
 @ensure_original_directory
-def pdb2system(s_pdbfile, s_outName, s_forceField, s_boxSize, s_reenforce_secondary_structure_in_martini=''):
+def pdb2system(s_pdbfile, s_outName, s_forceField, s_boxSize, s_martinize_aditional_arguments=''):
     """
     creates a new folder with the system name. and a gro and top files inside it with that same system name
     the top will be a socked top, all the molecules will be outside
@@ -43,7 +43,7 @@ def pdb2system(s_pdbfile, s_outName, s_forceField, s_boxSize, s_reenforce_second
 
     s_boxSize : for example "3 3 3"
 
-    s_reenforce_secondary_structure_in_martini : this is something to be used for martinize. it will add restraints to keep the secondary structure of a protein. ex: 'HHHHHHHHHHHH' or 'EEEEEEEEEEEE'
+    s_martinize_aditional_arguments : if you want aditional arguments in martinize. for example "-water-bias -water-bias-eps E:-0.5 H:-1.0 -ss HHHHHHHHHHHH"
 
     """
 
@@ -84,9 +84,13 @@ def pdb2system(s_pdbfile, s_outName, s_forceField, s_boxSize, s_reenforce_second
     if "martini" in s_forceField.lower(): #if the ff is martini, use martinize2
 
          ##################### martinize2 #####################
-        bricksFileSystem.run_and_capture(f"martinize2 -f temp.pdb -x {s_outName}_I_hate_that_martinize_spits_a_pdb.pdb -o {s_outName}.top -p backbone -ss {s_reenforce_secondary_structure_in_martini} -name main_molecule -from charmm -ff {s_forceField} -maxwarn 1")
+        bricksFileSystem.run_and_capture(f"martinize2 -f temp.pdb -x {s_outName}_I_hate_that_martinize_spits_a_pdb.pdb -o {s_outName}.top -p backbone -name main_molecule -from charmm -ff {s_forceField} -maxwarn 1 {s_martinize_aditional_arguments}")
         #bricksFileSystem.run_and_capture(f"martinize2 -f temp.pdb -x {s_outName}.pdb -o {s_outName}.top -p backbone -dssp -name main_molecule -from charmm -ff {s_forceField}") #this is to be used if I want to keep the current secondary structure instead of reeforcing a choice of mine
         #######################################################
+
+        #if the user inserted the water-bias argument, its necessary to edit the file martini_v3.0.0.itp to include those biases 
+        if "-water-bias" in s_martinize_aditional_arguments: 
+            bricksFileSystem.run_and_capture(f"sed -i '/\\[ nonbond_params \\]/c\\\n#include \"../virtual_sites_atomtypes.itp\"\\\n#include \"../virtual_sites_nonbond_params.itp\"\\\n\\\n[ nonbond_params ]' martini3001/martini_v3.0.0.itp")
 
         #as martinize2 is not as smart as pdb2gmx, I have to add myself the forcefield inclusion on the top file
         bricksFileSystem.run_and_capture(f"sed -i 's|#include \"martini\\.itp\"|#include \"martini3001/martini_v3\\.0\\.0\\.itp\"|' {s_outName}.top")
