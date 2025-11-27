@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# usage example:  ./runREALISTIC.sh a12HW a12HW.gro a12HW.top 1 298 charmm36 pc
+# usage example:  ./runREALISTIC.sh a12HW a12HW.gro a12HW.top 1 298 charmm36 pc 8 2
 
 # ARGUMENTS:
 # 1-name that goes onthe runREALISTIC to be created and the job name
@@ -10,10 +10,11 @@
 # 5-temperature (remeber that martini3 was parametrized at 310)
 # 6-forcefield to be used in mdp construction (must be "charmm36" or "martini3")
 # 7-architecture (pc, slurm, rome)
+# 8-ntOMP
+# 9-ntMPI
 
-
-if [ $# -lt 7 ]; then
-    echo "7 arguments needed : name filename.gro filename.top numberOfNanoseconds temperatureList forceFieldName architecture "
+if [ $# -lt 9 ]; then
+    echo "9 arguments needed : name filename.gro filename.top numberOfNanoseconds temperatureList forceFieldName architecture ntOMP ntMPI"
     exit 1
 fi
 
@@ -84,6 +85,22 @@ fi
 echo " "
 
 
+NTOMP=$8
+if [[ "$NTOMP" =~ ^[0-9]+$ ]]; then
+    echo "NTOMP OK (is an integer)"
+else
+    echo "NTOMP is NOT an integer"
+fi
+
+
+
+NTMPI=$9
+if [[ "$NTMPI" =~ ^[0-9]+$ ]]; then
+    echo "NTMPI OK (is an integer)"
+else
+    echo "NTMPI is NOT an integer"
+fi
+echo " "
 
 
 ########### check top file for [ distance_restraints ] or [ dihedral_restraints ]
@@ -570,7 +587,7 @@ if [[ $ARCHITECTURE == "rome" ]]; then # insert the rome header, if the user cho
 cat <<EOT >> "script.${NAME}.sh"
 
 #MSUB   -r ${NAME}.realistic       # Job name
-#MSUB   -n 8                       # Number of tasks in parallel mode
+#MSUB   -n ${NTMPI}                # Number of tasks in parallel mode
 #MSUB   -c 1                       # Number of cores per parallel task
 #MSUB   -W yes                     # Let multiple jobs sharing same name & user run simultaneously
 #MSUB   -o out.scheduler.%I.${NAME}            # Output file
@@ -593,7 +610,7 @@ export GMX_DISABLE_GPU_DETECTION=1 # prevent GROMACS from using GPUs
 export I_MPI_PIN_CELL=core
 export I_MPI_PIN_DOMAIN=auto
 
-OMP_NUM_THREADS=2      # number of OpenMP threads
+OMP_NUM_THREADS=${NTOMP}      # number of OpenMP threads
 
 EOT
 
@@ -611,10 +628,10 @@ elif [[ $ARCHITECTURE == "slurm" ]]; then # insert the slurm header, if the user
 cat <<EOT >> "script.${NAME}.sh"
 
 #SBATCH --partition=calcul
-#SBATCH --cpus-per-task=16
-#SBATCH --gres=gpu:1
+#SBATCH --cpus-per-task=${NTOMP}
+##SBATCH --gres=gpu:1
 ##SBATCH --mem-per-cpu=1GB
-#SBATCH --nodes=1
+##SBATCH --nodes=1
 #SBATCH --job-name=${NAME}.realistic
 #SBATCH --output=outanderr.slurm.${NAME}
 #SBATCH --exclude=node-15
@@ -626,7 +643,7 @@ module load gromacs/2024.5
 EOT
 
 GMX="gmx"
-MDRUN_OPTIONS="-ntomp 16 -ntmpi 1" #ATENTION: this must be coherent with #SBATCH --cpus-per-task
+MDRUN_OPTIONS="-ntomp ${NTOMP} -ntmpi ${NTMPI}" #ATENTION: this must be coherent with #SBATCH --cpus-per-task
 
 
 
@@ -646,7 +663,7 @@ module load gromacs/2024.5
 EOT
 
 GMX="gmx"
-MDRUN_OPTIONS="-ntomp 16 -ntmpi 1"
+MDRUN_OPTIONS="-ntomp ${NTOMP} -ntmpi ${NTMPI}"
 
 
 
@@ -835,16 +852,14 @@ chmod +x script.${NAME}.sh
 
 
 if [[ $ARCHITECTURE == "slurm" ]]; then
-    sbatch script.${NAME}.sh
-    echo "job was sent"
+    sbatch script.${NAME}.sh && echo "job was sent"
 
 elif [[ $ARCHITECTURE == "rome" ]]; then
-    ccc_msub script.${NAME}.sh
-    echo "job was sent"
+    ccc_msub script.${NAME}.sh && echo "job was sent"
 
 elif [[ $ARCHITECTURE == "pc" ]]; then
-    ./script.${NAME}.sh
-    echo "script was lounched"
+    ./script.${NAME}.sh && echo "script finished"
+    
 
 fi
 
