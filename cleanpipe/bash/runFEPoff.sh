@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# usage example: ./runFEP.sh alaHO alaHO.gro alaHO.top 100 "283 298 313" charmm36 pc molecule_0 8 2
+# usage example: ./runFEPoff.sh alaHO alaHO.gro alaHO.top 100 "283 298 313" charmm36 pc molecule_0 8 2
 
 
 # ARGUMENTS:
@@ -68,7 +68,7 @@ echo " "
 if [[ $FF == "charmm36" || $FF == "martini3" ]]; then
     echo "    FF is valid"
 else
-    echo "Error: the force field must be either 'charmm36' or 'martini3'"
+    echo "Error: the force field must be either 'charmm36' or 'martini3' !"
     exit 1
 fi
 echo " "
@@ -95,7 +95,7 @@ echo " "
 if [[ $ARCHITECTURE == "pc" || $ARCHITECTURE == "slurm" || $ARCHITECTURE == "rome" ]]; then
     echo "    Architecture is valid"
 else
-    echo "Error: architecture must be 'pc' or 'slurm' or 'rome' "
+    echo "Error: architecture must be 'pc' or 'slurm' or 'rome' !"
     exit 1
 fi
 echo " "
@@ -106,19 +106,23 @@ echo "Molecule to decouple: ${MOL_TO_DECOUPLE}"
 echo " "
 
 NTOMP=$9
+echo "NTOMP: ${NTOMP}"
 if [[ "$NTOMP" =~ ^[0-9]+$ ]]; then
     echo "NTOMP OK (is an integer)"
 else
-    echo "NTOMP is NOT an integer"
+    echo "Error: NTOMP is NOT an integer!"
+    exit 1
 fi
 
 
 
-NTMPI=$10
+NTMPI=${10}
+echo "NTMPI: ${NTMPI}"
 if [[ "$NTMPI" =~ ^[0-9]+$ ]]; then
     echo "NTMPI OK (is an integer)"
 else
-    echo "NTMPI is NOT an integer"
+    echo "Error: NTMPI is NOT an integer!"
+    exit 1
 fi
 echo " "
 
@@ -812,9 +816,9 @@ echo "############## EM - Temperature ${t} Lambda ${i} #########################
 cd 1_EM || exit 1
 	
 
-${GMX} grompp -f ${file_em_mdp} -c "../../../../${GRO}" -p "../../../../${TOP}" -o "${NAME}_em.tpr" 2>&1 | tee "log"
+${GMX} grompp -f ${file_em_mdp} -c "../../../../${GRO}" -p "../../../../${TOP}" -o "${NAME}_em.tpr" 2>&1 | tee "log.grompp"
 
-if grep -q "Error" "log"; then
+if grep -q "Error" "log.grompp"; then
     echo "GROMACS reported an error — stopping script."
     exit 1
 fi
@@ -822,9 +826,9 @@ fi
 
 echo "##########################################################################################"
 
-${GMX} mdrun -deffnm "${NAME}_em" ${MDRUN_OPTIONS} 2>&1 | tee "log"
+${GMX} mdrun -deffnm "${NAME}_em" ${MDRUN_OPTIONS} 2>&1 | tee "log.mdrun"
 
-if grep -q "Error" "log"; then
+if grep -q "Error" "log.mdrun"; then
     echo "GROMACS reported an error — stopping script."
     exit 1
 fi
@@ -837,9 +841,9 @@ echo "############# NVT - Temperature ${t} Lambda ${i}  ########################
 cd ../2_NVT || exit 1
 
 
-${GMX} grompp -f ${file_nvt_mdp} -c "../1_EM/${NAME}_em.gro" -r "../1_EM/${NAME}_em.gro" -p "../../../../${TOP}" -o "${NAME}_nvt.tpr" -maxwarn 1 2>&1 | tee "log"
+${GMX} grompp -f ${file_nvt_mdp} -c "../1_EM/${NAME}_em.gro" -r "../1_EM/${NAME}_em.gro" -p "../../../../${TOP}" -o "${NAME}_nvt.tpr" -maxwarn 1 2>&1 | tee "log.grompp"
 
-if grep -q "Error" "log"; then
+if grep -q "Error" "log.grompp"; then
     echo "GROMACS reported an error — stopping script."
     exit 1
 fi
@@ -847,9 +851,9 @@ fi
 
 echo "##########################################################################################"
 
-${GMX} mdrun -v -deffnm "${NAME}_nvt" ${MDRUN_OPTIONS} 2>&1 | tee "log"
+${GMX} mdrun -v -deffnm "${NAME}_nvt" ${MDRUN_OPTIONS} 2>&1 | tee "log.mdrun"
 
-if grep -q "Error" "log"; then
+if grep -q "Error" "log.mdrun"; then
     echo "GROMACS reported an error — stopping script."
     exit 1
 fi
@@ -861,9 +865,9 @@ fi
 echo "##################### NPT - Temperature ${t} Lambda ${i}  ###############################"
 cd ../3_NPT || exit 1
 
-${GMX} grompp -f ${file_npt_mdp} -c "../2_NVT/${NAME}_nvt.gro" -r "../2_NVT/${NAME}_nvt.gro" -p "../../../../${TOP}" -o "${NAME}_npt.tpr" -maxwarn 1 2>&1 | tee "log"
+${GMX} grompp -f ${file_npt_mdp} -c "../2_NVT/${NAME}_nvt.gro" -r "../2_NVT/${NAME}_nvt.gro" -p "../../../../${TOP}" -o "${NAME}_npt.tpr" -maxwarn 1 2>&1 | tee "log.grompp"
 
-if grep -q "Error" "log"; then
+if grep -q "Error" "log.grompp"; then
     echo "GROMACS reported an error — stopping script."
     exit 1
 fi
@@ -871,9 +875,9 @@ fi
 
 echo "#########################################################################################"
 
-${GMX} mdrun -v -deffnm "${NAME}_npt" ${MDRUN_OPTIONS} 2>&1 | tee "log"
+${GMX} mdrun -v -deffnm "${NAME}_npt" ${MDRUN_OPTIONS} 2>&1 | tee "log.mdrun"
 
-if grep -q "Error" "log"; then
+if grep -q "Error" "log.mdrun"; then
     echo "GROMACS reported an error — stopping script."
     exit 1
 fi
@@ -884,10 +888,10 @@ fi
 echo "#################### PRODUCTION - Temperature ${t} Lambda ${i}  #######################"
 cd ../4_PROD || exit 1	
 
-${GMX} grompp -f ${file_prod_mdp} -c "../3_NPT/${NAME}_npt.gro" -p "../../../../${TOP}" -o "${NAME}_prod_${t}_${i}.tpr" -maxwarn 1 2>&1 | tee "log"
+${GMX} grompp -f ${file_prod_mdp} -c "../3_NPT/${NAME}_npt.gro" -p "../../../../${TOP}" -o "${NAME}_prod_${t}_${i}.tpr" -maxwarn 1 2>&1 | tee "log.grompp"
 #gmx grompp -f xxx I must create a mdp file that is the same as prod but with shorter lenght xxx  -c "../3_NPT/${NAME}_npt.gro" -p "../../../../${TOP}" -o "${NAME}_quick_${t}_${i}.tpr" -maxwarn 1
 
-if grep -q "Error" "log"; then
+if grep -q "Error" "log.grompp"; then
     echo "GROMACS reported an error — stopping script."
     exit 1
 fi
@@ -896,9 +900,9 @@ fi
 
 echo "#######################################################################################"
 
-${GMX} mdrun -v -deffnm "${NAME}_prod_${t}_${i}" ${MDRUN_OPTIONS} 2>&1 | tee "log" 
+${GMX} mdrun -v -deffnm "${NAME}_prod_${t}_${i}" ${MDRUN_OPTIONS} 2>&1 | tee "log.mdrun" 
 
-if grep -q "Error" "log"; then
+if grep -q "Error" "log.mdrun"; then
     echo "GROMACS reported an error — stopping script."
     exit 1
 fi
@@ -909,18 +913,18 @@ fi
 echo "############################## CENTER AND FIT - Temperature ${t} Lambda ${i}  ###################################"
 
 
-printf '1\n0' | ${GMX} trjconv -s "${NAME}_prod_${t}_${i}.tpr" -f "${NAME}_prod_${t}_${i}.xtc" -o "${NAME}_prod_${t}_${i}.centered.xtc" -center -pbc mol 2>&1 | tee "log"
+printf '1\n0' | ${GMX} trjconv -s "${NAME}_prod_${t}_${i}.tpr" -f "${NAME}_prod_${t}_${i}.xtc" -o "${NAME}_prod_${t}_${i}.centered.xtc" -center -pbc mol 2>&1 | tee "log.center"
 
-if grep -q "Error" "log"; then
+if grep -q "Error" "log.center"; then
     echo "GROMACS reported an error — stopping script."
     exit 1
 fi
 
 
 
-printf '1\n0' | ${GMX} trjconv -s "${NAME}_prod_${t}_${i}.tpr" -f "${NAME}_prod_${t}_${i}.centered.xtc" -o "${NAME}_prod_${t}_${i}.fitted.xtc" -fit progressive 2>&1 | tee "log"
+printf '1\n0' | ${GMX} trjconv -s "${NAME}_prod_${t}_${i}.tpr" -f "${NAME}_prod_${t}_${i}.centered.xtc" -o "${NAME}_prod_${t}_${i}.fitted.xtc" -fit progressive 2>&1 | tee "log.fit"
 
-if grep -q "Error" "log"; then
+if grep -q "Error" "log.fit"; then
     echo "GROMACS reported an error — stopping script."
     exit 1
 fi
