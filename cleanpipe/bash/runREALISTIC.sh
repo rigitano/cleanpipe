@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# usage example:  ./runREALISTIC.sh a12HW a12HW.gro a12HW.top 1 298 charmm36 pc 8 2
+# usage example:  ./runREALISTIC.sh a12HW a12HW.gro a12HW.top 1 298 charmm36 pc 2 8
 
 # ARGUMENTS:
 # 1-name that goes onthe runREALISTIC to be created and the job name

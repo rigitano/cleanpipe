@@ -698,7 +698,7 @@ EOT
 if [[ $ARCHITECTURE == "rome" ]]; then # insert the rome header, if the user chose this architecture
 
 
-cat <<EOT >>  "t${t}.l${i}.sh"
+cat <<EOT >> "t${t}.l${i}.sh"
 
 #MSUB   -r ${NAME}.${t}.${i}.fep             # Job name
 #MSUB   -n ${NTMPI}                          # Number of tasks in parallel mode (ntmpi)
@@ -739,10 +739,12 @@ MDRUN_OPTIONS=""
 #########################################################################################################
 elif [[ $ARCHITECTURE == "slurm" ]]; then # insert the slurm header, if the user chose this architecture
 
-cat <<EOT >>  "t${t}.l${i}.sh"
+cat <<EOT >> "t${t}.l${i}.sh"
 
 #SBATCH --partition=calcul
 #SBATCH --cpus-per-task=${NTOMP}
+##SBATCH --gres=gpu:1
+##SBATCH --nodes=1
 #SBATCH --job-name=${NAME}.${t}.${i}.fep
 #SBATCH --output=t${t}.l${i}.scheduler.outanderr
 #SBATCH --exclude=node-15
@@ -767,7 +769,7 @@ MDRUN_OPTIONS="-ntomp ${NTOMP} -ntmpi ${NTMPI}" #this requires  #SBATCH --cpus-p
 ##########################################################################################################3
 elif [[ $ARCHITECTURE == "pc" ]]; then # insert what should be the gromacs commands in my local pc
 
-cat <<EOT >>  "t${t}.l${i}.sh"
+cat <<EOT >> "t${t}.l${i}.sh"
 
 module purge
 module load cuda/11.8
@@ -801,7 +803,7 @@ fi # end of if that inserts script headers and module loading before the gromacs
 
 
 #now the gromacs commands will be appended to the headers and moldule loading
-cat <<EOT >>  "t${t}.l${i}.sh"
+cat <<EOT >> "t${t}.l${i}.sh"
 
 
 
@@ -937,9 +939,7 @@ EOT
 	
 
 
-
-
-
+# xxx in the future, I should put an analysis script here, that procced with the analysis. this has to be a different script, because for slurm and rome, I should run just after all the jobs are finished
 
 
 
@@ -947,29 +947,13 @@ chmod +x t${t}.l${i}.sh
 
 
 if [[ $ARCHITECTURE == "slurm" ]]; then
-    jid=$(sbatch t${t}.l${i}.sh | awk '{print $4}')
-    #build list of ids sent, to use to set the dependency of the analysis script 
-    slurm_ids+=($jid)
-    DEPENDENCY_STRING=$(printf "afterok:%s:" "${slurm_ids[@]}")
-    DEPENDENCY_STRING=${DEPENDENCY_STRING%:}    # remove final colon
-
-    echo "job was sent (t: ${t} Lambda: ${i}) - id ${jid}"
-
+    sbatch t${t}.l${i}.sh && echo "job was sent (t: ${t} Lambda: ${i})"
 
 elif [[ $ARCHITECTURE == "rome" ]]; then
-    jid=$(ccc_msub t${t}.l${i}.sh | grep -Eo '[0-9]+' | tail -n1)
-    #build list of ids sent, to use to set the dependency of the analysis script 
-    tgcc_ids+=($jid)
-    DEPENDENCY_STRING=$(printf "%s," "${tgcc_ids[@]}")
-    DEPENDENCY_STRING=${DEPENDENCY_STRING%,}      # remove final comma
-
-    echo "job was sent (t: ${t} Lambda: ${i}) - id ${jid}"
-
+    ccc_msub t${t}.l${i}.sh && echo "job was sent (t: ${t} Lambda: ${i})"
 
 elif [[ $ARCHITECTURE == "pc" ]]; then
     nohup ./t${t}.l${i}.sh > t${t}.l{l}.redirected.out.and.err 2>&1 &
-    pid=$!
-    DEPENDENCY_STRING+=($pid)
     echo "script was lounched (t: ${t} Lambda: ${i})"
 
 fi
@@ -991,388 +975,3 @@ done # temperature loop
 
 
 
-echo "Jobs were sent for all lambdas and temperatures"
-echo " "
-echo "This is the dependency string:"
-echo "$DEPENDENCY_STRING"
-echo " "
-
-
-
-
-
-
-
-
-# analysis script that will be run just after all the jobs are finished. each temperature will have one
-# this analysis script will concatenate outputs for each lambda, if there is *part* in the name, and then calculate the bar and baring
-for t in $TEMPERATURE_LIST; do
-
-
-
-
-cat <<EOT > "${NAME}.${t}.ConcatAndBar.sh"
-#!/bin/bash
-
-EOT
-
-
-
-
-########################################################################################################
-if [[ $ARCHITECTURE == "rome" ]]; then # insert the rome header, if the user chose this architecture
-
-
-cat <<EOT >>  "${NAME}.${t}.ConcatAndBar.sh"
-
-#MSUB   -r ${NAME}.${t}.ConcatAndBar         # Job name
-#MSUB   -n 1                                 # Number of tasks in parallel mode (ntmpi)
-#MSUB   -c 8                                 # Number of cores per parallel task
-#MSUB   -W yes                               # Let multiple jobs sharing same name & user run simultaneously
-#MSUB   -o final.analysis.%I.scheduler.out   # Output file
-#MSUB   -e final.analysis.%I.scheduler.err   # Output file for errors
-#MSUB   -q rome                              # Partition:    rome        
-#MSUB   -A gen13458                          # Project code: gen10138 or spe00017
-#MSUB   -m scratch,work,store                # File system:  scratch,work,store
-#MSUB   -Q normal                            # Quality of Service (test,normal,long) (ccc_mqinfo)
-#MSUB   -T 86400                             # Maximum walltime in seconds
-#MSUB   -a ${DEPENDENCY_STRING}
-#MSUB   -@ henrique.rigitano@ibcp.fr:end
-
-set -x # echo commands
-
-module purge  # retire tous les modules déchargeables de l'environnement
-module load gnu/11 # charge gnu/11 et définit gnu/11 comme compilateur dans votre environnement
-module load nvhpc/24.3 # besoin de mettre avant OpenMPI comme ce dernier charge un cuda qui n'est pas compatible avec nvhpc/24.3
-module load mpi/openmpi/4 # charge la souche OpenMPI
-module load gromacs/2025.0 # charge le produit
-
-export GMX_DISABLE_GPU_DETECTION=1 # prevent GROMACS from using GPUs
-export I_MPI_PIN_CELL=core
-export I_MPI_PIN_DOMAIN=auto
-
-OMP_NUM_THREADS=1      # number of OpenMP threads (ntomp)
-
-EOT
-
-#GMX ENGINE 
-GMX="ccc_mprun gmx_mpi"
-
-
-
-#########################################################################################################
-elif [[ $ARCHITECTURE == "slurm" ]]; then # insert the slurm header, if the user chose this architecture
-
-cat <<EOT >>  "${NAME}.${t}.ConcatAndBar.sh"
-
-#SBATCH --partition=calcul
-#SBATCH --cpus-per-task=1
-#SBATCH --job-name=${NAME}.${t}.ConcatAndBar
-#SBATCH --output=final.analysis.scheduler.outanderr
-#SBATCH --exclude=node-15
-#SBATCH --dependency=${DEPENDENCY_STRING}
-
-module purge
-module load cuda/11.8
-module load gromacs/2024.5
-
-#alternative:
-#module purge
-#module load cuda/12.2
-#module load gromacs/2025.0
-
-EOT
-
-#GMX ENGINE
-GMX="gmx"
-
-
-##########################################################################################################3
-elif [[ $ARCHITECTURE == "pc" ]]; then # insert what should be the gromacs commands in my local pc
-
-cat <<EOT >>  "${NAME}.${t}.ConcatAndBar.sh"
-
-sleep 14400
-
-module purge
-module load cuda/11.8
-module load gromacs/2024.5
-
-#alternative:
-#module purge
-#module load cuda/12.2
-#module load gromacs/2025.0
-
-EOT
-
-#GMX ENGINE
-GMX="gmx"
-
-
-
-########################################################################################################
-fi # end of if that inserts script headers and module loading before the gromacs commands
-
-
-
-#now the gromacs commands will be appended to the headers and moldule loading
-cat <<EOT >> "${NAME}.${t}.ConcatAndBar.sh"
-
-set -o pipefail  # stop if any part of a pipeline fails
-
-
-
-
-echo '##################################################################'
-echo '########## concatenation of mdrun outputs, if necessary ##########'
-echo '################ (for all temperatures and lamdas) ###############'
-echo '##################################################################'
-
-
-
-
-
-for i in {00..20}; do  # lambda loop
-
-cd t${t}/Lambda_\${i}/4_PROD || exit 1
-pwd
-
-
-
-##################### xvg concatenation, if necessary #####################
-
-
-# Count part files
-count=\$(find . -name "*part*.xvg" -type f | wc -l)
-
-if [[ "\$count" -gt 0 ]]; then
-
-    echo "Found \$count *part*.xvg files. Sorting…"
-
-    #I will create concatenated files with name all. so lets delete them, I case I run this script before
-    rm -f -- *.all.xvg
-
-
-    # Sort files like in your xtc script
-    sorted_files=\$(find . -name "*part*.xvg" -type f \
-        | sed -E 's#.*_([0-9]+)\.([0-9]+)\.part0*([0-9]+)\.(.*)#\2 \3 & #' \
-        | sort -k1,1n -k2,2n \
-        | awk '{print \$3}')
-
-    nonempty_files=()
-
-    echo "Checking which XVG files contain data…"
-
-    for f in \$sorted_files; do
-        echo -n " → Checking \$f ... "
-
-        # Extract last non-comment line
-        lastline=\$(grep -v '^[#@]' "\$f" | tail -n 1)
-
-        if [[ -z "\$lastline" ]]; then
-            echo "EMPTY — skipping"
-        else
-            echo "OK"
-            nonempty_files+=("\$f")
-        fi
-    done
-
-    if [[ \${#nonempty_files[@]} -eq 0 ]]; then
-        echo "All xvg part files are empty at t${t} L\${i} — nothing to concatenate."
-        exit 1
-    fi
-
-    echo "Non-empty files to be concatenated:"
-    printf '   %s\n' "\${nonempty_files[@]}"
-
-    # Define output name based on prefix of first file
-    first="\${nonempty_files[0]}"
-    prefix="\${first%%.part*}"
-    out="\${prefix}.all.xvg"
-
-    echo "Writing concatenated file to: \$out"
-
-    # Write header from first file only
-    grep '^[#@]' "\${nonempty_files[0]}" > "\$out"
-
-    echo "@    legend \"Concatenated XVG\"" >> "\$out"
-    echo >> "\$out"
-
-    # Append only data (ignore comments) from each file
-    for f in "\${nonempty_files[@]}"; do
-        grep -v '^[#@]' "\$f" >> "\$out"
-    done
-
-    echo "Done."
-
-else
-    echo "No part-files found. Renaming *.xvg to *.all.xvg…"
-    find . -maxdepth 1 -name "*.xvg" -type f | while read -r f; do
-        base="\${f%.xvg}"
-        new="\${base}.all.xvg"
-        echo "Renaming: \$f → \$new"
-        mv "\$f" "\$new"
-    done
-fi
-
-
-
-
-
-
-##################### xtc concatenation, if necessary #####################
-
-
-# Count part files
-count=\$(find . -name "*part*.xtc" -type f | wc -l)
-
-if [[ "\$count" -gt 0 ]]; then
-    echo "Found \$count *part*.xtc files. Sorting…"
-
-    #I will create concatenated files with name all. so lets delete them, I case I run this script before
-    rm -f -- *.all.xvg
-
-
-    # Sort files using your existing logic
-    sorted_files=\$(find . -name "*part*.xtc" -type f \
-        | sed -E 's#.*_([0-9]+)\.([0-9]+)\.part0*([0-9]+)\.(.*)#\2 \3 & #' \
-        | sort -k1,1n -k2,2n \
-        | awk '{print \$3}')
-
-    echo "Checking which files are empty…"
-
-    nonempty_files=()
-
-    for f in \$sorted_files; do
-        echo -n " → Checking \$f ... "
-
-        # Run gmx check and detect emptiness
-        # An empty xtc usually shows somthing like: "Last frame read 0" or "Read 0 frames"
-        frames=\$(${GMX} check -f "\$f" 2>/dev/null \
-                | awk '
-                    /[Ff]rame/ {
-                        # Extract the last numeric value in the line
-                        for (i = NF; i > 0; i--) {
-                            if (\$i ~ /^[0-9]+$/) { print \$i; exit }
-                        }
-                    }')
-
-        # Default to 0 if empty (means no frame count found)
-        frames=\${frames:-0}
-
-        if (( frames > 0 )); then
-            echo "OK (\$frames frames)"
-            nonempty_files+=("\$f")
-        else
-            echo "EMPTY — skipping"
-        fi
-
-
-    done
-
-    if [[ \${#nonempty_files[@]} -eq 0 ]]; then
-        echo "All xtc part files are empty at t${t} L\${i} — nothing to concatenate."
-        exit 1
-    fi
-
-    echo "Non-empty files to be concatenated:"
-    printf '   %s\n' "\${nonempty_files[@]}"
-
-    # Extract prefix from first file (safer than hard-coding)
-    first="\${nonempty_files[0]}"
-    prefix="\${first%%.part*}"   # removes .part0001.xtc etc.
-
-    out="\${prefix}.all.xtc"
-
-    echo "Concatenating into: \$out"
-
-    # Run gmx trjcat with only valid files
-    ${GMX} trjcat -f "\${nonempty_files[@]}" -o "\$out" -settime <<\EOF
-0
-EOF
-
-    echo "Done."
-
-else
-    echo "No part-files found. Renaming *.xtc to *.all.xtc…"
-
-    find . -maxdepth 1 -name "*.xtc" -type f | while read -r f; do
-        base="\${f%.xtc}"
-        new="\${base}.all.xtc"
-        echo "Renaming: \$f → \$new"
-        mv "\$f" "\$new"
-    done
-fi
-
-
-
-cd ../../..  #go back to runFEP, thext iteration will jump to the correct 4_PROD
-
-done # lambda loop
-
-
-
-
-
-echo '######################################################################'
-echo '##################### bar and barint calculation #####################'
-echo '################## (for all temperatures and lamdas) #################'
-echo '######################################################################'
-
-
-
-
-
-
-pwd
-cd t${t} || exit 1
-
-if [[ -d bar ]]; then
-    rm -rf bar
-fi
-
-mkdir bar
-
-
-${GMX} bar -f Lambda_*/4_PROD/*.all.xvg -o bar/${NAME}_${t}_bar.xvg -oi bar/${NAME}_${t}_barint.xvg 2>&1 | tee "log.bar"
-
-if grep -q "Error" "log.bar"; then
-    echo "GROMACS reported an error — stopping script."
-    exit 1
-fi
-
-
-
-
-cd .. #go back to runFEP so we can go to the next temperature
-
-
-EOT
-
-
-
-chmod +x ${NAME}.${t}.ConcatAndBar.sh
-
-
-if [[ $ARCHITECTURE == "slurm" ]]; then
-    sbatch ${NAME}.${t}.ConcatAndBar.sh
-    echo "analysis job was sent. it will wait utill dependencies finish"
-
-
-elif [[ $ARCHITECTURE == "rome" ]]; then
-    ccc_msub ${NAME}.${t}.ConcatAndBar.sh
-    echo "analysis job was sent. it will wait utill dependencies finish"
-
-
-elif [[ $ARCHITECTURE == "pc" ]]; then
-    nohup ${NAME}.${t}.ConcatAndBar.sh 2>&1 &
-
-    echo "analysis job was sent. it will wait 4 hours before starting"
-
-fi
-
-
-
-
-
-done # temperature loop
