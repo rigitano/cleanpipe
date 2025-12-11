@@ -1,0 +1,11 @@
+#include "inputs/forcefield_C0_EO_MM.itp"
+#include "inputs/ions.itp"
+#include "inputs/solvents.itp"
+
+[ system ]
+Octanol box
+
+[ molecules ]
+; Compound        nmols
+OCO               1183
+

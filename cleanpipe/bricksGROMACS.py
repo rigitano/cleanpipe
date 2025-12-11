@@ -29,7 +29,7 @@ def ensure_original_directory(func):
 
 
 @ensure_original_directory
-def pdb2system(s_pdbfile, s_outName, s_forceField, s_boxSize, s_martinize_aditional_arguments=''):
+def pdb2system(s_pdbfile, s_outName, s_forceField, s_boxSize, s_aditional_arguments=''):
     """
     creates a new folder with the system name. and a gro and top files inside it with that same system name
     the top will be a socked top, all the molecules will be outside
@@ -37,20 +37,29 @@ def pdb2system(s_pdbfile, s_outName, s_forceField, s_boxSize, s_martinize_aditio
     s_pdbfile : the input
     s_outName : names for the gro, top and folder
     
-    s_forceField : whats the ff file, please give also the location, relative to where the function is louched. for example:
-                                                                                                                            '../alanine12/v15-truss/charmm36-jul2022.ff'
-                                                                                                                            '~/ff/martini3001'
+    s_forceField :  you can insert one of the folowing ff names that are in the USEFUL_FORCEFIELDS folder:
+                        charmm36-jul2022
+                        martini3001
+                        martini22
+                    or alternetively give the location, relative to where the function is louched. for example:
+                        '../alanine12/v15-truss/charmm36-jul2022.ff'
+                        '~/ff/martini3001'
 
     s_boxSize : for example "3 3 3"
 
-    s_martinize_aditional_arguments : if you want aditional arguments in martinize. for example "-water-bias -water-bias-eps E:-0.5 H:-1.0 -ss HHHHHHHHHHHH"
+    s_aditional_arguments : if you want aditional arguments in gmx or martinize2. for example in martinize2 "-water-bias -water-bias-eps E:-0.5 H:-1.0 -ss HHHHHHHHHHHH"
 
     """
 
-    #input management
-    s_forceField = str(Path(s_forceField).expanduser().resolve()) #resolve all ../ ~/ ../../ ./ to absolute path
-    s_absoluteLocation = bricksFileSystem.get_file_location(s_forceField) # get forcefiled original location (relative to where the program was louched)
-    s_forceField       = bricksFileSystem.get_filename_without_extension(s_forceField) # now we update the variable so It will have just the ff name. without location nor extention
+    # forcefield input
+    if s_forceField in ["charmm36-jul2022", "martini3001", "martini22"]: #if the user chose one the forcefields that I have stored myself in USEFUL_FORCEFIELDS
+        module_path = Path(__file__).resolve().parent # Where the cl module lives
+        s_ffLocation = module_path / "USEFUL_FORCEFIELDS"
+
+    else: #if the user gave the folder of the forcefield
+        s_forceField = str(Path(s_forceField).expanduser().resolve()) #resolve all ../ ~/ ../../ ./ to absolute path
+        s_ffLocation = bricksFileSystem.get_file_location(s_forceField) # get forcefiled original location (relative to where the program was louched)
+        s_forceField       = bricksFileSystem.get_filename_without_extension(s_forceField) # now we update the variable so It will have just the ff name. without location nor extention
 
     bricksFileSystem.check_extention(s_pdbfile,['.pdb']) #check if the filename inside s_pdbfile is valid
     s_molName = bricksFileSystem.get_filename_without_extension(s_pdbfile)#get the pdb basename. it should be the name of the protagonist molecule
@@ -58,19 +67,19 @@ def pdb2system(s_pdbfile, s_outName, s_forceField, s_boxSize, s_martinize_aditio
     #create output folder. and 
     bricksFileSystem.run_and_capture(f"mkdir {s_outName}")
 
-    # bring the original pdb, the forcefield and eventual toppar to the system folder
+    # bring the original pdb to the system folder
     bricksFileSystem.run_and_capture(f'cp {s_pdbfile} {s_outName}/temp.pdb')
     
+    # bring the ff file the system folder
     try:
-        bricksFileSystem.run_and_capture(f'cp -r "{s_absoluteLocation}/{s_forceField}" {s_outName.rstrip("/")}/')#copy the forcefield to the new folder. its a try because sometimes there is a .ff in the name
+        bricksFileSystem.run_and_capture(f'cp -r "{s_ffLocation}/{s_forceField}" {s_outName.rstrip("/")}/')#copy the forcefield to the new folder. its a try because sometimes there is a .ff in the name
     except:
-        bricksFileSystem.run_and_capture(f'cp -r "{s_absoluteLocation}/{s_forceField}.ff" {s_outName.rstrip("/")}/')#if it failed, lets put the .ff
+        bricksFileSystem.run_and_capture(f'cp -r "{s_ffLocation}/{s_forceField}.ff" {s_outName.rstrip("/")}/')#if it failed, lets put the .ff
 
+    #there is an extra folder in the case of charmm36
+    if "charmm36" in s_forceField.lower():
+        bricksFileSystem.run_and_capture(f'cp -r "{str(module_path / "USEFUL_MOLECULES" / "charmm36" / "toppar")}" "{s_outName.rstrip("/")}/"')
 
-    try:
-        bricksFileSystem.run_and_capture(f'cp -r "{s_absoluteLocation}/toppar" "{s_outName.rstrip("/")}/"')#copy the toppar to the new folder. its a try because it may not exist
-    except:
-        print("CLEANPIPE MESSAGE toppar folder not found in the same folder as the forcefield folder")
 
 
     #cd into the output folder we created and do everithing there
@@ -81,18 +90,25 @@ def pdb2system(s_pdbfile, s_outName, s_forceField, s_boxSize, s_martinize_aditio
 
     #=============================== create gro and top. make sure there is a box size to the gro ======================================
 
-    if "martini" in s_forceField.lower(): #if the ff is martini, use martinize2
+    if "martini" in s_forceField.lower(): #if the ff is martini3001 or martini22, use martinize2
 
          ##################### martinize2 #####################
-        bricksFileSystem.run_and_capture(f"martinize2 -f temp.pdb -x {s_outName}_martinize2_output.pdb -o {s_outName}.top -p backbone -name main_molecule -from charmm -ff {s_forceField} -maxwarn 1 {s_martinize_aditional_arguments}")
+        bricksFileSystem.run_and_capture(f"martinize2 -f temp.pdb -x {s_outName}_martinize2_output.pdb -o {s_outName}.top -p backbone -name main_molecule -from charmm -ff {s_forceField} -maxwarn 1 {s_aditional_arguments}")
         #######################################################
 
-        #if the user inserted the water-bias argument, its necessary to edit the file martini_v3.0.0.itp to include those biases 
-        if "-water-bias" in s_martinize_aditional_arguments: 
-            bricksFileSystem.run_and_capture(f"sed -i '/\\[ nonbond_params \\]/c\\\n#include \"../virtual_sites_atomtypes.itp\"\\\n#include \"../virtual_sites_nonbond_params.itp\"\\\n\\\n[ nonbond_params ]' martini3001/martini_v3.0.0.itp")
+        # martinize2 is not as smart as pdb2gmx, so I have to add myself the forcefield inclusion on the top file
+        if s_forceField == "martini3001":
+            bricksFileSystem.run_and_capture(f"sed -i 's|#include \"martini\\.itp\"|#include \"martini3001/martini_v3\\.0\\.0\\.itp\"|' {s_outName}.top")
+        elif s_forceField == "martini22":
+            bricksFileSystem.run_and_capture(f"sed -i 's|#include \"martini\\.itp\"|#include \"martini22/martini_v2\\.2\\.itp\"|' {s_outName}.top")
 
-        #as martinize2 is not as smart as pdb2gmx, I have to add myself the forcefield inclusion on the top file
-        bricksFileSystem.run_and_capture(f"sed -i 's|#include \"martini\\.itp\"|#include \"martini3001/martini_v3\\.0\\.0\\.itp\"|' {s_outName}.top")
+        #if the user inserted the water-bias argument, its necessary to edit the file martini_v3.0.0.itp to include those biases 
+        if "-water-bias" in s_aditional_arguments: 
+            if s_forceField == "martini3001":
+                bricksFileSystem.run_and_capture(f"sed -i '/\\[ nonbond_params \\]/c\\\n#include \"../virtual_sites_atomtypes.itp\"\\\n#include \"../virtual_sites_nonbond_params.itp\"\\\n\\\n[ nonbond_params ]' martini3001/martini_v3.0.0.itp")
+            if s_forceField == "martini22":
+                bricksFileSystem.run_and_capture(f"sed -i '/\\[ nonbond_params \\]/c\\\n#include \"../virtual_sites_atomtypes.itp\"\\\n#include \"../virtual_sites_nonbond_params.itp\"\\\n\\\n[ nonbond_params ]' martini3001/martini_v2.2.itp")
+
 
         #define box size, this will produce a gro file to replace that idiotic pdb martinize2 that spits out. s_boxSize contains the user definition (ex: "3 3 3")
         bricksFileSystem.run_and_capture(f"gmx editconf -f {s_outName}_martinize2_output.pdb -o {s_outName}.gro -c -box {s_boxSize} -bt cubic")
@@ -110,7 +126,7 @@ def pdb2system(s_pdbfile, s_outName, s_forceField, s_boxSize, s_martinize_aditio
         s_choices_for_termini = bricksPDB.check_pdb_caps("temp.pdb")
 
         ##################### pdb2gmx #####################
-        bricksFileSystem.run_and_capture(f"printf '{s_choices_for_termini}' | gmx pdb2gmx -f temp.pdb -o {s_outName}.gro -p {s_outName}.top -missing -ter -ignh -water none -ff {s_forceField}") #-i {s_molName}.posres.itp
+        bricksFileSystem.run_and_capture(f"printf '{s_choices_for_termini}' | gmx pdb2gmx -f temp.pdb -o {s_outName}.gro -p {s_outName}.top -missing -ter -ignh -water none -ff {s_forceField} {s_aditional_arguments}") #-i {s_molName}.posres.itp
         ###################################################
 
         #pdb2gmx gives a weird name to the molecule from the pdb (ex: "Other_chain_O"), because he is stupid. lets replace it by the real molecule name, that I took from the pdb file name

@@ -144,7 +144,7 @@ def pdb2molecule_in_solvent(s_pdbfile, s_outSytemName, solvent, s_forceField, s_
         "runFEPoff.sh",
         "runREALISTIC.sh",
     ]
-    module_path = Path(__file__).parent # Where the cl module lives
+    module_path = Path(__file__).resolve().parent # Where the cl module lives
     source_dir = module_path / "bash" # Folder containing the source files
     dest_dir = Path(s_outSytemName) # Destination folder
     for filename in files_to_copy:
@@ -173,31 +173,42 @@ def pdb2molecule_in_water_and_octane(s_pdbfile, s_folderName, s_forceField, s_ma
 
     """
     print("CLEANPIPE called function pdb2molecule_in_water_and_octane")
+    module_path = Path(__file__).resolve().parent # Where the cl module lives
+    ff_dir       = module_path / "USEFUL_FORCEFIELDS" 
+    solvents_dir = module_path / "USEFUL_SOLVENTS" 
 
-
-    if "martini" in s_forceField.lower():
-        solvent1 = ["~/solvents/martini/Water-pure/water.gro","~/ff/martini3001/martini_v3.0.0_solvents_v1.itp"]
-        solvent2 = ["~/solvents/martini/Octane/OCT_PRO1.gro", "~/ff/martini3001/martini_v3.0.0_solvents_v1.itp"]
+    if "martini3001" in s_forceField.lower():
+        solvent1  = [ solvents_dir / "martini3001" / "Water-pure" / "water.gro",     ff_dir / "martini3001" / "martini_v3.0.0_solvents_v1.itp" ]    # I think water is already in the ff itp, so no need for this solvents file       
+        solvent2  = [ solvents_dir / "martini3001" / "Octane"     / "OCT_PRO1.gro",  ff_dir / "martini3001" / "martini_v3.0.0_solvents_v1.itp" ]
+        s_boxSize1 = "6 6 6"
+        s_boxSize2 = "6.1 6.1 6.1"
+        s_maxsol1 = "1736"
+        s_maxsol2 = "712"
+    elif "martini22" in s_forceField.lower():
+        solvent1  = [ solvents_dir / "martini22" / "Water-pure" / "water.gro",     ff_dir / "martini22" / "martini_v2.0_solvents.itp" ] # I think water is already in the ff itp, so no need for this solvents file  
+        solvent2  = [ solvents_dir / "martini22" / "Octane"     / "OCT_PRO1.gro",  ff_dir / "martini22" / "martini_v2.0_solvents.itp" ]
         s_boxSize1 = "6 6 6"
         s_boxSize2 = "6.1 6.1 6.1"
         s_maxsol1 = "1736"
         s_maxsol2 = "712"
     elif "charmm" in s_forceField.lower():
-        solvent1 = "tip3p"
-        solvent2 = ["octane_box_npt.gro","octn.itp"]
+        solvent1   = "tip3p"
+        solvent2   = [ solvents_dir / "charmm36" / "Octane" / "octane_box_npt.gro",  solvents_dir / "charmm36" / "Octane" / "octn.itp" ]
         s_boxSize1 = "6 6 6"
         s_boxSize2 = "6.1 6.1 6.1"
         s_maxsol1 = "6943"
         s_maxsol2 = "712"
 
-    
 
-    # create the two systems
+
+
+
+    # create the two systems it their own temporary folders
     s_molname = bricksFileSystem.get_filename_without_extension(s_pdbfile)
     pdb2molecule_in_solvent(s_pdbfile, s_molname + "_inW", solvent1, s_forceField, s_boxSize1, s_maxsol1, s_martinize_aditional_arguments)
     pdb2molecule_in_solvent(s_pdbfile, s_molname + "_inO", solvent2, s_forceField, s_boxSize2, s_maxsol2, s_martinize_aditional_arguments)
 
-    #now put the two systems in the same folder
+    #create folder that will contain the two systems, an moove them there
     bricksFileSystem.run_and_capture(f"mkdir {s_folderName}")
     bricksFileSystem.run_and_capture(f"rsync -av *_inW/* {s_folderName}")
     bricksFileSystem.run_and_capture(f"rsync -av *_inO/* {s_folderName}")

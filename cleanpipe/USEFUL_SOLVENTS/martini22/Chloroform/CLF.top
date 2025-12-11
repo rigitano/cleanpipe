@@ -1,0 +1,11 @@
+#include "inputs/forcefield_C0_EO_MM.itp"
+#include "inputs/ions.itp"
+#include "inputs/solvents.itp"
+
+[ system ]
+Chloroform box
+
+[ molecules ]
+; Compound        nmols
+CLF               2197
+

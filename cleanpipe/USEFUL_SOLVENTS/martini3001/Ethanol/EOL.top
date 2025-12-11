@@ -1,0 +1,11 @@
+#include "inputs/forcefield_C0_EO_MM.itp"
+#include "inputs/ions.itp"
+#include "inputs/solvents.itp"
+
+[ system ]
+Ethanol box
+
+[ molecules ]
+; Compound        nmols
+EOL               2197
+

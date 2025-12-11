@@ -1,0 +1,5 @@
+the solvents for both martini22 and martini3001 were taken from https://cgmartini.nl/docs/downloads/example-applications/solvent-systems.html
+for martini3001 Octane, I have to change the box so that the atoms were alternation C1 and C2
+
+in the case of charm, I found an ocnate itp someware and made the box myself
+

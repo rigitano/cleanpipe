@@ -21,10 +21,18 @@ setup(
         'MDAnalysis',
         'nglview',
     ],
-    include_package_data=True, # Normally pip install consider only .py files. this will alow it to see the mdp files in the mdp folder
+
+    include_package_data=True,  # this triggers MANIFEST.in handling
+
+    # not needed because MANIFEST.in handles recursive inclusion. this is just a reminder that doing this is necessary, otherwise just py files will be considered
     package_data={
-        'cleanpipe.mdp': ['*.mdp'],
-        'cleanpipe.bash': ['*.sh'],
-        'cleanpipe.tcl': ['*.tcl'],
+        "cleanpipe": [
+            "mdp/*",
+            "bash/*",
+            "tcl/*",
+            "USEFUL_SOLVENTS/*",
+            "USEFUL_MOLECULES/*",
+            "USEFUL_FORCEFIELDS/*",
+        ]
     },
 )

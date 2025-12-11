@@ -1,0 +1,76 @@
+;;;;;; 3-1 WATER
+
+[ moleculetype ]
+; molname  	nrexcl
+  SW  	    	1
+
+[ atoms ]
+;id 	type 	resnr 	residu 	atom 	cgnr 	charge
+ 1 	SW  	1 	SW  	SW 	1 	0 
+
+;;;;;; 2-1 WATER
+
+[ moleculetype ]
+; molname  	nrexcl
+  TW 	    	1
+
+[ atoms ]
+;id 	type 	resnr 	residu 	atom 	cgnr 	charge
+ 1 	TW 	1 	TW 	TW 	1 	0 
+
+;;;;;; DODECANE 3-1
+
+[moleculetype]
+; molname 	nrexcl
+  DOD3 		1
+
+[atoms]
+; id 	type 	resnr 	residu 	atom 	cgnr 	charge
+  1     SC2 	1 	DOD3 	C1 	1 	0 
+  2     SC1 	1 	DOD3 	C2	2 	0
+  3     SC1 	1 	DOD3 	C3	3 	0 
+  4     SC2 	1 	DOD3 	C4	4 	0  
+
+[bonds]
+; i j 	funct 	length 	force.c.
+  1 2 	1 	0.395 	5000 ; 
+  2 3 	1 	0.385	5000
+  3 4 	1 	0.395	5000
+
+[angles]
+; i j k 	funct 	angle 	force.c.
+  1 2 3 	2 	180.0 	25.0 
+  2 3 4 	2	180.0 	25.0 
+
+[dihedrals]
+;  1   2   3   4   3    9.28   12.16    -13.12    -3.06    26.24    -31.5
+
+;;;;;; DODECANE 2-1
+
+[moleculetype]
+; molname 	nrexcl
+  DOD2 		1
+
+[atoms]
+; id 	type 	resnr 	residu 	atom 	cgnr 	charge
+  1    TC3  	1 	DOD2 	C1 	1 	0 
+  2    TC2  	1 	DOD2 	C2	2 	0
+  3    TC2  	1 	DOD2 	C3	3 	0 
+  4    TC2  	1 	DOD2 	C4	4 	0  
+  5    TC2  	1 	DOD2 	C5	5 	0  
+  6    TC3  	1 	DOD2 	C6	6 	0  
+
+[bonds]
+; i j 	funct 	length 	force.c.
+  1 2 	1 	0.33   6500 
+  2 3 	1 	0.32   6500
+  3 4 	1 	0.32   6500
+  4 5 	1 	0.32   6500
+  5 6 	1 	0.33   6500
+
+[angles]
+; i j k 	funct 	angle 	force.c.
+  1 2 3 	2 	180.0 	15.0 
+  2 3 4 	2 	180.0 	15.0 
+  3 4 5 	2 	180.0 	15.0 
+  4 5 6 	2 	180.0 	15.0 
