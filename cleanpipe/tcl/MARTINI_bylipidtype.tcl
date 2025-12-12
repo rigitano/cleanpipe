@@ -55,7 +55,7 @@ color Display Background white
 
 # put a grey representation in all, that will be overiden my each specific type
 mol representation Licorice 2.3 50 50
-set text "all"
+set text "not W"
 mol selection $text
 mol material AOChalky
 mol color ColorID 2 ;# grey

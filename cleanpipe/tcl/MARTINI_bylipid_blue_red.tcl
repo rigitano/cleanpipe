@@ -17,7 +17,7 @@ display rendermode GLSL
 
 # put a grey representation in all, that will be overiden my each specific type
 mol representation Licorice 1.7 50 50
-set text "all"
+set text "not W"
 mol selection $text
 mol material AOChalky
 mol color ColorID 2 ;# grey
@@ -37,7 +37,7 @@ mol addrep top
 # bluish tone
 mol representation Licorice 2.0 12.0 12.0
 mol color ColorID 23
-mol selection {not resname SED_WILL_REPLACE_THIS}
+mol selection {not resname SED_WILL_REPLACE_THIS and not W}
 mol material AOChalky
 mol addrep top
 
