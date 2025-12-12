@@ -93,7 +93,7 @@ def pdb2system(s_pdbfile, s_outName, s_forceField, s_boxSize, s_aditional_argume
     if "martini" in s_forceField.lower(): #if the ff is martini3001 or martini22, use martinize2
 
          ##################### martinize2 #####################
-        bricksFileSystem.run_and_capture(f"martinize2 -f temp.pdb -x {s_outName}_martinize2_output.pdb -o {s_outName}.top -p backbone -name main_molecule -from charmm -ff {s_forceField} -maxwarn 1 {s_aditional_arguments}")
+        bricksFileSystem.run_and_capture(f"martinize2 -f temp.pdb -x {s_outName}_martinize2_output.pdb -o {s_outName}.top -p backbone -name main_molecule -from charmm -ff {s_forceField} -maxwarn 2 {s_aditional_arguments}")
         #######################################################
 
         # martinize2 is not as smart as pdb2gmx, so I have to add myself the forcefield inclusion on the top file
