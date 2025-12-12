@@ -32,7 +32,7 @@ proc vmdrestoremymaterials {} {
   material change diffuse   GlassBubble 0.34
   material change specular  GlassBubble 1.0
   material change shininess GlassBubble 1.0
-  material change opacity   GlassBubble 0.08
+  material change opacity   GlassBubble 0.03
   material change transmode GlassBubble 1
 }
 vmdrestoremymaterials

@@ -62,6 +62,7 @@ mol addrep top
 mol selection "name W"
 mol representation VDW 2.4 12
 mol color ColorID 12   ;# light blue
+material change opacity Transparent 0.03
 mol material Transparent
 mol addrep top
 
