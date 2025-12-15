@@ -88,6 +88,7 @@ mol addrep top
 
 # PROTEIN
 
+# backbone
 set text "name BB"
 mol selection $text
 mol representation Licorice 1 12 12
@@ -95,6 +96,7 @@ mol material AOChalky
 mol color ColorID 15 ;# iceblue
 mol addrep top
 
+# side chains
 mol selection {name regexp "^(SC).*"}
 mol representation Licorice 1 12 12
 mol material AOChalky

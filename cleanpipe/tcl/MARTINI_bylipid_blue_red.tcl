@@ -30,14 +30,14 @@ mol addrep top
 # reddish tone
 mol representation Licorice 2.0 12.0 12.0
 mol color ColorID 29
-mol selection {resname SED_WILL_REPLACE_THIS}
+mol selection {resname SED_WILL_REPLACE_THIS and not name W}
 mol material AOChalky
 mol addrep top
 
 # bluish tone
 mol representation Licorice 2.0 12.0 12.0
 mol color ColorID 23
-mol selection {not resname SED_WILL_REPLACE_THIS and not W}
+mol selection {not resname SED_WILL_REPLACE_THIS and not name W}
 mol material AOChalky
 mol addrep top
 
