@@ -64,19 +64,19 @@ def pdb2system(s_pdbfile, s_outName, s_forceField, s_boxSize, s_aditional_argume
     bricksFileSystem.check_extention(s_pdbfile,['.pdb']) #check if the filename inside s_pdbfile is valid
     s_molName = bricksFileSystem.get_filename_without_extension(s_pdbfile)#get the pdb basename. it should be the name of the protagonist molecule
 
-    #create output folder. and 
+    # create output folder. and 
     bricksFileSystem.run_and_capture(f"mkdir {s_outName}")
 
     # bring the original pdb to the system folder
     bricksFileSystem.run_and_capture(f'cp {s_pdbfile} {s_outName}/temp.pdb')
     
-    # bring the ff file the system folder
-    try:
-        bricksFileSystem.run_and_capture(f'cp -r "{s_ffLocation}/{s_forceField}" {s_outName.rstrip("/")}/')#copy the forcefield to the new folder. its a try because sometimes there is a .ff in the name
-    except:
-        bricksFileSystem.run_and_capture(f'cp -r "{s_ffLocation}/{s_forceField}.ff" {s_outName.rstrip("/")}/')#if it failed, lets put the .ff
 
-    #there is an extra folder in the case of charmm36
+    # in the case of charmm, the actual folder has a .ff in the end
+    if "charmm36-jul2022" in s_forceField.lower():
+        bricksFileSystem.run_and_capture(f'cp -r "{s_ffLocation}/charmm36-jul2022.ff" {s_outName.rstrip("/")}/')
+
+
+    # in the case of charmm, there is an extra folder
     if "charmm36" in s_forceField.lower():
         bricksFileSystem.run_and_capture(f'cp -r "{str(module_path / "USEFUL_MOLECULES" / "charmm36" / "toppar")}" "{s_outName.rstrip("/")}/"')
 

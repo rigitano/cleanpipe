@@ -156,7 +156,7 @@ def pdb2molecule_in_solvent(s_pdbfile, s_outSytemName, solvent, s_forceField, s_
 
 
 @ensure_original_directory
-def pdb2molecule_in_water_and_octane(s_pdbfile, s_folderName, s_forceField, s_martinize_aditional_arguments=''):
+def pdb2molecule_in_water_and_octane(s_pdbfile, s_folderName, s_forceField, s_boxSize, s_aditional_arguments=''):
     """
     this function is perfect for canclulations of free energies of transfer. there will be two systems in the same folder. 
     but for DG transfer, this actualy makes things easyer. you can run two runREALISTIC scrits, and then two runFEPoff scripts. and all the data you need will be there
@@ -165,10 +165,11 @@ def pdb2molecule_in_water_and_octane(s_pdbfile, s_folderName, s_forceField, s_ma
     s_folderName    : string with the name of the folder, for example "ala6Hdihr200-transfer". this folder will be created, and inside it, the two systems will be created inside it
     s_forceField    : one of the gromacs recognized force fields, for example "charmm36-jul2022"
     s_boxSize       : string with x y z sizes, for example "3 3 3"
+    s_aditional_arguments : extra stuff you might want to add to martinize2 or pdb2gmx
 
     example:
     cl.pdb2molecule_in_two_solvents("normal_peptide.pdb", "ala6Hdih200-transfer", "charmm36-jul2022")
-    cl.pdb2molecule_in_water_and_octane("g12H.pdb", "g12Hbias1-transfer", '~/ff/martini3001', s_martinize_aditional_arguments='-water-bias -water-bias-eps E:-0.5 H:-1.0 -ss HHHHHHHHHHHH')
+    cl.pdb2molecule_in_water_and_octane("g12H.pdb", "g12Hbias1-transfer", '~/ff/martini3001', s_aditional_arguments='-water-bias -water-bias-eps E:-0.5 H:-1.0 -ss HHHHHHHHHHHH')
 
 
     """
@@ -180,22 +181,22 @@ def pdb2molecule_in_water_and_octane(s_pdbfile, s_folderName, s_forceField, s_ma
     if "martini3001" in s_forceField.lower():
         solvent1  = [ solvents_dir / "martini3001" / "Water-pure" / "water.gro",     ff_dir / "martini3001" / "martini_v3.0.0_solvents_v1.itp" ]    # I think water is already in the ff itp, so no need for this solvents file       
         solvent2  = [ solvents_dir / "martini3001" / "Octane"     / "OCT_PRO1.gro",  ff_dir / "martini3001" / "martini_v3.0.0_solvents_v1.itp" ]
-        s_boxSize1 = "6 6 6"
-        s_boxSize2 = "6.1 6.1 6.1"
+        s_boxSize1 = s_boxSize #"6 6 6"
+        s_boxSize2 = s_boxSize #"6.1 6.1 6.1"
         s_maxsol1 = "1736"
         s_maxsol2 = "712"
     elif "martini22" in s_forceField.lower():
         solvent1  = [ solvents_dir / "martini22" / "Water-pure" / "water.gro",     ff_dir / "martini22" / "martini_v2.0_solvents.itp" ] # I think water is already in the ff itp, so no need for this solvents file  
         solvent2  = [ solvents_dir / "martini22" / "Octane"     / "OCT_PRO1.gro",  ff_dir / "martini22" / "martini_v2.0_solvents.itp" ]
-        s_boxSize1 = "6 6 6"
-        s_boxSize2 = "6.1 6.1 6.1"
+        s_boxSize1 = s_boxSize #"6 6 6"
+        s_boxSize2 = s_boxSize #"6.1 6.1 6.1"
         s_maxsol1 = "1736"
         s_maxsol2 = "712"
     elif "charmm" in s_forceField.lower():
         solvent1   = "tip3p"
         solvent2   = [ solvents_dir / "charmm36" / "Octane" / "octane_box_npt.gro",  solvents_dir / "charmm36" / "Octane" / "octn.itp" ]
-        s_boxSize1 = "6 6 6"
-        s_boxSize2 = "6.1 6.1 6.1"
+        s_boxSize1 = s_boxSize #"3 3 3"
+        s_boxSize2 = s_boxSize #"3.1 3.1 3.1"
         s_maxsol1 = "6943"
         s_maxsol2 = "712"
 
@@ -205,8 +206,8 @@ def pdb2molecule_in_water_and_octane(s_pdbfile, s_folderName, s_forceField, s_ma
 
     # create the two systems it their own temporary folders
     s_molname = bricksFileSystem.get_filename_without_extension(s_pdbfile)
-    pdb2molecule_in_solvent(s_pdbfile, s_molname + "_inW", solvent1, s_forceField, s_boxSize1, s_maxsol1, s_martinize_aditional_arguments)
-    pdb2molecule_in_solvent(s_pdbfile, s_molname + "_inO", solvent2, s_forceField, s_boxSize2, s_maxsol2, s_martinize_aditional_arguments)
+    pdb2molecule_in_solvent(s_pdbfile, s_molname + "_inW", solvent1, s_forceField, s_boxSize1, s_maxsol1, s_aditional_arguments)
+    pdb2molecule_in_solvent(s_pdbfile, s_molname + "_inO", solvent2, s_forceField, s_boxSize2, s_maxsol2, s_aditional_arguments)
 
     #create folder that will contain the two systems, an moove them there
     bricksFileSystem.run_and_capture(f"mkdir {s_folderName}")
