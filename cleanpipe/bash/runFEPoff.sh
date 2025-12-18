@@ -824,7 +824,7 @@ fi
 
 echo "##########################################################################################"
 
-${GMX} mdrun -deffnm "${NAME}_em" ${MDRUN_OPTIONS} 2>&1 | tee "log.mdrun"
+${GMX} mdrun -deffnm "${NAME}_em" 2>&1 | tee "log.mdrun"
 
 if grep -q "Error" "log.mdrun"; then
     echo "GROMACS reported an error — stopping script."
@@ -1356,12 +1356,12 @@ chmod +x ${NAME}.${t}.ConcatAndBar.sh
 
 if [[ $ARCHITECTURE == "slurm" ]]; then
     sbatch ${NAME}.${t}.ConcatAndBar.sh
-    echo "analysis job was sent. it will wait utill dependencies finish"
+    echo "analysis job was sent. it will wait until dependencies finish"
 
 
 elif [[ $ARCHITECTURE == "rome" ]]; then
     ccc_msub ${NAME}.${t}.ConcatAndBar.sh
-    echo "analysis job was sent. it will wait utill dependencies finish"
+    echo "analysis job was sent. it will wait until dependencies finish"
 
 
 elif [[ $ARCHITECTURE == "pc" ]]; then

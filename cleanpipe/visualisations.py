@@ -23,6 +23,8 @@ import matplotlib.colors as mcolors
 import matplotlib.patches as mpatches
 from matplotlib.colors import BoundaryNorm
 
+
+
 import nglview as nv
 import MDAnalysis as mda
 import mdtraj as md
@@ -30,16 +32,17 @@ import mdtraj as md
 import seaborn as sns
 
 
-def view_coord(s_coord):
+def view_coords(s_coord):
     """
     
     example:
-    cl.view_coord("pepticat.pdb")
+    cl.view_coords("pepticat.pdb")
     """
 
 
     view = nv.show_file(s_coord)
     view.clear()
+    view.add_representation('ball+stick', selection='all')
 
     view.add_representation('cartoon', selection='protein', color='red')
 
@@ -52,6 +55,7 @@ def view_coord(s_coord):
 
     view.add_representation('ball+stick', selection='CL', color='yellow', aspectRatio=10)
     view.add_representation('ball+stick', selection='NA', color='green', aspectRatio=10)
+
 
 
     return view

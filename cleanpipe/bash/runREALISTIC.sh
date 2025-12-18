@@ -792,9 +792,8 @@ fi
 # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-# the intent of the script is just make REALISTIC, so now we can actualy exit
-
-exit
+# if the intent of the script is realy just make REALISTIC, you could quit here
+# thats why I usually put time 1 ns. by doing this the next step is as short as possible
 
 # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -828,16 +827,26 @@ if grep -q "Error" "outanderr.mdrun"; then
 fi
 
 
-echo "####################### PRODUCTION center ################################"
 
-printf '1\n0' | gmx trjconv -s "prod.tpr" -f "prod.xtc" -o "prod.centered.xtc" -center -pbc mol 2>&1 | tee "outanderr.center"
 
-if grep -q "Error" "outanderr.center"; then
+echo "############################## CENTER AND FIT ###################################"
+
+
+printf '1\n0' | ${GMX} trjconv -s "prod.tpr" -f "prod.xtc" -o "prod.centered.xtc" -center -pbc mol 2>&1 | tee "log.center"
+
+if grep -q "Error" "log.center"; then
     echo "GROMACS reported an error — stopping script."
     exit 1
 fi
 
 
+
+printf '1\n0' | ${GMX} trjconv -s "prod.tpr" -f "prod.centered.xtc" -o "prod.fitted.xtc" -fit progressive 2>&1 | tee "log.fit"
+
+if grep -q "Error" "log.fit"; then
+    echo "GROMACS reported an error — stopping script."
+    exit 1
+fi
 
 
 cd ../.. # get out of runREALISTIC
