@@ -77,11 +77,11 @@ echo " "
 
 PRODUCTION_DURATION=$4 #how many nanoseconds
 if [[ $FF == "charmm36" ]]; then
-  STEPS=$(echo "scale=0; ($PRODUCTION_DURATION / 0.002) * 10000" | bc)
+  STEPS=$(echo "scale=0; ($PRODUCTION_DURATION / 0.002) * 1000" | bc)
 fi
 
 if [[ $FF == "martini3" ]]; then
-  STEPS=$(echo "scale=0; ($PRODUCTION_DURATION / 0.02) * 10000" | bc)
+  STEPS=$(echo "scale=0; ($PRODUCTION_DURATION / 0.02) * 1000" | bc)
 fi
 
 
