@@ -240,7 +240,7 @@ def calc_rama(s_xtc, s_tpr, s_out, b_overwrite=False):
         bricksFileSystem.run_and_capture(f"mkdir -p rama")
         bricksFileSystem.run_and_capture(f"gmx rama -f {s_xtc} -s {s_tpr} -o rama/{s_out}.xvg")
         bricksFileSystem.run_and_capture(f"awk '/@|#/ {{next}} {{print $1\",\"$2}}' rama/{s_out}.xvg > rama/{s_out}.csv")
-        print(f"CLEANPIPE MESSAGE: Created: {s_out} and {s_out}")
+        print(f"CLEANPIPE MESSAGE: Created: rama/{s_out}.csv")
 
 
 
@@ -274,19 +274,19 @@ def plot_rama(s_rama_file,title=""):
     fig, ax = plt.subplots(figsize=(8, 6))  # Smaller figure size
     
     # Background regions
-    ax.fill_betweenx(np.linspace(threeten_region['psi'][0], threeten_region['psi'][1], 100), threeten_region['phi'][0], threeten_region['phi'][1], color='yellow', alpha=0.8, label='3₁₀ helix')
-    ax.fill_betweenx(np.linspace(pi_region['psi'][0], pi_region['psi'][1], 100), pi_region['phi'][0], pi_region['phi'][1], color='orange', alpha=0.6, label='π helix')
-    ax.fill_betweenx(np.linspace(kappa_region['psi'][0], kappa_region['psi'][1], 100), kappa_region['phi'][0], kappa_region['phi'][1], color='purple', alpha=0.4, label='PP2 helix (κ)')
-    ax.fill_betweenx(np.linspace(PP1_region['psi'][0], PP1_region['psi'][1], 100), PP1_region['phi'][0], kappa_region['phi'][1], color='magenta', alpha=0.4, label='PP1 helix')
+    ax.fill_betweenx(np.linspace(threeten_region['psi'][0], threeten_region['psi'][1], 100), threeten_region['phi'][0], threeten_region['phi'][1], color='yellow', alpha=0.8, label='3₁₀-helix')
+    ax.fill_betweenx(np.linspace(pi_region['psi'][0], pi_region['psi'][1], 100), pi_region['phi'][0], pi_region['phi'][1], color='orange', alpha=0.6, label='π-helix')
+    ax.fill_betweenx(np.linspace(kappa_region['psi'][0], kappa_region['psi'][1], 100), kappa_region['phi'][0], kappa_region['phi'][1], color='purple', alpha=0.4, label='polyprolineII-helix (κ-helix)')
+    ax.fill_betweenx(np.linspace(PP1_region['psi'][0], PP1_region['psi'][1], 100), PP1_region['phi'][0], kappa_region['phi'][1], color='magenta', alpha=0.4, label='polyprolineI-helix')
     
     
-    ax.fill_betweenx(np.linspace(alpha_region['psi'][0], alpha_region['psi'][1], 100), alpha_region['phi'][0], alpha_region['phi'][1], color='red', alpha=0.6, label='α helix')
-    ax.fill_betweenx(np.linspace(left_alpha_region['psi'][0], left_alpha_region['psi'][1], 100), left_alpha_region['phi'][0], left_alpha_region['phi'][1], color='coral', alpha=0.6, label='left-handed α helix')  
+    ax.fill_betweenx(np.linspace(alpha_region['psi'][0], alpha_region['psi'][1], 100), alpha_region['phi'][0], alpha_region['phi'][1], color='red', alpha=0.6, label='right handed α-helix')
+    ax.fill_betweenx(np.linspace(left_alpha_region['psi'][0], left_alpha_region['psi'][1], 100), left_alpha_region['phi'][0], left_alpha_region['phi'][1], color='coral', alpha=0.6, label='left handed α-helix')  
 
-    ax.fill_betweenx(np.linspace(beta_region['psi'][0], beta_region['psi'][1], 100), beta_region['phi'][0], beta_region['phi'][1], color='blue', alpha=0.3, label='β strand')
+    ax.fill_betweenx(np.linspace(beta_region['psi'][0], beta_region['psi'][1], 100), beta_region['phi'][0], beta_region['phi'][1], color='blue', alpha=0.3, label='β-strand')
 
     # Scatter plot
-    ax.scatter(data['phi'], data['psi'], s=10, color='black', alpha=0.1, label='Residues')
+    ax.scatter(data['phi'], data['psi'], s=10, color='black', alpha=0.1, label='residues')
     
     # Axes limits
     ax.set_xlim([-180, 180])
@@ -315,7 +315,35 @@ def plot_rama(s_rama_file,title=""):
     plt.show()
 
 
-def plot_dssp(s_dssp_file,s_subtitle):
+
+def calc_dssp(s_xtc, s_gro, s_out, b_overwrite=False):
+    """
+    s_xtc: xtc file containing trajectory after a run
+    s_gro: gro file of t=0
+    s_out: base name for output files (no extension) a dat wil be created with this name in the dssp folder
+    b_overwrite: if True, recompute and overwrite existing outputs
+
+    Example:
+    cl.calc_dssp("xtcs/lC_inO_prod_298_00.all.xtc", "../lC_inO__runFEP/t298/Lambda_00/3_NPT/lC_inO_npt.gro", "lC_inO_dssp_298_00")
+
+    """
+
+
+
+    dat_path = Path("dssp") / f"{s_out}.dat"
+
+    # Skip if outputs exist and overwrite disabled
+    if b_overwrite==False and dat_path.exists():
+        print(f"CLEANPIPE MESSAGE: Nothing done. Calculation already exists: {dat_path}")
+    else:
+        bricksFileSystem.run_and_capture(f"mkdir -p dssp")
+        bricksFileSystem.run_and_capture(f"gmx dssp -f {s_xtc} -s {s_gro} -o dssp/{s_out}.dat -hmode dssp")
+        print(f"CLEANPIPE MESSAGE: Created:  {dat_path}")
+
+
+
+
+def plot_dssp(s_dssp_file,s_title):
 
     """
     cl.plot_dssp('dssp.dat','hello')
@@ -327,44 +355,16 @@ def plot_dssp(s_dssp_file,s_subtitle):
     
     char_to_index = {
         'H': 0,  # alpha-helix
-        'B': 1,  # beta-bridge
-        'E': 2,  # extended beta-ladder
+        'B': 1,  # isolated beta-bridge
+        'E': 2,  # extended strand in beta-ladder
         'G': 3,  # 3_10-helix
         'I': 4,  # pi-helix
         'P': 5,  # kappa-helix (poly-proline II)
         'S': 6,  # bend
         'T': 7,  # hydrogen-bonded turn
         '=': 8,  # break
-        '~': 9   # coil/loop (no structure)
+        '~': 9   # loop (no structure)
     }
-    labels = ['alpha-helix', 
-              'beta-bridge', 
-              'extended beta-ladder', 
-              '3_10-helix', 
-              'pi-helix', 
-              'kappa-helix', 
-              'bend', 
-              'hydrogen-bonded turn', 
-              'break', 
-              'coil/loop (no structure)']
-
-
-    #colors = ['black','red', 'green', 'blue', 'yellow', 'orange', 'purple', 'brown', 'pink', 'white', 'gray']
-
-    colors = [
-    'black',
-    'red',        # alpha-helix
-    'orange',     # beta-bridge
-    'yellow',     # extended beta-ladder
-    'darkred',    # 3_10-helix
-    'magenta',    # pi-helix
-    'pink',       # kappa-helix
-    'cyan',       # bend
-    'blue',       # hydrogen-bonded turn
-    'purple',       # break
-    'grey'       # coil/loop (no structure)
-]
-    
     
     # Strip newline characters and create a 2D list where each sublist is a list of characters from each line
     data = [list(line.strip()) for line in lines]
@@ -383,7 +383,7 @@ def plot_dssp(s_dssp_file,s_subtitle):
     #print(data_indices)
     
     # Define colors for each type
-
+    colors = ['black','red', 'green', 'blue', 'yellow', 'orange', 'purple', 'brown', 'pink', 'white', 'gray']
     cmap = mcolors.ListedColormap(colors)
     bounds = np.arange(-1.5, 10, 1)  # This sets bounds at midpoints between integers from -1 to 9
     
@@ -409,22 +409,28 @@ def plot_dssp(s_dssp_file,s_subtitle):
     #    '3_10-helix', 'pi-helix', 'kappa-helix', 'bend', 'hydrogen-bonded turn', 'break', 'loop'
     #])
     
-    
+    labels = [
+        '(H) α-helix',
+        '(B) isolated β-bridge ',
+        '(E) extended β-strand in β-ladder',
+        '(G) 3₁₀-helix ',
+        '(I)   π-helix ',
+        '(P) polyproline II (κ helix) ',
+        '(S) bend ',
+        '(T) hydrogen-bonded turn ',
+        '(=) break ',
+        '(~) unassigned (e.g. coil/loop) '
+    ]
+
 
     legend_handles = [mpatches.Patch(color=colors[i+1], label=labels[i]) for i in range(len(labels))] # be carefull, there are more colors than labels, because there is black for -1, and that shouldnt have any label
     legend = plt.legend(handles=legend_handles, bbox_to_anchor=(1.05, 1), loc='upper left')
     
     # Set axis labels
-    ax.set_xlabel('Time (ns)', fontsize=13)
-    ax.set_ylabel('Residue Position', fontsize=13)
-    ax.set_title('Secondary Structure Over Time (DSSP Algorithm)\n' + s_subtitle, fontsize=13)
+    ax.set_xlabel('Time Step (ns)')
+    ax.set_ylabel('Residue Position')
+    ax.set_title('Secondary Structure Over Time (DSSP-v4 algorithm) - ' + s_title)
     plt.grid(False)
-    
-    # Optionally save the mapped data to a file
-    #np.savetxt('transposed_data_indices.dat', data_indices, fmt='%d', delimiter=',', header='Transposed Data Indices')
-
-    # Show the plot
-    plt.show()
 
 
 
