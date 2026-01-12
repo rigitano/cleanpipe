@@ -226,12 +226,7 @@ def calc_rama(s_xtc, s_tpr, s_out, b_overwrite=False):
     b_overwrite: if True, recompute and overwrite existing outputs
 
     Example:
-      calc_rama(
-        "xtcs/lC_inW_prod_298_00.all.xtc",
-        "../collected_tprs/lC_inW_prod_298_00.tpr",
-        "lC_inW_rama",
-        b_overwrite=True
-      )
+    cl.calc_rama("xtcs/lC_inW_prod_298_00.all.xtc", "../collected_tprs/lC_inW_prod_298_00.tpr","lC_inW_rama")
     """
 
 
@@ -251,6 +246,13 @@ def calc_rama(s_xtc, s_tpr, s_out, b_overwrite=False):
 
 
 def plot_rama(s_rama_file,title=""):
+
+    """
+    s_rama_file: csv file created by the function cl.calc_rama()
+
+    Example:
+    cl.plot_rama("rama/lC_inW_rama.csv","peptide in water")
+    """
 
     
     # Load the data
