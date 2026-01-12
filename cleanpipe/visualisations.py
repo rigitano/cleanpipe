@@ -262,10 +262,12 @@ def plot_rama(s_rama_file,title=""):
     alpha_region = {'phi': (-90, -30), 'psi': (-70,-10)}
     threeten_region = {'phi': (-90, -40), 'psi': (-60,0)}
     pi_region = {'phi': (-90, -40), 'psi': (-90,-30)}
-    kappa_region = {'phi': (-90, -60), 'psi': (120, 180)}
+    kappa_region = {'phi': (-85, -65), 'psi': (160, 140)}
+    PP1_region = {'phi': (-85, -65), 'psi': (170, 150)}
+    
     left_alpha_region = {'phi': (30, 120), 'psi': (0,90)}
     
-    beta_region = {'phi': (-180, -90), 'psi': (90, 180)}
+    beta_region = {'phi': (-180, -60), 'psi': (90, 180)}
     
     
     # Plot the data
@@ -274,14 +276,14 @@ def plot_rama(s_rama_file,title=""):
     # Background regions
     ax.fill_betweenx(np.linspace(threeten_region['psi'][0], threeten_region['psi'][1], 100), threeten_region['phi'][0], threeten_region['phi'][1], color='yellow', alpha=0.8, label='3₁₀ helix')
     ax.fill_betweenx(np.linspace(pi_region['psi'][0], pi_region['psi'][1], 100), pi_region['phi'][0], pi_region['phi'][1], color='orange', alpha=0.6, label='π helix')
-    ax.fill_betweenx(np.linspace(kappa_region['psi'][0], kappa_region['psi'][1], 100), kappa_region['phi'][0], kappa_region['phi'][1], color='purple', alpha=0.4, label='κ helix')
-
+    ax.fill_betweenx(np.linspace(kappa_region['psi'][0], kappa_region['psi'][1], 100), kappa_region['phi'][0], kappa_region['phi'][1], color='purple', alpha=0.4, label='PP2 helix (κ)')
+    ax.fill_betweenx(np.linspace(PP1_region['psi'][0], PP1_region['psi'][1], 100), PP1_region['phi'][0], kappa_region['phi'][1], color='magenta', alpha=0.4, label='PP1 helix')
     
     
     ax.fill_betweenx(np.linspace(alpha_region['psi'][0], alpha_region['psi'][1], 100), alpha_region['phi'][0], alpha_region['phi'][1], color='red', alpha=0.6, label='α helix')
     ax.fill_betweenx(np.linspace(left_alpha_region['psi'][0], left_alpha_region['psi'][1], 100), left_alpha_region['phi'][0], left_alpha_region['phi'][1], color='coral', alpha=0.6, label='left-handed α helix')  
 
-    ax.fill_betweenx(np.linspace(beta_region['psi'][0], beta_region['psi'][1], 100), beta_region['phi'][0], beta_region['phi'][1], color='blue', alpha=0.3, label='beta strand')
+    ax.fill_betweenx(np.linspace(beta_region['psi'][0], beta_region['psi'][1], 100), beta_region['phi'][0], beta_region['phi'][1], color='blue', alpha=0.3, label='β strand')
 
     # Scatter plot
     ax.scatter(data['phi'], data['psi'], s=10, color='black', alpha=0.1, label='Residues')
