@@ -171,47 +171,78 @@ def plot_hbonds(s_ss_file,s_ps_file,s_pp_file,s_subtitle=""):
     #plt.grid(True)
     plt.show()
 
-def plot_sasa(s_file,s_subtitle):
+
+
+
+def calc_sasa(s_xtc, s_tpr, s_out, b_overwrite=False):
     """
-    
-    example
-    cl.plot_sasa('sasa.xvg','hi')
+    s_xtc: xtc file containing trajectory after a run
+    s_tpr: tpr file of that run
+    s_out: base name for output files (no extension) a xvg and csv wil be created with this name in the rama folder
+    b_overwrite: if True, recompute and overwrite existing outputs
+
+    Example:
+    cl.calc_sasa("xtcs/lC_inW_prod_298_00.all.xtc", "../collected_tprs/lC_inW_prod_298_00.tpr","lC_inW_prod_298_00_sasa")
     """
 
+
+
+    xvg_path = Path("sasa") / f"{s_out}.xvg"
+
+    # Skip if outputs exist and overwrite disabled
+    if b_overwrite==False and xvg_path.exists():
+        print(f"CLEANPIPE MESSAGE: Nothing done. Calculation already exists: {xvg_path}")
+    else:
+        bricksFileSystem.run_and_capture(f"mkdir -p sasa")
+        bricksFileSystem.run_and_capture(f'printf "1\n" | gmx sasa -f {s_xtc} -s {s_tpr} -o sasa/{s_out}.xvg')
+        print(f"CLEANPIPE MESSAGE: Created: sasa/{s_out}.csv")
+
+
+def plot_sasa(s_protein_sol_file,s_title):
+    """
+    plot_sasa('sasa/lC_inW_prod_298_00_area.xvg',"Solvent Accessible Surface Area over Time\npeptide in water")
+    """
+
+
     # load data
-    with open(s_file, 'r') as file:
+    with open(s_protein_sol_file, 'r') as file:
         filtered_lines1 = ''.join([line for line in file if not line.startswith(('@', '#'))])
     data1 = StringIO(filtered_lines1)
     dfh1 = pd.read_csv(data1, sep=r'\s+', header=None, names=['Time (ps)', 'Area'])
+    
 
-
-    #convert ps to ns
-    dfh1['Time (ns)'] = dfh1['Time (ps)']/1000
+    
     
     # Calculate averages
     avg1 = dfh1['Area'].mean()
 
-    # Set the color palette
+    
+    # Set the color palette to 'husl' and the number of lines
     sns.set_palette(['#1abc9c'])
     colors = sns.color_palette()
     color1 = colors[0]  # First color in the palette
 
     
     # Plotting data from df1
-    plt.subplots(figsize=(6.5, 3.6))  # Smaller figure size
-    plt.plot(dfh1['Time (ns)'], dfh1['Area'], label='Area')
+    plt.figure(figsize=(6, 3.5))
+    plt.plot(dfh1['Time (ps)'], dfh1['Area'], label='Area')
     plt.axhline(avg1, linestyle='--', color=color1)
     if avg1 > 0.1:
-        plt.text(max(dfh1['Time (ns)'])*1.06, avg1, f'{avg1:.1f}', verticalalignment='bottom', color=color1)
-
-    plt.title('Solvent-Accessible Surface Area over Time\n' + s_subtitle, fontsize=13)
-    plt.xlabel('Time (ns)', fontsize=13)
-    plt.ylabel('Area (nm\\S2\\N)', fontsize=13)
-    plt.ylim(0, avg1*1.2)
-    #plt.yticks([1, 2, 3, 4, 5,6,7,8,9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21,22,23,24,25])
+        plt.text(max(dfh1['Time (ps)'])*1.06, avg1, f'{avg1:.1f}', verticalalignment='bottom', color=color1)
+    
+    
 
     
-    #plt.grid(True)
+    plt.xlabel('Time (ps)')
+    plt.ylabel('Area (nm\\S2\\N)')
+    plt.ylim(0, 25)
+    plt.yticks([1, 2, 3, 4, 5,6,7,8,9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21,22,23,24, 25])
+
+
+    
+    
+    plt.title(s_title)
+    plt.grid(True)
     plt.show()
 
 
