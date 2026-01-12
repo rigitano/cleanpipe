@@ -240,12 +240,12 @@ def calc_rama(s_xtc, s_tpr, s_out, b_overwrite=False):
 
     # Skip if outputs exist and overwrite disabled
     if b_overwrite==False and csv_path.exists():
-        return f"Nothing done. Calculation already exists: {csv_path}"
+        print(f"CLEANPIPE MESSAGE: Nothing done. Calculation already exists: {csv_path}")
     else:
-        bricksFileSystem.run_and_capture(f"rm -rf rama; mkdir -p rama")
+        bricksFileSystem.run_and_capture(f"mkdir -p rama")
         bricksFileSystem.run_and_capture(f"gmx rama -f {s_xtc} -s {s_tpr} -o rama/{s_out}.xvg")
         bricksFileSystem.run_and_capture(f"awk '/@|#/ {{next}} {{print $1\",\"$2}}' rama/{s_out}.xvg > rama/{s_out}.csv")
-        return f"Calculation done. Created: {s_out} and {s_out}"
+        print(f"CLEANPIPE MESSAGE: Created: {s_out} and {s_out}")
 
 
 
