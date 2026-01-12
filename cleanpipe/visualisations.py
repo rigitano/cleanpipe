@@ -7,7 +7,7 @@ import subprocess
 import tempfile
 import os
 import platform
-
+from pathlib import Path
 
 from cleanpipe import lltools
 from cleanpipe import algelin
@@ -32,11 +32,11 @@ import mdtraj as md
 import seaborn as sns
 
 
-def view_coords(s_coord):
+def view_coord(s_coord):
     """
     
     example:
-    cl.view_coords("pepticat.pdb")
+    cl.view_coord("pepticat.pdb")
     """
 
 
@@ -215,40 +215,91 @@ def plot_sasa(s_file,s_subtitle):
     plt.show()
 
 
-def plot_ramachandran(s_rama_file,s_subtitle):
+
+
+
+def calc_rama(s_xtc, s_tpr, s_out, b_overwrite=False):
     """
-    cl.plot_ramachandran("rama.csv","hello")
+    s_xtc: xtc file containing trajectory after a run
+    s_tpr: tpr file of that run
+    s_out: base name for output files (no extension) a xvg and csv wil be created with this name in the rama folder
+    b_overwrite: if True, recompute and overwrite existing outputs
+
+    Example:
+      calc_rama(
+        "xtcs/lC_inW_prod_298_00.all.xtc",
+        "../collected_tprs/lC_inW_prod_298_00.tpr",
+        "lC_inW_rama",
+        b_overwrite=True
+      )
     """
+
+
+
+    csv_path = Path("rama") / f"{s_out}.csv"
+
+    # Skip if outputs exist and overwrite disabled
+    if b_overwrite==False and csv_path.exists():
+        return f"Nothing done. Calculation already exists: {csv_path}"
+    else:
+        bricksFileSystem.run_and_capture(f"rm -rf rama; mkdir -p rama")
+        bricksFileSystem.run_and_capture(f"gmx rama -f {s_xtc} -s {s_tpr} -o rama/{s_out}.xvg")
+        bricksFileSystem.run_and_capture(f"awk '/@|#/ {{next}} {{print $1\",\"$2}}' rama/{s_out}.xvg > rama/{s_out}.csv")
+        return f"Calculation done. Created: {s_out} and {s_out}"
+
+
+
+
+def plot_rama(s_rama_file,title=""):
+
     
     # Load the data
     data = pd.read_csv(s_rama_file, header=None, names=['phi', 'psi'])
     
     # Define the boundaries for the secondary structure regions
-    alpha_region = {'phi': (-180, -50), 'psi': (-60, 45)}
-    beta_region = {'phi': (-180, -50), 'psi': (90, 180)}
-    left_alpha_region = {'phi': (50, 180), 'psi': (45, 180)}
+    alpha_region = {'phi': (-90, -30), 'psi': (-70,-10)}
+    threeten_region = {'phi': (-90, -40), 'psi': (-60,0)}
+    pi_region = {'phi': (-90, -40), 'psi': (-90,-30)}
+    kappa_region = {'phi': (-90, -60), 'psi': (120, 180)}
+    left_alpha_region = {'phi': (30, 120), 'psi': (0,90)}
+    
+    beta_region = {'phi': (-180, -90), 'psi': (90, 180)}
+    
     
     # Plot the data
     fig, ax = plt.subplots(figsize=(8, 6))  # Smaller figure size
     
     # Background regions
-    ax.fill_betweenx(np.linspace(alpha_region['psi'][0], alpha_region['psi'][1], 100), alpha_region['phi'][0], alpha_region['phi'][1], color='red', alpha=0.7, label='Alpha Region')
-    ax.fill_betweenx(np.linspace(beta_region['psi'][0], beta_region['psi'][1], 100), beta_region['phi'][0], beta_region['phi'][1], color='yellow', alpha=0.7, label='Beta Region')
+    ax.fill_betweenx(np.linspace(threeten_region['psi'][0], threeten_region['psi'][1], 100), threeten_region['phi'][0], threeten_region['phi'][1], color='yellow', alpha=0.8, label='3₁₀ helix')
+    ax.fill_betweenx(np.linspace(pi_region['psi'][0], pi_region['psi'][1], 100), pi_region['phi'][0], pi_region['phi'][1], color='orange', alpha=0.6, label='π helix')
+    ax.fill_betweenx(np.linspace(kappa_region['psi'][0], kappa_region['psi'][1], 100), kappa_region['phi'][0], kappa_region['phi'][1], color='purple', alpha=0.4, label='κ helix')
+
+    
+    
+    ax.fill_betweenx(np.linspace(alpha_region['psi'][0], alpha_region['psi'][1], 100), alpha_region['phi'][0], alpha_region['phi'][1], color='red', alpha=0.6, label='α helix')
+    ax.fill_betweenx(np.linspace(left_alpha_region['psi'][0], left_alpha_region['psi'][1], 100), left_alpha_region['phi'][0], left_alpha_region['phi'][1], color='coral', alpha=0.6, label='left-handed α helix')  
+
+    ax.fill_betweenx(np.linspace(beta_region['psi'][0], beta_region['psi'][1], 100), beta_region['phi'][0], beta_region['phi'][1], color='blue', alpha=0.3, label='beta strand')
 
     # Scatter plot
-    ax.scatter(data['phi'], data['psi'], s=10, color='black', alpha=0.6, label='Residues')
+    ax.scatter(data['phi'], data['psi'], s=10, color='black', alpha=0.1, label='Residues')
     
     # Axes limits
     ax.set_xlim([-180, 180])
     ax.set_ylim([-180, 180])
+
+    # set ticks
+    ticks = [-180, -120, -60, 0, 60, 120, 180]
+    ax.set_xticks(ticks)
+    ax.set_yticks(ticks)
     
     # Labels and title
-    ax.set_xlabel('φ', fontsize=13)#Phi
-    ax.set_ylabel('ψ', fontsize=13)#Psi
-    ax.set_title('Ramachandran Plot\n' + s_subtitle, fontsize=13)
+    ax.set_xlabel('φ', fontsize=14)
+    ax.set_ylabel('ψ', fontsize=14)
+    ax.set_title(title, fontsize=14)
     
     # Grid
-    ax.grid(True, linestyle='-', alpha=0.3)
+    ax.grid(True, linestyle='--', alpha=0.5)
     
     # Legend outside the plot
     ax.legend(fontsize=9, bbox_to_anchor=(1.05, 1), loc='upper left', borderaxespad=0.)

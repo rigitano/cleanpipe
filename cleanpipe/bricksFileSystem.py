@@ -270,8 +270,8 @@ def run_and_capture(command):
     
     # Start the process
     process = subprocess.Popen(
-        command,
-        shell=True,
+        ["bash", "-ilc", f"{command}"], 
+        #shell=True,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         text=True,
