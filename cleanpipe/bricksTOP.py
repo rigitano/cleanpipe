@@ -1279,3 +1279,144 @@ def freeze_phi_psi_dihedrals(s_gro_file,s_top_file, restraining_force,s_molename
     #update the the dihedral list, but now the atoms of the backbone have improper dihedrals   
     #put_lines_at_the_proper_place_of_directive(s_file_to_be_edited, s_out_file_name, '[ dihedrals ]', ll_gro_diherals_backbone, 'first')
     
+
+
+
+def parse_itp_charges(itp_path):
+    """
+    Parse the [ atoms ] section of a GROMACS .itp and return charges in atom-index order.
+    Returns:
+        charges: list[float]
+        atoms:   list[dict] with keys: nr, atomname, resname, charge
+
+    """
+    itp_path = Path(itp_path)
+    text = itp_path.read_text(encoding="utf-8", errors="replace").splitlines()
+
+    in_atoms = False
+    atoms = []
+
+    for raw in text:
+        line = raw.strip()
+        if not line:
+            continue
+
+        # strip ';' comments
+        if ";" in line:
+            line = line.split(";", 1)[0].strip()
+        if not line:
+            continue
+
+        # section headers
+        if line.startswith("[") and line.endswith("]"):
+            section = line.strip("[]").strip().lower()
+            in_atoms = (section == "atoms")
+            continue
+
+        if not in_atoms:
+            continue
+
+        parts = line.split()
+        if not parts:
+            continue
+        if not re.match(r"^\d+$", parts[0]):  # atom index
+            continue
+
+        # Typical [ atoms ] format:
+        # nr type resnr residue atom cgnr charge mass
+        # 0  1    2     3       4    5    6      7
+        try:
+            nr = int(parts[0])
+            resname = parts[3]
+            atomname = parts[4]
+            charge = float(parts[6])
+        except (IndexError, ValueError) as e:
+            raise ValueError(f"Failed parsing line in [ atoms ]:\n{raw}") from e
+
+        atoms.append({"nr": nr, "resname": resname, "atomname": atomname, "charge": charge})
+
+    if not atoms:
+        raise ValueError(f"No atoms found in [ atoms ] section of {itp_path}")
+
+    atoms.sort(key=lambda d: d["nr"])
+    charges = [a["charge"] for a in atoms]
+    return charges, atoms
+
+
+
+
+def add_itp_partial_charges_to_bfactor_in_pdb(s_itp_file, pdb_in, pdb_out, field="bfactor", decimals=2):
+    """
+
+    - reads charges from itp
+    - adds them into preexistent pdb as B-factor
+    - prints stats
+
+    example usage
+    out_pdb = add_itp_partial_charges_to_bfactor_in_pdb(
+        itp_path="CHYO_lipid.itp",
+        pdb_in="CHYO.pdb",
+        pdb_out="CHYO_charges2.pdb"
+    )
+
+    """
+    charges, atoms = parse_itp_charges(s_itp_file)
+
+    qsum = sum(charges)
+    qmin = min(charges)
+    qmax = max(charges)
+
+    print(f"Parsed {len(charges)} charges from: {s_itp_file}")
+    print(f"Charge stats: min={qmin:+.4f} e  max={qmax:+.4f} e  sum={qsum:+.4f} e")
+    print(f"Writing charges into PDB field: {field}")
+
+    # small preview
+    #preview=10
+    #print("\nPreview (first few atoms from .itp):")
+    #for a in atoms[:preview]:
+    #    print(f"  {a['nr']:5d}  {a['resname']:<6s}  {a['atomname']:<6s}  {a['charge']:+.4f}")
+
+
+    pdb_in = Path(pdb_in)
+    pdb_out = Path(pdb_out)
+
+    field = field.lower()
+    if field not in ("bfactor", "occupancy"):
+        raise ValueError("field must be 'bfactor' or 'occupancy'")
+
+    # PDB fixed columns (0-based slices; end exclusive)
+    occ_slice = (54, 60)   # cols 55-60
+    bfac_slice = (60, 66)  # cols 61-66
+
+    lines = pdb_in.read_text(encoding="utf-8", errors="replace").splitlines()
+    atom_line_indices = [i for i, ln in enumerate(lines) if ln.startswith("ATOM") or ln.startswith("HETATM")]
+
+    if len(atom_line_indices) != len(charges):
+        raise ValueError(
+            f"Atom count mismatch:\n"
+            f"  PDB ATOM/HETATM lines: {len(atom_line_indices)}\n"
+            f"  charges provided:       {len(charges)}\n\n"
+            f"Fix: make sure pdb_in contains ONLY the atoms that correspond to the .itp, in the same order."
+        )
+
+    def fmt(v):
+        # PDB occupancy/B-factor are width 6 with typically 2 decimals
+        s = f"{v:6.{decimals}f}"
+        return s[:6] if len(s) > 6 else s
+
+    for k, idx in enumerate(atom_line_indices):
+        ln = lines[idx]
+        # ensure length
+        if len(ln) < 66:
+            ln = ln.ljust(66)
+
+        v = charges[k]
+        if field == "occupancy":
+            ln = ln[:occ_slice[0]] + fmt(v) + ln[occ_slice[1]:]
+        else:
+            ln = ln[:bfac_slice[0]] + fmt(v) + ln[bfac_slice[1]:]
+
+        lines[idx] = ln
+
+    pdb_out.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    return pdb_out

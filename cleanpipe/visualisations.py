@@ -8,6 +8,7 @@ import tempfile
 import os
 import platform
 from pathlib import Path
+import re
 
 from cleanpipe import lltools
 from cleanpipe import algelin
@@ -1747,4 +1748,42 @@ enable_force_visualization
 
     #clean temp file
     #bricksFileSystem.delete(temp_file_path)
+
+def see_partial_charges_from_itp(s_gro_file, s_itp_file):
+
+    #convert gro to pdb, so I can latter add the charges as bfactor
+    #the out pdb nabe will be ugly. something like foo.gro.pdb
+    bricksFileSystem.run_and_capture(f"gmx editconf -f {s_gro_file} -o {s_gro_file}.pdb")
+
+
+    #add partial charges to pdb
+    pdb_in=f"{s_gro_file}.pdb" #the ugly name I mentioned
+    pdb_out=f"{s_gro_file}.pdb_with_partialcharges.pdb" #an even uglyer name
+    out_pdb = bricksTOP.add_itp_partial_charges_to_bfactor_in_pdb(s_itp_file, pdb_in, pdb_out)
+
+    #load that pdb as a new molecule in pdb. and then delete them, so not to polute the folder
+    send_command_to_vmd(f"mol new {pdb_out}")
+
+
+    #run the tcl script that will provide the visualisation of the molecule from the pdb
+    script_name = "partial_charges_stored_as_beta.tcl"
+
+    module_path = Path(__file__)
+    module_dir = module_path.parent  #get where cleanpipe is, because the scripts are in a folder there
+    script_path = module_dir / "tcl" / script_name #build the script full path
+
+    script_path_str = str(script_path) # Convert path to a string with OS-specific formatting (safe for both Windows and Linux)
+    script_path_str = script_path.as_posix() # convert to POSIX-style (slashes). good for windows. VMD accepts both styles but prefers forward slashes
+
+    #final_command = f'source "{script_path_str}"'
+    #send_command_to_vmd(final_command)
+    send_command_to_vmd("source "+script_path_str.replace("\\", "\\\\"))
+
+
+
+
+
+
+
+
 
