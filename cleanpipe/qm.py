@@ -8,7 +8,7 @@ import plotly.io as pio
 from pathlib import Path
 from PIL import Image
 import os, math, glob
-
+import plotly.graph_objects as go
 
 
 
@@ -26,7 +26,7 @@ def qm(chosen_molecule, s_theory, s_basis, s_out_folder_name, b_optimize=True):
     H 1 0.96
     H 1 0.96 2 104.5
     ''')
-    energy, wfn = cl.qm(water, "hf", "6-31++G(d,p)", "qm_hf_water", b_optimize=True)
+    energy, wfn = cl.qm(water, "hf", "6-31G(d)", "qm_hf_water", b_optimize=True)
     energy, wfn = cl.qm(water, "dft", "6-31++G(d,p)", "qm_dft_water", b_optimize=True)
     energy, wfn = cl.qm(water, "ccsd(t)", "cc-pVTZ", "qm_ccsd_water", b_optimize=True)
 
@@ -396,7 +396,7 @@ def plot_isosurfaces_from_expression(
     3   (1/(162*sqrt(pi))) * (x + I*y)**2 * exp(-r/3)
 
     """
-    import plotly.graph_objects as go
+    
 
     # ---- grid ----
     x = np.linspace(-L, L, n)
@@ -746,3 +746,60 @@ def create_frames_of_psi_waving(cube_path, out_dir, iso_value=0.05 ):
 
 
 
+def see_labeled_molecule(cya):
+    """
+    the imput must be a molecule generated like so:
+
+    water = psi4.geometry('''
+    O
+    H 1 0.96
+    H 1 0.96 2 104.5
+    ''')
+
+    the output is a visualization in jupyter notebook of that molecule with labels over the atoms. 
+    those labels will be suited just for the procedure of creating a set of dihedral angles
+
+    """
+
+
+
+    # Get XYZ string from Psi4 (different Psi4 versions expose different helpers)
+    try:
+        xyz = cya.to_string(dtype="xyz")
+    except TypeError:
+        xyz = cya.save_string_xyz()
+
+    # ---- Visualization with atom IDs ----
+    use_one_based_ids = True   # set False if you want 0-based IDs (Psi4-style)
+
+    view = py3Dmol.view(width=700, height=520)
+    view.addModel(xyz, "xyz")
+    view.setStyle({"stick": {"radius": 0.18}, "sphere": {"scale": 0.28}})
+    view.setBackgroundColor("0xFFFFFF")
+
+    # Parse XYZ to place labels (works regardless of py3Dmol/3Dmol selection quirks)
+    lines = [ln.strip() for ln in xyz.splitlines() if ln.strip()]
+    nat = int(lines[0])
+    atom_lines = lines[2:2+nat]  # skip nat + comment
+
+    for i, ln in enumerate(atom_lines):
+        sym, x, y, z = ln.split()[:4]
+        idx = (i + 1) if use_one_based_ids else i
+        label = f"{idx}:{sym}"
+
+        view.addLabel(
+            label,
+            {
+                "position": {"x": float(x), "y": float(y), "z": float(z)},
+                "fontSize": 12,
+                "fontColor": "black",
+                "backgroundColor": "white",
+                "backgroundOpacity": 0.6,
+                "borderColor": "black",
+                "borderOpacity": 0.3,
+                "inFront": True
+            }
+        )
+
+    view.zoomTo()
+    view.show()
