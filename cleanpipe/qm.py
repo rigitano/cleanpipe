@@ -10,7 +10,7 @@ from PIL import Image
 import os, math, glob
 import plotly.graph_objects as go
 
-
+from cleanpipe import bricksFileSystem
 
 
 def qm(chosen_molecule, s_theory, s_basis, s_out_folder_name, b_optimize=True):
@@ -144,6 +144,225 @@ def qm(chosen_molecule, s_theory, s_basis, s_out_folder_name, b_optimize=True):
     print(energy)
 
     return energy, wfn
+
+def qm_bond_scan(chosen_molecule, l_bond_indeces, s_theory='HF', s_basis='6-31G(d)', s_out_folder_name='bond_scan'):
+    """
+
+    cl.qm_bond_scan(cya, [0, 2], s_theory='HF', s_basis='6-31G(d)', s_out_folder_name='bond_scan')
+    """
+
+    bricksFileSystem.delete(s_out_folder_name)
+    os.makedirs(s_out_folder_name, exist_ok=True)
+
+    
+    #results will be saved here if you need to see them after closing jupyter
+    datafile = Path(s_out_folder_name) / "scan_data.txt"
+   
+
+    psi4.core.clean()
+    psi4.core.clean_options()
+    psi4.core.clean_variables()
+
+    psi4.set_options({
+        "reference": "rhf",
+        "scf_type": "df",
+        "e_convergence": 1e-9,
+        "d_convergence": 1e-9,
+    })
+
+    mol0 = psi4.core.get_active_molecule().clone()
+    energies = []
+
+    for count, r in enumerate(np.arange(0.90, 1.70 + 1e-9, 0.02)):
+        mol = mol0.clone()
+
+        geometric_keywords = {
+            'coordsys': 'tric',
+            'constraints': {
+                'set': [{
+                    'type': 'distance',
+                    'indices': l_bond_indeces,
+                    'value': float(r)
+                }]
+            }
+        }
+
+        try:
+            E = psi4.optimize(
+                f'{s_theory}/{s_basis}',
+                molecule=mol,
+                engine='geometric',
+                optimizer_keywords=geometric_keywords
+            )
+
+            #store in variable
+            energies.append((count, r, E))
+
+            #store in data file, if you need the data after closing jupyter
+            with open(datafile, "a") as f:
+                f.write(f"{{'step': {count}, 'distance': {r}, 'energy': {E}}}\n")
+
+            #save molecule geometry file
+            mol.save_xyz_file(
+                os.path.join(s_out_folder_name, f'optimized_distance_{r:.3f}.xyz'), 
+                True
+            )
+
+            
+
+        except Exception as e:
+            with open(datafile, "a") as f:
+                f.write(f"{{'step': {count}, 'distance': {r}, 'energy': ERROR}}\n")
+            continue
+
+
+
+def qm_angle_scan(chosen_molecule, l_angle_indeces, s_theory='HF', s_basis='6-31G(d)', s_out_folder_name='angle_scan'):
+    """
+
+    cl.qm_bond_scan(cya, [8, 0, 2], s_theory='HF', s_basis='6-31G(d)', s_out_folder_name='angle_scan')
+    """
+
+    bricksFileSystem.delete(s_out_folder_name)
+    os.makedirs(s_out_folder_name, exist_ok=True)
+
+    
+    #results will be saved here if you need to see them after closing jupyter
+    datafile = Path(s_out_folder_name) / "scan_data.txt"
+   
+
+    psi4.core.clean()
+    psi4.core.clean_options()
+    psi4.core.clean_variables()
+
+    psi4.set_options({
+        "reference": "rhf",
+        "scf_type": "df",
+        "e_convergence": 1e-9,
+        "d_convergence": 1e-9,
+    })
+
+    mol0 = psi4.core.get_active_molecule().clone()
+    energies = []
+
+    for count, theta in enumerate(range(60, 181, 2)):
+        mol = mol0.clone()
+
+        geometric_keywords = {
+            'coordsys': 'tric',
+            'constraints': {
+                'set': [{
+                    'type': 'angle',
+                    'indices': l_angle_indeces,
+                    'value': float(theta)
+                }]
+            }
+        }
+
+        try:
+            E = psi4.optimize(
+                f'{s_theory}/{s_basis}',
+                molecule=mol,
+                engine='geometric',
+                optimizer_keywords=geometric_keywords
+            )
+
+            #store in variable
+            energies.append((count, theta, E))
+
+            #store in data file, if you need the data after closing jupyter
+            with open(datafile, "a") as f:
+                f.write(f"{{'step': {count}, 'angle': {theta}, 'energy': {E}}}\n")
+
+            #save molecule geometry file
+            mol.save_xyz_file(
+                os.path.join(s_out_folder_name, f'optimized_angle_{theta:03d}.xyz'), 
+                True
+            )
+
+            
+
+        except Exception as e:
+            with open(datafile, "a") as f:
+                f.write(f"{{'step': {count}, 'angle': {r}, 'energy': ERROR}}\n")
+            continue
+
+
+
+
+
+def qm_dihedral_scan(chosen_molecule, l_dihedral_indeces, s_theory='HF', s_basis='6-31G(d)', s_out_folder_name='dihedral_scan'):
+    """
+
+    cl.qm_dihedral_scan(cya, [8, 0, 2, 3], s_theory='HF', s_basis='6-31G(d)', s_out_folder_name='dihedral_scan')
+    """
+
+    bricksFileSystem.delete(s_out_folder_name)
+    os.makedirs(s_out_folder_name, exist_ok=True)
+
+    
+    #results will be saved here if you need to see them after closing jupyter
+    datafile = Path(s_out_folder_name) / "scan_data.txt"
+   
+
+    psi4.core.clean()
+    psi4.core.clean_options()
+    psi4.core.clean_variables()
+
+    psi4.set_options({
+        "reference": "rhf",
+        "scf_type": "df",
+        "e_convergence": 1e-9,
+        "d_convergence": 1e-9,
+    })
+
+    mol0 = psi4.core.get_active_molecule().clone()
+    energies = []
+
+    for count, a in enumerate(range(0, 360, 5)): #id, final angle, step
+        mol = mol0.clone()
+
+        geometric_keywords = {
+            'coordsys': 'tric',
+            'constraints': {
+                'set': [{
+                    'type': 'dihedral',
+                    'indices': l_dihedral_indeces,
+                    'value': float(a)   # degrees
+                }]
+            }
+        }
+
+        try:
+            E = psi4.optimize(
+                f'{s_theory}/{s_basis}',
+                molecule=mol,
+                engine='geometric',
+                optimizer_keywords=geometric_keywords
+            )
+
+            #store in variable
+            energies.append((count, a, E))
+
+            #store in data file, if you need the data after closing jupyter
+            with open(datafile, "a") as f:
+                f.write(f"{{'step': {count}, 'angle': {a}, 'energy': {E}}}\n")
+
+            #save molecule geometry file
+            mol.save_xyz_file(
+                os.path.join(s_out_folder_name, f'optimized_torsion_dihedral_{a:03d}.xyz'), 
+                True
+            )
+
+            
+
+        except Exception as e:
+            with open(datafile, "a") as f:
+                f.write(f"{{'step': {count}, 'angle': {a}, 'energy': ERROR}}\n")
+            continue
+
+
+
 
 
 def read_cube(cube_file):
