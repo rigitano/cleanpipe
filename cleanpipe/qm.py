@@ -173,7 +173,7 @@ def qm_bond_scan(chosen_molecule, l_bond_indeces, s_theory='HF', s_basis='6-31G(
     mol0 = psi4.core.get_active_molecule().clone()
     energies = []
 
-    for count, r in enumerate(np.arange(0.90, 1.70 + 1e-9, 0.02)):
+    for count, r in enumerate(np.arange(1.5, 5, 0.1)):
         mol = mol0.clone()
 
         geometric_keywords = {
@@ -200,7 +200,7 @@ def qm_bond_scan(chosen_molecule, l_bond_indeces, s_theory='HF', s_basis='6-31G(
 
             #store in data file, if you need the data after closing jupyter
             with open(datafile, "a") as f:
-                f.write(f"{{'step': {count}, 'distance': {r}, 'energy': {E}}}\n")
+                f.write(f"{{'step': {count}, 'distance': {r}, 'energy': {E}}},\n")
 
             #save molecule geometry file
             mol.save_xyz_file(
@@ -212,7 +212,7 @@ def qm_bond_scan(chosen_molecule, l_bond_indeces, s_theory='HF', s_basis='6-31G(
 
         except Exception as e:
             with open(datafile, "a") as f:
-                f.write(f"{{'step': {count}, 'distance': {r}, 'energy': ERROR}}\n")
+                f.write(f"{{'step': {count}, 'distance': {r}, 'energy': ERROR}},\n")
             continue
 
 
@@ -272,7 +272,7 @@ def qm_angle_scan(chosen_molecule, l_angle_indeces, s_theory='HF', s_basis='6-31
 
             #store in data file, if you need the data after closing jupyter
             with open(datafile, "a") as f:
-                f.write(f"{{'step': {count}, 'angle': {theta}, 'energy': {E}}}\n")
+                f.write(f"{{'step': {count}, 'angle': {theta}, 'energy': {E}}},\n")
 
             #save molecule geometry file
             mol.save_xyz_file(
@@ -284,7 +284,7 @@ def qm_angle_scan(chosen_molecule, l_angle_indeces, s_theory='HF', s_basis='6-31
 
         except Exception as e:
             with open(datafile, "a") as f:
-                f.write(f"{{'step': {count}, 'angle': {r}, 'energy': ERROR}}\n")
+                f.write(f"{{'step': {count}, 'angle': {r}, 'energy': ERROR}},\n")
             continue
 
 
@@ -346,7 +346,7 @@ def qm_dihedral_scan(chosen_molecule, l_dihedral_indeces, s_theory='HF', s_basis
 
             #store in data file, if you need the data after closing jupyter
             with open(datafile, "a") as f:
-                f.write(f"{{'step': {count}, 'angle': {a}, 'energy': {E}}}\n")
+                f.write(f"{{'step': {count}, 'angle': {a}, 'energy': {E}}},\n")
 
             #save molecule geometry file
             mol.save_xyz_file(
@@ -358,7 +358,7 @@ def qm_dihedral_scan(chosen_molecule, l_dihedral_indeces, s_theory='HF', s_basis
 
         except Exception as e:
             with open(datafile, "a") as f:
-                f.write(f"{{'step': {count}, 'angle': {a}, 'energy': ERROR}}\n")
+                f.write(f"{{'step': {count}, 'angle': {a}, 'energy': ERROR}},\n")
             continue
 
 
