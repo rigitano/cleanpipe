@@ -13,6 +13,38 @@ import plotly.graph_objects as go
 from cleanpipe import bricksFileSystem
 
 
+
+#THIS HERE WILL SAVE THE wfn_hf THAT CAME AS A RESULT OF psi4.optimize INTO CUBE FILES THAT i WILL BE ABLE TO VISUALIZE
+"""
+os.makedirs("cubes_hf_homo", exist_ok=True)
+
+psi4.set_options({
+    "cubeprop_tasks": ["DENSITY","ORBITALS", "ESP"],   # ESP gives ESP.cube (and Dt.cube), ORBITALS gives Psi_a_N.cube
+    "cubeprop_orbitals": [homo],             # only the HOMO (alpha). For beta in UHF you'd use negative indices.
+
+    "cubeprop_filepath": "cubes_hf_homo",
+    "cubic_grid_spacing": [0.2, 0.2, 0.2],
+    "cubic_grid_overage": [4.0, 4.0, 4.0],
+})
+
+psi4.cubeprop(wfn_hf)
+
+# --- Rename for convenience ---
+# Typical outputs you’ll see: ESP.cube, Dt.cube, Psi_a_<homo>.cube
+for f in glob.glob("cubes_hf_homo/*.cube"):
+    base = os.path.basename(f)
+    new = os.path.join("cubes_hf_homo", f"hf_homo{homo}_{base}")
+    os.rename(f, new)
+
+print(f"Wrote HOMO cube for orbital index {homo} into cubes_hf_homo/")
+
+
+"""
+
+
+
+
+
 def qm(chosen_molecule, s_theory, s_basis, s_out_folder_name, b_optimize=True):
     """
     chosen_molecule:        molecule created using psi4.geometry
@@ -964,7 +996,7 @@ def create_frames_of_psi_waving(cube_path, out_dir, iso_value=0.05 ):
     )
 
 
-
+#xxx not sure if this is ok
 def see_labeled_molecule(cya):
     """
     the imput must be a molecule generated like so:
@@ -1022,3 +1054,825 @@ def see_labeled_molecule(cya):
 
     view.zoomTo()
     view.show()
+
+
+
+
+
+
+
+def make_string_gif(
+    filename="string.gif",
+    *,
+    L=1.0,
+    c=1.0,
+    mode_n=1,
+    A=1.0,
+    phase=0.0,
+    seconds=3.0,
+    fps=30,
+    nx=700,
+    dpi=150,
+    ylim=None,
+    style="grey",   # "grey" or "bgy"
+    line_width=3,
+    bg="white"      # "white" or "transparent"
+):
+    """
+    Generate a clean GIF of a string tied at both ends.
+
+    style:
+      - "grey": plain grey line
+      - "bgy" : blue(+A) / grey(0) / yellow(-A) gradient along the string
+
+    bg:
+      - "white": white background
+      - "transparent": transparent background (often nice for overlays)
+
+
+
+    make_string_gif("string_grey3.gif", mode_n=3, A=1.0, seconds=2, fps=30, style="grey")
+    make_string_gif("string_bgy3.gif",  mode_n=3, A=1.0, seconds=2, fps=30, style="bgy")
+    """
+
+    import numpy as np
+    import matplotlib.pyplot as plt
+    from matplotlib.animation import FuncAnimation, PillowWriter
+    from matplotlib.collections import LineCollection
+    from matplotlib.colors import LinearSegmentedColormap, Normalize
+
+
+    # --- Physics: fixed ends standing wave (normal mode) ---
+    def fixed_ends_mode(x, t, n=1, A=1.0, L=1.0, c=1.0, phase=0.0):
+        omega = n * np.pi * c / L
+        return A * np.sin(n * np.pi * x / L) * np.cos(omega * t + phase)
+
+
+    # --- Colormap: -A -> yellow, 0 -> grey, +A -> blue ---
+    def yellow_grey_blue_cmap():
+        colors = [
+            (1.0, 1.0, 0.0),   # yellow
+            (0.5, 0.5, 0.5),   # grey
+            (0.0, 0.0, 1.0),   # blue
+        ]
+        return LinearSegmentedColormap.from_list("yellow_grey_blue", colors, N=256)
+
+
+    def _make_linecollection(x, y, cmap, norm, lw=3):
+        points = np.column_stack([x, y]).reshape(-1, 1, 2)
+        segments = np.concatenate([points[:-1], points[1:]], axis=1)
+        lc = LineCollection(segments, cmap=cmap, norm=norm)
+        lc.set_array(y[:-1])          # color per segment from y
+        lc.set_linewidth(lw)
+        return lc
+
+
+
+
+    x = np.linspace(0, L, nx)
+    nframes = int(np.round(seconds * fps))
+    t_values = np.linspace(0, seconds, nframes, endpoint=False)
+
+    if ylim is None:
+        ylim = 1.2 * abs(A)
+
+    # Figure and axis: CLEAN (no axes, no ticks, no grid, no title)
+    fig, ax = plt.subplots(figsize=(7, 3), dpi=dpi)
+    ax.set_xlim(0, L)
+    ax.set_ylim(-ylim, ylim)
+    ax.axis("off")
+
+    if bg == "transparent":
+        fig.patch.set_alpha(0)
+        ax.patch.set_alpha(0)
+
+    # Initial frame
+    y0 = fixed_ends_mode(x, t_values[0], n=mode_n, A=A, L=L, c=c, phase=phase)
+
+    artists = []
+
+    if style.lower() == "grey":
+        # Plain grey line (0.5 is mid-grey in Matplotlib)
+        line, = ax.plot(x, y0, lw=line_width, color="0.5")
+        artists = [line]
+
+        def update(i):
+            y = fixed_ends_mode(x, t_values[i], n=mode_n, A=A, L=L, c=c, phase=phase)
+            line.set_ydata(y)
+            return (line,)
+
+    elif style.lower() in ("bgy", "blueyellow", "blue-yellow", "by"):
+        cmap = yellow_grey_blue_cmap()
+        norm = Normalize(vmin=-A, vmax=A)
+
+        lc = _make_linecollection(x, y0, cmap=cmap, norm=norm, lw=line_width)
+        ax.add_collection(lc)
+        artists = [lc]
+
+        def update(i):
+            y = fixed_ends_mode(x, t_values[i], n=mode_n, A=A, L=L, c=c, phase=phase)
+
+            # update geometry
+            points = np.column_stack([x, y]).reshape(-1, 1, 2)
+            segments = np.concatenate([points[:-1], points[1:]], axis=1)
+            lc.set_segments(segments)
+
+            # update colors
+            lc.set_array(y[:-1])
+            return (lc,)
+
+    else:
+        plt.close(fig)
+        raise ValueError('style must be "grey" or "bgy"')
+
+    anim = FuncAnimation(fig, update, frames=nframes, blit=True)
+
+    # Save GIF
+    save_kwargs = {}
+    if bg == "transparent":
+        # Transparent background in GIF is supported with PillowWriter in many viewers
+        save_kwargs["savefig_kwargs"] = {"transparent": True}
+
+    anim.save(filename, writer=PillowWriter(fps=fps), dpi=dpi, **save_kwargs)
+    plt.close(fig)
+    return filename
+
+
+
+
+
+
+def make_color_projected_gif(
+    filename="color_projected.gif",
+    *,
+    L=1.0,
+    c=1.0,
+    mode_n=1,
+    A=1.0,
+    phase=0.0,
+    seconds=3.0,
+    fps=30,
+    nx=700,
+    dpi=150,
+    style="bgy",     # "bgy" (recommended) or "grey"
+    line_width=6,
+    bg="white",      # "white" or "transparent"
+    y0=0.0           # vertical position of the flat line
+):
+    """
+    Creates a GIF where geometry is a flat horizontal line, but its color along x
+    varies according to y(x,t) from a fixed-end standing wave.
+
+    The "wave" is projected into color only: height does NOT change with time.
+
+    make_color_projected_gif("projected_bgy3.gif", mode_n=3, A=1.0, style="bgy", seconds=2, fps=30)
+    """
+
+
+    import numpy as np
+    import matplotlib.pyplot as plt
+    from matplotlib.animation import FuncAnimation, PillowWriter
+    from matplotlib.collections import LineCollection
+    from matplotlib.colors import LinearSegmentedColormap, Normalize
+
+
+    def fixed_ends_mode(x, t, n=1, A=1.0, L=1.0, c=1.0, phase=0.0):
+        omega = n * np.pi * c / L
+        return A * np.sin(n * np.pi * x / L) * np.cos(omega * t + phase)
+
+
+    def yellow_grey_blue_cmap():
+        # -A -> yellow, 0 -> grey, +A -> blue
+        colors = [
+            (1.0, 1.0, 0.0),   # yellow
+            (0.5, 0.5, 0.5),   # grey
+            (0.0, 0.0, 1.0),   # blue
+        ]
+        return LinearSegmentedColormap.from_list("yellow_grey_blue", colors, N=256)
+
+
+
+    x = np.linspace(0, L, nx)
+    nframes = int(np.round(seconds * fps))
+    t_values = np.linspace(0, seconds, nframes, endpoint=False)
+
+    # Flat geometry: y is constant
+    y_flat = np.full_like(x, float(y0))
+
+    # Clean figure
+    fig, ax = plt.subplots(figsize=(7, 1.2), dpi=dpi)
+    ax.set_xlim(0, L)
+    ax.set_ylim(y0 - 1.0, y0 + 1.0)  # just enough vertical room
+    ax.axis("off")
+
+    if bg == "transparent":
+        fig.patch.set_alpha(0)
+        ax.patch.set_alpha(0)
+
+    # Build segments for a flat line ONCE (geometry doesn't change)
+    points = np.column_stack([x, y_flat]).reshape(-1, 1, 2)
+    segments = np.concatenate([points[:-1], points[1:]], axis=1)
+
+    # Initial color-signal from standing wave
+    s0 = fixed_ends_mode(x, t_values[0], n=mode_n, A=A, L=L, c=c, phase=phase)
+
+    if style.lower() == "grey":
+        # Constant grey (no color undulation)
+        lc = LineCollection(segments, colors=["0.5"], linewidths=line_width)
+        ax.add_collection(lc)
+
+        def update(i):
+            return (lc,)
+
+    elif style.lower() in ("bgy", "blueyellow", "blue-yellow", "by"):
+        cmap = yellow_grey_blue_cmap()
+        norm = Normalize(vmin=-A, vmax=A)
+
+        lc = LineCollection(segments, cmap=cmap, norm=norm, linewidths=line_width)
+        lc.set_array(s0[:-1])  # color per segment from the signal
+        ax.add_collection(lc)
+
+        def update(i):
+            s = fixed_ends_mode(x, t_values[i], n=mode_n, A=A, L=L, c=c, phase=phase)
+            lc.set_array(s[:-1])  # update ONLY colors
+            return (lc,)
+
+    else:
+        plt.close(fig)
+        raise ValueError('style must be "grey" or "bgy"')
+
+    anim = FuncAnimation(fig, update, frames=nframes, blit=True)
+
+    save_kwargs = {}
+    if bg == "transparent":
+        save_kwargs["savefig_kwargs"] = {"transparent": True}
+
+    anim.save(filename, writer=PillowWriter(fps=fps), dpi=dpi, **save_kwargs)
+    plt.close(fig)
+    return filename
+
+
+
+
+import numpy as np
+import matplotlib.pyplot as plt
+from matplotlib.animation import FuncAnimation, PillowWriter
+from matplotlib.colors import hsv_to_rgb
+from mpl_toolkits.mplot3d.art3d import Line3DCollection
+
+
+def fixed_ends_mode_complex(x, t, n=1, A=1.0, L=1.0, c=1.0, phase=0.0):
+    """
+    Complex standing-wave rotation:
+        z(x,t) = A*sin(n*pi*x/L) * exp(i*(omega*t + phase))
+    """
+    omega = n * np.pi * c / L
+    shape = A * np.sin(n * np.pi * x / L)
+    return shape * np.exp(1j * (omega * t + phase))
+
+
+def _phase_colors(z, sat=1.0, val=1.0):
+    """
+    Full color wheel from complex phase arg(z), with:
+      +real (arg=0)  -> blue
+      -real (arg=pi) -> yellow
+    """
+    arg = np.angle(z)  # [-pi, pi]
+    hue = (2/3 + arg / (2 * np.pi)) % 1.0  # hue=2/3 is blue
+    hsv = np.stack([hue, np.full_like(hue, sat), np.full_like(hue, val)], axis=-1)
+    return hsv_to_rgb(hsv)
+
+import numpy as np
+from matplotlib.colors import hsv_to_rgb
+
+def _phase_colors_with_amplitude_fade(z, A=1.0, sat_max=1.0, val=1.0, gamma=1.0):
+    """
+    Color by phase (full color wheel) but fade to grey near |z|=0 by reducing saturation.
+
+    Requirements:
+      +real -> blue, -real -> yellow (via hue shift)
+      |z| ~ 0 -> grey-ish
+
+    Parameters
+    ----------
+    z : complex array
+    A : float
+        Reference amplitude for normalization (same A as your wave).
+    sat_max : float
+        Saturation at full amplitude.
+    val : float
+        Brightness/value (keep 1.0 usually).
+    gamma : float
+        Controls how quickly color fades near zero:
+          gamma > 1 fades more strongly near zero,
+          gamma < 1 keeps more color near zero.
+    """
+    arg = np.angle(z)  # [-pi, pi]
+    hue = (2/3 + arg / (2 * np.pi)) % 1.0  # +real -> blue
+
+    # amplitude in [0,1]
+    amp = np.abs(z) / max(A, 1e-12)
+    amp = np.clip(amp, 0.0, 1.0)
+
+    # Fade saturation to 0 near zero amplitude => grey
+    sat = sat_max * (amp ** gamma)
+
+    hsv = np.stack([hue, sat, np.full_like(hue, val)], axis=-1)
+    return hsv_to_rgb(hsv)
+
+
+
+
+def make_complex_string_gif_3d(
+    filename="complex_string_3d.gif",
+    *,
+    L=1.0,
+    c=1.0,
+    mode_n=1,
+    A=1.0,
+    phase=0.0,
+    seconds=3.0,
+    fps=30,
+    nx=700,
+    dpi=150,
+    style="phase",      # "grey" or "phase"
+    line_width=3,
+    bg="white",         # "white" or "transparent"
+    elev=18,
+    azim=-55,
+    sat=1.0,
+    val=1.0,
+    axis_lw=1.0,        # thickness of the axis lines you asked for
+):
+    """
+    3D view of complex standing wave rotating around the x-axis.
+
+    Axes (SWITCHED as requested):
+      - x: position along string
+      - y: Im(z)  (horizontal complex axis)
+      - z: Re(z)  (vertical real axis)  -> blue is up, yellow is down (via phase coloring)
+
+    Visual style:
+      - No grid, no ticks, no panes.
+      - Draw only:
+          * x-axis as a thin black line (y=z=0)
+          * y-axis through origin (x=0, z=0)
+          * z-axis through origin (x=0, y=0)
+
+
+    make_complex_string_gif_3d("complex_axes_grey.gif",  mode_n=1, A=1.0, style="grey",  seconds=4, fps=30)
+    make_complex_string_gif_3d("complex_axes_grey2.gif",  mode_n=2, A=1.0, style="grey",  seconds=4, fps=30)
+    make_complex_string_gif_3d("complex_axes_grey3.gif",  mode_n=3, A=1.0, style="grey",  seconds=4, fps=30)
+    make_complex_string_gif_3d("complex_axes_phase.gif", mode_n=1, A=1.0, style="phase", seconds=4, fps=30)
+    make_complex_string_gif_3d("complex_axes_phase2.gif", mode_n=2, A=1.0, style="phase", seconds=4, fps=30)
+    make_complex_string_gif_3d("complex_axes_phase3.gif", mode_n=3, A=1.0, style="phase", seconds=4, fps=30)
+    """
+
+
+
+    import numpy as np
+    from matplotlib.colors import hsv_to_rgb
+
+    def phase_color_with_grey_nodes(z, A=1.0, gamma=2.0, grey=0.5, sat=1.0, val=1.0):
+        """
+        Full color circle from phase, but enforce GREY (not white) near |z|=0.
+
+        +Re (phase=0)   -> blue
+        -Re (phase=pi)  -> yellow
+
+        gamma controls how wide the grey node regions are.
+        grey is the node color in RGB (0.5 = medium grey).
+        """
+        # hue from phase, shifted so +Re is blue
+        arg = np.angle(z)
+        hue = (2/3 + arg / (2 * np.pi)) % 1.0
+
+        # vivid phase color
+        hsv = np.stack([hue, np.full_like(hue, sat), np.full_like(hue, val)], axis=-1)
+        rgb_phase = hsv_to_rgb(hsv)
+
+        # amplitude weight: 0 near nodes -> 1 at antinodes
+        amp = np.clip(np.abs(z) / max(A, 1e-12), 0.0, 1.0)
+        w = amp ** gamma
+
+        # blend grey <-> phase
+        rgb_grey = np.full_like(rgb_phase, grey)
+        rgb = (1 - w)[..., None] * rgb_grey + w[..., None] * rgb_phase
+        return rgb
+
+
+    def draw_box(ax, xlim, ylim, zlim, color="k", lw=1.0):
+        x0, x1 = xlim
+        y0, y1 = ylim
+        z0, z1 = zlim
+
+        corners = [
+            (x0, y0, z0), (x1, y0, z0), (x1, y1, z0), (x0, y1, z0),
+            (x0, y0, z1), (x1, y0, z1), (x1, y1, z1), (x0, y1, z1),
+        ]
+
+        edges = [
+            (0,1),(1,2),(2,3),(3,0),  # bottom square
+            (4,5),(5,6),(6,7),(7,4),  # top square
+            (0,4),(1,5),(2,6),(3,7),  # vertical edges
+        ]
+
+        for i, j in edges:
+            xi, yi, zi = corners[i]
+            xj, yj, zj = corners[j]
+            ax.plot([xi, xj], [yi, yj], [zi, zj], color=color, lw=lw)
+
+    def draw_zy_square(ax, x_const, ylim, zlim, color="k", lw=1.0):
+        """
+        Draw ONLY the 4 edges of a square/rectangle in the zy-plane at x = x_const.
+
+        Parameters
+        ----------
+        ax : 3D axes
+        x_const : float
+            The x position of the zy-plane (usually x0 = left boundary).
+        ylim : (y0, y1)
+            Limits along the y-axis (Im axis in your swapped setup).
+        zlim : (z0, z1)
+            Limits along the z-axis (Re axis in your swapped setup).
+        """
+        y0, y1 = ylim
+        z0, z1 = zlim
+
+        # 4 corners (x fixed)
+        corners = [
+            (x_const, y0, z0),
+            (x_const, y1, z0),
+            (x_const, y1, z1),
+            (x_const, y0, z1),
+        ]
+
+        # connect edges: 0-1-2-3-0
+        edges = [(0, 1), (1, 2), (2, 3), (3, 0)]
+
+        for i, j in edges:
+            xi, yi, zi = corners[i]
+            xj, yj, zj = corners[j]
+            ax.plot([xi, xj], [yi, yj], [zi, zj], color=color, lw=lw)
+
+    
+    x = np.linspace(0, L, nx)
+    nframes = int(np.round(seconds * fps))
+    t_values = np.linspace(0, seconds, nframes, endpoint=False)
+
+    # Initial curve
+    zz0 = fixed_ends_mode_complex(x, t_values[0], n=mode_n, A=A, L=L, c=c, phase=phase)
+    y0 = np.imag(zz0)   # complex axis (horizontal)
+    z0 = np.real(zz0)   # real axis (vertical)
+
+    fig = plt.figure(figsize=(7, 4), dpi=dpi)
+    ax = fig.add_subplot(111, projection="3d")
+
+    # Background
+    if bg == "transparent":
+        fig.patch.set_alpha(0)
+        ax.patch.set_alpha(0)
+
+    # Limits (fixed)
+    lim = 1.2 * abs(A)
+    ax.set_xlim(0, L)
+    ax.set_ylim(-lim, lim)  # Im
+    ax.set_zlim(-lim, lim)  # Re (vertical)
+
+    draw_zy_square(ax, x_const=0, ylim=(-lim, lim), zlim=(-lim, lim), color="k", lw=1)
+
+
+    # Camera
+    ax.view_init(elev=elev, azim=azim)
+
+    # Remove all default axis clutter (grid, ticks, panes, etc.)
+    ax.grid(False)
+    ax.set_xticks([])
+    ax.set_yticks([])
+    ax.set_zticks([])
+
+    # Hide axis panes completely
+    for axis in (ax.xaxis, ax.yaxis, ax.zaxis):
+        try:
+            pass
+            #axis.pane.set_facecolor((1, 1, 1, 0))
+            #axis.pane.set_edgecolor((1, 1, 1, 0))
+        except Exception:
+            pass
+
+    # Also hide the default axis lines (we'll draw our own)
+    try:
+        ax.w_xaxis.line.set_color((1, 1, 1, 0))
+        ax.w_yaxis.line.set_color((1, 1, 1, 0))
+        ax.w_zaxis.line.set_color((1, 1, 1, 0))
+    except Exception:
+        pass
+
+    # --- Draw ONLY the three axes crossing the origin ---
+    # x-axis: y=z=0, from 0..L (thin black line)
+    ax.plot([0, L], [0, 0], [0, 0], color="k", lw=axis_lw)
+
+    # y-axis (Im): x=0, z=0, from -lim..lim
+    ax.plot([0, 0], [-lim, lim], [0, 0], color="k", lw=axis_lw)
+
+    # z-axis (Re): x=0, y=0, from -lim..lim
+    ax.plot([0, 0], [0, 0], [-lim, lim], color="k", lw=axis_lw)
+
+    # --- Animated wave as a 3D segmented line (for per-segment colors) ---
+    pts0 = np.column_stack([x, y0, z0])
+    segs0 = np.stack([pts0[:-1], pts0[1:]], axis=1)
+    lc = Line3DCollection(segs0, linewidths=line_width)
+    ax.add_collection3d(lc)
+
+    if style.lower() == "grey":
+        lc.set_color((0.5, 0.5, 0.5, 1.0))
+
+        def update(i):
+            zz = fixed_ends_mode_complex(x, t_values[i], n=mode_n, A=A, L=L, c=c, phase=phase)
+            yy = np.imag(zz)
+            zz_re = np.real(zz)
+
+            pts = np.column_stack([x, yy, zz_re])
+            segs = np.stack([pts[:-1], pts[1:]], axis=1)
+            lc.set_segments(segs)
+            return (lc,)
+
+    elif style.lower() in ("phase", "colored", "color", "hsv"):
+        #rgb = _phase_colors(zz0, sat=sat, val=val)
+        rgb = phase_color_with_grey_nodes(zz0, A=A, gamma=2.0, grey=0.5, sat=sat, val=val)
+
+        lc.set_color(np.column_stack([rgb[:-1], np.ones(nx - 1)]))
+
+        def update(i):
+            zz = fixed_ends_mode_complex(x, t_values[i], n=mode_n, A=A, L=L, c=c, phase=phase)
+            yy = np.imag(zz)
+            zz_re = np.real(zz)
+
+            pts = np.column_stack([x, yy, zz_re])
+            segs = np.stack([pts[:-1], pts[1:]], axis=1)
+            lc.set_segments(segs)
+
+            #rgb = _phase_colors(zz, sat=sat, val=val)
+            rgb = _phase_colors_with_amplitude_fade(zz, A=A, sat_max=sat, val=val, gamma=2.0)
+
+            lc.set_color(np.column_stack([rgb[:-1], np.ones(nx - 1)]))
+            return (lc,)
+
+    else:
+        plt.close(fig)
+        raise ValueError('style must be "grey" or "phase"')
+
+    anim = FuncAnimation(fig, update, frames=nframes, blit=True)
+
+    save_kwargs = {}
+    if bg == "transparent":
+        save_kwargs["savefig_kwargs"] = {"transparent": True}
+
+
+
+
+    anim.save(filename, writer=PillowWriter(fps=fps), dpi=dpi, **save_kwargs)
+    plt.close(fig)
+    return filename
+
+
+def make_complex_color_rod_gif_3d(
+    filename="complex_color_rod_3d.gif",
+    *,
+    L=1.0,
+    c=1.0,
+    mode_n=1,
+    A=1.0,
+    phase=0.0,
+    seconds=3.0,
+    fps=30,
+    nx=700,
+    dpi=150,
+    style="phase",      # "grey" or "phase"
+    rod_width=8,        # thickness of the rod
+    bg="white",         # "white" or "transparent"
+    elev=18,
+    azim=-55,
+    sat=1.0,
+    val=1.0,
+    axis_lw=1.0,
+    zy_frame=True,      # draw the zy square at x=0
+    x_axis_line=True,   # draw thin x-axis line under the rod
+):
+    """
+    3D "rod" along the x-axis (y=z=0) whose color varies along x in time,
+    using the SAME complex wave logic as the rotating curve.
+
+    Axes convention (same as before, swapped):
+      x: position
+      y: Im(z)  (horizontal complex axis)
+      z: Re(z)  (vertical real axis)
+
+    But the geometry shown is ONLY the rod on the x-axis. The wave influences color only.
+
+
+    make_complex_color_rod_gif_3d("rod_phase.gif", mode_n=1, A=1.0, style="phase", seconds=4, fps=30, rod_width=10)
+    make_complex_color_rod_gif_3d("rod_phase2.gif", mode_n=2, A=1.0, style="phase", seconds=4, fps=30, rod_width=10)
+    make_complex_color_rod_gif_3d("rod_phase3.gif", mode_n=3, A=1.0, style="phase", seconds=4, fps=30, rod_width=10)
+    """
+
+    import numpy as np
+    import matplotlib.pyplot as plt
+    from matplotlib.animation import FuncAnimation, PillowWriter
+    from matplotlib.colors import hsv_to_rgb
+    from mpl_toolkits.mplot3d.art3d import Line3DCollection
+
+
+    def fixed_ends_mode_complex(x, t, n=1, A=1.0, L=1.0, c=1.0, phase=0.0):
+        omega = n * np.pi * c / L
+        shape = A * np.sin(n * np.pi * x / L)
+        return shape * np.exp(1j * (omega * t + phase))
+
+
+    def _phase_colors(z, sat=1.0, val=1.0):
+        """
+        Phase -> full color wheel, with:
+        +real (arg=0)  -> blue
+        -real (arg=pi) -> yellow
+        """
+        arg = np.angle(z)
+        hue = (2/3 + arg / (2 * np.pi)) % 1.0
+        hsv = np.stack([hue, np.full_like(hue, sat), np.full_like(hue, val)], axis=-1)
+        return hsv_to_rgb(hsv)
+
+    import numpy as np
+    from matplotlib.colors import hsv_to_rgb
+
+    def _phase_colors_with_amplitude_fade(z, A=1.0, sat_max=1.0, val=1.0, gamma=1.0):
+        """
+        Color by phase (full color wheel) but fade to grey near |z|=0 by reducing saturation.
+
+        Requirements:
+        +real -> blue, -real -> yellow (via hue shift)
+        |z| ~ 0 -> grey-ish
+
+        Parameters
+        ----------
+        z : complex array
+        A : float
+            Reference amplitude for normalization (same A as your wave).
+        sat_max : float
+            Saturation at full amplitude.
+        val : float
+            Brightness/value (keep 1.0 usually).
+        gamma : float
+            Controls how quickly color fades near zero:
+            gamma > 1 fades more strongly near zero,
+            gamma < 1 keeps more color near zero.
+        """
+        arg = np.angle(z)  # [-pi, pi]
+        hue = (2/3 + arg / (2 * np.pi)) % 1.0  # +real -> blue
+
+        # amplitude in [0,1]
+        amp = np.abs(z) / max(A, 1e-12)
+        amp = np.clip(amp, 0.0, 1.0)
+
+        # Fade saturation to 0 near zero amplitude => grey
+        sat = sat_max * (amp ** gamma)
+
+        hsv = np.stack([hue, sat, np.full_like(hue, val)], axis=-1)
+        return hsv_to_rgb(hsv)
+
+
+    def draw_zy_square(ax, x_const, ylim, zlim, color="k", lw=1.0):
+        y0, y1 = ylim
+        z0, z1 = zlim
+        corners = [
+            (x_const, y0, z0),
+            (x_const, y1, z0),
+            (x_const, y1, z1),
+            (x_const, y0, z1),
+        ]
+        edges = [(0, 1), (1, 2), (2, 3), (3, 0)]
+        for i, j in edges:
+            xi, yi, zi = corners[i]
+            xj, yj, zj = corners[j]
+            ax.plot([xi, xj], [yi, yj], [zi, zj], color=color, lw=lw)
+
+
+    import numpy as np
+    from matplotlib.colors import hsv_to_rgb
+
+    def phase_color_with_grey_nodes(z, A=1.0, gamma=2.0, grey=0.5, sat=1.0, val=1.0):
+        """
+        Full color circle from phase, but enforce GREY (not white) near |z|=0.
+
+        +Re (phase=0)   -> blue
+        -Re (phase=pi)  -> yellow
+
+        gamma controls how wide the grey node regions are.
+        grey is the node color in RGB (0.5 = medium grey).
+        """
+        # hue from phase, shifted so +Re is blue
+        arg = np.angle(z)
+        hue = (2/3 + arg / (2 * np.pi)) % 1.0
+
+        # vivid phase color
+        hsv = np.stack([hue, np.full_like(hue, sat), np.full_like(hue, val)], axis=-1)
+        rgb_phase = hsv_to_rgb(hsv)
+
+        # amplitude weight: 0 near nodes -> 1 at antinodes
+        amp = np.clip(np.abs(z) / max(A, 1e-12), 0.0, 1.0)
+        w = amp ** gamma
+
+        # blend grey <-> phase
+        rgb_grey = np.full_like(rgb_phase, grey)
+        rgb = (1 - w)[..., None] * rgb_grey + w[..., None] * rgb_phase
+        return rgb
+
+
+    x = np.linspace(0, L, nx)
+    nframes = int(np.round(seconds * fps))
+    t_values = np.linspace(0, seconds, nframes, endpoint=False)
+
+    lim = 1.2 * abs(A)
+
+    fig = plt.figure(figsize=(7, 4), dpi=dpi)
+    ax = fig.add_subplot(111, projection="3d")
+
+    if bg == "transparent":
+        fig.patch.set_alpha(0)
+        ax.patch.set_alpha(0)
+
+    ax.set_xlim(0, L)
+    ax.set_ylim(-lim, lim)
+    ax.set_zlim(-lim, lim)
+
+    ax.view_init(elev=elev, azim=azim)
+
+    # Remove all default clutter
+    ax.grid(False)
+    ax.set_xticks([])
+    ax.set_yticks([])
+    ax.set_zticks([])
+    for axis in (ax.xaxis, ax.yaxis, ax.zaxis):
+        try:
+            axis.pane.set_facecolor((1, 1, 1, 0))
+            axis.pane.set_edgecolor((1, 1, 1, 0))
+        except Exception:
+            pass
+    try:
+        ax.w_xaxis.line.set_color((1, 1, 1, 0))
+        ax.w_yaxis.line.set_color((1, 1, 1, 0))
+        ax.w_zaxis.line.set_color((1, 1, 1, 0))
+    except Exception:
+        pass
+
+    # Optional: draw the minimal reference axes you wanted
+    if x_axis_line:
+        ax.plot([0, L], [0, 0], [0, 0], color="k", lw=axis_lw)
+    ax.plot([0, 0], [-lim, lim], [0, 0], color="k", lw=axis_lw)   # y-axis through origin
+    ax.plot([0, 0], [0, 0], [-lim, lim], color="k", lw=axis_lw)   # z-axis through origin
+
+    if zy_frame:
+        draw_zy_square(ax, x_const=0, ylim=(-lim, lim), zlim=(-lim, lim), color="k", lw=axis_lw)
+
+    # --- Build the rod segments ONCE (geometry fixed on x-axis) ---
+    y_rod = np.zeros_like(x)
+    z_rod = np.zeros_like(x)
+    pts = np.column_stack([x, y_rod, z_rod])
+    segs = np.stack([pts[:-1], pts[1:]], axis=1)
+
+    rod = Line3DCollection(segs, linewidths=rod_width)
+    ax.add_collection3d(rod)
+
+    # Initial color signal from complex wave
+    zc0 = fixed_ends_mode_complex(x, t_values[0], n=mode_n, A=A, L=L, c=c, phase=phase)
+
+    if style.lower() == "grey":
+        rod.set_color((0.5, 0.5, 0.5, 1.0))
+
+        def update(i):
+            return (rod,)
+
+    elif style.lower() in ("phase", "colored", "color", "hsv"):
+        #rgb0 = _phase_colors(zc0, sat=sat, val=val)
+        rgb0 = phase_color_with_grey_nodes(zc0, A=A, gamma=2.0, grey=0.5, sat=sat, val=val)
+
+        rod.set_color(np.column_stack([rgb0[:-1], np.ones(nx - 1)]))
+
+        def update(i):
+            zc = fixed_ends_mode_complex(x, t_values[i], n=mode_n, A=A, L=L, c=c, phase=phase)
+            rgb = rgb = _phase_colors_with_amplitude_fade(zc, A=A, sat_max=sat, val=val, gamma=2.0)
+            rod.set_color(np.column_stack([rgb[:-1], np.ones(nx - 1)]))
+            return (rod,)
+
+    else:
+        plt.close(fig)
+        raise ValueError('style must be "grey" or "phase"')
+
+    anim = FuncAnimation(fig, update, frames=nframes, blit=True)
+
+    save_kwargs = {}
+    if bg == "transparent":
+        save_kwargs["savefig_kwargs"] = {"transparent": True}
+
+    anim.save(filename, writer=PillowWriter(fps=fps), dpi=dpi, **save_kwargs)
+    plt.close(fig)
+    return filename
+
