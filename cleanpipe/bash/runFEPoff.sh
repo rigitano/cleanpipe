@@ -1,7 +1,11 @@
 #!/bin/bash
 
-# usage example: ./runFEPoff.sh alaHO alaHO.gro alaHO.top 100 "283 298 313" charmm36 pc molecule_0 8 2
 
+# usage example: 
+# martini
+#./runFEPoff.sh alaHO alaHO.gro alaHO.top 100 "283 298 313" martini3 pc molecule_0 2 8
+# aa
+#./runFEPoff.sh alaHO alaHO.gro alaHO.top 100 "283 298 313" charmm36 pc molecule_0 ???? ?????
 
 # ARGUMENTS:
 # 1-name that goes on the runFEP the folder to be created, and job name
@@ -10,7 +14,7 @@
 # 4-nanoseconds of production
 # 5-temperatures (remeber that martini3 was parametrized at 310)
 # 6-forcefield to use in mdp construction (must be "charmm36" or "martini3")
-# 7-architecture (pc, slurm, rome)
+# 7-architecture (pc, slurm, rome, adastra)
 # 8-molecule to be decoupled
 # 9-ntOMP
 # 10-ntMPI
@@ -724,7 +728,7 @@ export GMX_DISABLE_GPU_DETECTION=1 # prevent GROMACS from using GPUs
 export I_MPI_PIN_CELL=core
 export I_MPI_PIN_DOMAIN=auto
 
-OMP_NUM_THREADS=${NTOMP}      # number of OpenMP threads (ntomp)
+export OMP_NUM_THREADS=${NTOMP}      # number of OpenMP threads (ntomp)
 
 EOT
 
@@ -763,6 +767,43 @@ GMX="gmx"
 
 #GMX MDRUN ADITIONAL OPTIONS. ATENTION: this must be coherent with #SBATCH --cpus-per-task
 MDRUN_OPTIONS="-ntomp ${NTOMP} -ntmpi ${NTMPI}" #this requires  #SBATCH --cpus-per-task=1
+
+
+#########################################################################################################
+elif [[ $ARCHITECTURE == "adastra" ]]; then # insert the adastra header, if the user chose this architecture
+
+cat <<EOT >>  "t${t}.l${i}.sh"
+
+#SBATCH --account=c1613458
+#SBATCH -J ${NAME}.${t}.${i}.fep
+#SBATCH --constraint=GENOA         # GENOA(192)(CPU) or MI250(64)(GPU)
+##SBATCH --nodes=
+#SBATCH --ntasks-per-node=${NTMPI} 
+#SBATCH --cpus-per-task=${NTOMP}
+##SBATCH --exclusive
+#SBATCH -o t${t}.l${i}.scheduler.out
+#SBATCH -e t${t}.l${i}.scheduler.err 
+
+
+module purge
+module load CCE-CPU-4.0.0
+module load gromacs/2024.3-omp-mpi
+
+module list
+
+
+export OMP_NUM_THREADS=${NTOMP}      # number of OpenMP threads (ntomp)
+
+EOT
+
+#GMX ENGINE 
+GMX="gmx_mpi"
+
+#GMX MDRUN ADITIONAL OPTIONS. ATENTION: this must be coherent with #SBATCH
+MDRUN_OPTIONS=""
+
+
+
 
 ##########################################################################################################3
 elif [[ $ARCHITECTURE == "pc" ]]; then # insert what should be the gromacs commands in my local pc
