@@ -82,7 +82,14 @@ def view_traj(s_xtc,s_gro):
     view.add_representation('ball+stick', selection='NA', color='green', aspectRatio=10)
 
     view.add_spacefill('not protein', opacity=0.1)
-
+    """
+    view.add_representation(
+        'ball+stick',
+        selection='not protein',
+        color='blue',
+        opacity=0.2
+    )
+    """
     return view
 
 
