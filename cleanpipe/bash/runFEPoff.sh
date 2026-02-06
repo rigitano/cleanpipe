@@ -786,8 +786,10 @@ cat <<EOT >>  "t${t}.l${i}.sh"
 
 
 module purge
-module load CCE-CPU-4.0.0
-module load gromacs/2024.3-omp-mpi
+#module load CCE-CPU-4.0.0
+develop CCE-CPU-5.0.0
+module spider gromacs/2025.2-omp-mpi
+#module load gromacs/2024.3-omp-mpi
 
 module list
 
