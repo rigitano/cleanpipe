@@ -91,7 +91,7 @@ def pdb2box_full_of_that(s_pdbfile, s_forceField, s_box_size, n_mol_max):
     bricksTOP.setSystemName(f"{s_outPathAndName}.top", f"box filled with {s_filename}" )
 
 @ensure_original_directory
-def pdb2molecule_in_solvent(s_pdbfile, s_outSytemName, solvent, s_forceField, s_boxSize, s_maxsol=0, s_martinize_aditional_arguments=''):
+def pdb2molecule_in_solvent(s_pdbfile, s_outSytemName, solvent, s_forceField, s_boxSize, s_maxsol=0, s_aditional_arguments=''):
     """
     s_pdbfile       : string with the pdb name. for example "insulin.pdb", this will be the main molecule in the system.
     s_outSytemName  : string with the name of the system, for example "alaHW". a folder with that name will be created, and inside it, all the files, for example: alaHW.gro and alaHW.top
@@ -102,7 +102,7 @@ def pdb2molecule_in_solvent(s_pdbfile, s_outSytemName, solvent, s_forceField, s_
     s_boxSize       : string with x y z sizes, for example "3 3 3"
     s_maxsol        : the maximum number of solvent molecules that will be added. this is optional here, as the 0 value mean the parameter wont be considered by gromacs
 
-    s_martinize_aditional_arguments : add extra arguments in martinize. for example "-water-bias -water-bias-eps E:-0.5 H:-1.0 -ss HHHHHHHHHHHH"
+    s_aditional_arguments : add extra arguments in martinize or pdb2gmx. for example, in martinize: "-water-bias -water-bias-eps E:-0.5 H:-1.0 -ss HHHHHHHHHHHH"
 
     examples:
 
@@ -120,7 +120,7 @@ def pdb2molecule_in_solvent(s_pdbfile, s_outSytemName, solvent, s_forceField, s_
 
 
     ########################### create gro, itps and top in a folder with the name of the system ###########################
-    bricksGROMACS.pdb2system(s_pdbfile, s_outSytemName, s_forceField, s_boxSize, s_martinize_aditional_arguments)
+    bricksGROMACS.pdb2system(s_pdbfile, s_outSytemName, s_forceField, s_boxSize, s_aditional_arguments)
     ########################################################################################################################
 
 
@@ -156,7 +156,7 @@ def pdb2molecule_in_solvent(s_pdbfile, s_outSytemName, solvent, s_forceField, s_
 
 
 @ensure_original_directory
-def pdb2molecule_in_water_and_octane(s_pdbfile, s_folderName, s_forceField, s_boxSize, s_aditional_arguments=''):
+def pdb2molecule_in_water_and_octane(s_pdbfile, s_folderName, s_forceField, s_boxSize, s_maxsolW, s_maxsolO, s_aditional_arguments=''):
     """
     this function is perfect for canclulations of free energies of transfer. there will be two systems in the same folder. 
     but for DG transfer, this actualy makes things easyer. you can run two runREALISTIC scrits, and then two runFEPoff scripts. and all the data you need will be there
@@ -165,11 +165,25 @@ def pdb2molecule_in_water_and_octane(s_pdbfile, s_folderName, s_forceField, s_bo
     s_folderName    : string with the name of the folder, for example "ala6Hdihr200-transfer". this folder will be created, and inside it, the two systems will be created inside it
     s_forceField    : one of the gromacs recognized force fields, for example "charmm36-jul2022"
     s_boxSize       : string with x y z sizes, for example "3 3 3"
+    s_maxsolW       : max number of water molecules. ex 
+                                                           1residues  and box 3 3 3 : 873 (xxx for martini)
+                                                           6residues  and box 5 5 5 : 3616?
+                                                           11residues and box 6 6 6 : 6943
+                                                           12residues and box 6 6 6 : 6943 (1736 for martini)
+                                                           13residues and box 6 6 6 : xxx (xxx for martini)
+
+    s_maxsolO       : max number of octane molecules. ex:
+                                                           1residues  and box 3 3 3 : 65
+                                                           6residues  and box 5 5 5 : 395?
+                                                           11residues and box 6 6 6 : 712
+                                                           12residues and box 6 6 6 : 712
+                                                           13residues and box 6 6 6 : xxx (xxx for martini)
+
     s_aditional_arguments : extra stuff you might want to add to martinize2 or pdb2gmx
 
     example:
-    cl.pdb2molecule_in_two_solvents("normal_peptide.pdb", "ala6Hdih200-transfer", "charmm36-jul2022")
-    cl.pdb2molecule_in_water_and_octane("g12H.pdb", "g12Hbias1-transfer", '~/ff/martini3001', s_aditional_arguments='-water-bias -water-bias-eps E:-0.5 H:-1.0 -ss HHHHHHHHHHHH')
+    cl.pdb2molecule_in_water_and_octane("normal_peptide.pdb", "ala6Hdih200-transfer", "charmm36-jul2022", "6 6 6", "6943", "712" )
+    cl.pdb2molecule_in_water_and_octane("g12H.pdb",           "g12Hbias1-transfer",   '~/ff/martini3001', "6 6 6", "1736", "712", s_aditional_arguments='-water-bias -water-bias-eps E:-0.5 H:-1.0 -ss HHHHHHHHHHHH')
 
 
     """
@@ -183,22 +197,22 @@ def pdb2molecule_in_water_and_octane(s_pdbfile, s_folderName, s_forceField, s_bo
         solvent2  = [ solvents_dir / "martini3001" / "Octane"     / "OCT_PRO1.gro",  ff_dir / "martini3001" / "martini_v3.0.0_solvents_v1.itp" ]
         s_boxSize1 = s_boxSize #"6 6 6"
         s_boxSize2 = s_boxSize #"6.1 6.1 6.1"
-        s_maxsol1 = "1736"
-        s_maxsol2 = "712"
+        s_maxsol1 = s_maxsolW
+        s_maxsol2 = s_maxsolO
     elif "martini22" in s_forceField.lower():
         solvent1  = [ solvents_dir / "martini22" / "Water-pure" / "water.gro",     ff_dir / "martini22" / "martini_v2.0_solvents.itp" ] # I think water is already in the ff itp, so no need for this solvents file  
         solvent2  = [ solvents_dir / "martini22" / "Octane"     / "OCT_PRO1.gro",  ff_dir / "martini22" / "martini_v2.0_solvents.itp" ]
         s_boxSize1 = s_boxSize #"6 6 6"
         s_boxSize2 = s_boxSize #"6.1 6.1 6.1"
-        s_maxsol1 = "1736"
-        s_maxsol2 = "712"
+        s_maxsol1 = s_maxsolW
+        s_maxsol2 = s_maxsolO
     elif "charmm" in s_forceField.lower():
         solvent1   = "tip3p"
         solvent2   = [ solvents_dir / "charmm36" / "Octane" / "octane_box_npt.gro",  solvents_dir / "charmm36" / "Octane" / "octn.itp" ]
         s_boxSize1 = s_boxSize #"3 3 3"
         s_boxSize2 = s_boxSize #"3.1 3.1 3.1"
-        s_maxsol1 = "6943"
-        s_maxsol2 = "712"
+        s_maxsol1 = s_maxsolW
+        s_maxsol2 = s_maxsolO
 
 
 
