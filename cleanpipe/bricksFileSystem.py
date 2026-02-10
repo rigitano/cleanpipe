@@ -289,6 +289,16 @@ def run_and_capture(command):
             line = stream.readline()
             if not line:
                 break
+
+            # Filter out only these bash job-control warnings (and nothing else)
+            if is_stderr:
+                stripped = line.rstrip("\r\n")
+                if (
+                    stripped.startswith("bash: cannot set terminal process group (")
+                    and stripped.endswith("): Inappropriate ioctl for device")
+                ) or (stripped == "bash: no job control in this shell"):
+                    continue
+
             with output_lock:
                 # Add stream identification prefix
                 prefix = "STDERR: " if is_stderr else "STDOUT: "
@@ -329,11 +339,11 @@ def run_and_capture(command):
     final_error = ''.join(captured_error)
     
     # Print completion message
-    print(f"CLEANPIPE MESSAGE exit {process.returncode} (ok)\n", flush=True)
+    print(f"CLEANPIPE MESSAGE ### TERMINAL COMMAND ### exit {process.returncode} (ok)\n", flush=True)
     
     # Handle errors
     if process.returncode != 0:
-        print(f"CLEANPIPE MESSAGE exit {process.returncode} (fail)\n")
+        print(f"CLEANPIPE MESSAGE ### TERMINAL COMMAND ### exit {process.returncode} (fail)\n")
         if final_error:
             print(f"\nCLEANPIPE MESSAGE final standard error output after failiure:\n{final_error}\n")
         raise subprocess.CalledProcessError(
