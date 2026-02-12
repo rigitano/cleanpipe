@@ -99,7 +99,7 @@ for ((i = 0; i < len1; i++)); do
 #
 #@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ CLUSTER SETTINGS @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
-#MSUB   -r ${TPR_WITHOUT_EXTENSION}-try$((i+1))            # Job name
+#MSUB   -r bench$((i+1))${TPR_WITHOUT_EXTENSION}            # Job name
 #MSUB   -n ${keywords1[i]}         # Number of tasks in parallel mode
 #MSUB   -c 1                       # Number of cores per parallel task
 # #MSUB -N 1                       # Number of nodes to allocate (Inferred)
