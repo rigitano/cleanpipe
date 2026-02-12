@@ -577,34 +577,150 @@ def parse_directives_inside_intermolecular_interactions(s_file):
     return molecules
 
 
-def expand_includes(file_path):
+import os
+import re
+from pathlib import Path
+
+# Accept both quotes and angle brackets
+INCLUDE_RE = re.compile(r'^\s*#include\s*[<"]([^">]+)[>"]')
+
+def _resolve_include(including_file: Path, include_token: str, search_dirs=()):
+    """
+    Resolve include_token robustly:
+      1) expand ~ and env vars
+      2) if absolute -> use as is
+      3) if relative -> resolve relative to including file's directory
+      4) if not found -> try search_dirs (each joined with relative token)
+    Returns (resolved_path: Path | None, tried_paths: list[Path])
+    """
+    base_dir = including_file.resolve().parent
+
+    expanded = os.path.expandvars(os.path.expanduser(include_token.strip()))
+    p = Path(expanded)
+
+    tried = []
+
+    # Candidate 1: absolute or relative-to-including-file
+    if p.is_absolute():
+        cand = p
+    else:
+        cand = base_dir / p
+    cand = cand.resolve()
+    tried.append(cand)
+    if cand.exists():
+        return cand, tried
+
+    # Candidate 2+: fallback search directories (only meaningful for relative tokens)
+    if not p.is_absolute():
+        for d in search_dirs:
+            d = Path(os.path.expandvars(os.path.expanduser(str(d)))).resolve()
+            alt = (d / p).resolve()
+            tried.append(alt)
+            if alt.exists():
+                return alt, tried
+
+    return None, tried
+
+
+def expand_includes(
+    file_path,
+    *,
+    search_dirs=None,
+    visited=None,
+    on_missing="keep",   # "keep" or "raise"
+    emit_markers=False   # True to add begin/end comments around inserted blocks
+):
     """
     Recursively read a file and expand any #include directives.
-    The included files are assumed to be specified with quotes, e.g.,
-        #include "other_file.itp"
-    The file path is assumed to be relative to the directory of the including file.
+
+    Handles:
+      - #include "file" and #include <file>
+      - absolute + relative include paths
+      - ~ and $VARS expansions
+      - trailing ';' comments after include directives
+      - fallback search directories
+      - cycle detection to avoid infinite recursion
+
+    Params:
+      search_dirs: iterable of directories to try if relative include isn't found next to including file.
+                  Common choices: [os.environ.get("GMXLIB"), "/path/to/ff", os.getcwd()]
+      visited: internal set used for cycle detection (you normally don't pass this)
+      on_missing: "keep" keeps the original include line; "raise" throws FileNotFoundError
+      emit_markers: if True, wraps expanded content with helpful comments.
     """
-    content = []
-    with open(file_path, 'r') as f:
+    if search_dirs is None:
+        search_dirs = []
+        # Optional: include GMXLIB if set
+        gmxl = os.environ.get("GMXLIB")
+        if gmxl:
+            search_dirs.append(gmxl)
+
+    if visited is None:
+        visited = set()
+
+    file_path = Path(file_path).expanduser()
+    # Don't force resolve here if it may not exist; but for cycle detection we want a stable key
+    file_key = str(file_path.resolve()) if file_path.exists() else str(file_path)
+
+    if file_key in visited:
+        # Include loop detected; keep line as-is or raise, but don't recurse forever.
+        # Here: keep silently with a marker.
+        return f"; NOTE: include loop avoided for {file_path}\n"
+
+    if not file_path.exists():
+        msg = f"Top/itp file not found: {file_path}"
+        if on_missing == "raise":
+            raise FileNotFoundError(msg)
+        return f"; NOTE: {msg}\n"
+
+    visited.add(file_key)
+
+    content_parts = []
+    with file_path.open("r", encoding="utf-8", errors="replace") as f:
         for line in f:
-            stripped = line.strip()
-            if stripped.startswith("#include"):
-                # Look for pattern: #include "filename"
-                m = re.search(r'#include\s+"([^"]+)"', stripped)
-                if m:
-                    include_filename = m.group(1)
-                    include_path = os.path.join(os.path.dirname(file_path), include_filename)
-                    if os.path.exists(include_path):
-                        # Recursively expand includes in the included file
-                        content.append(expand_includes(include_path))
-                    else:
-                        print(f"File to be included not found: {include_path}")
-                else:
-                    # If the #include line doesn't match the expected format, just keep the line.
-                    content.append(line)
-            else:
-                content.append(line)
-    return "".join(content)
+            # Remove trailing GROMACS comments to parse includes robustly,
+            # but keep the original line if we don't expand it.
+            no_comment = line.split(";", 1)[0].strip()
+
+            m = INCLUDE_RE.match(no_comment)
+            if not m:
+                content_parts.append(line)
+                continue
+
+            include_token = m.group(1).strip()
+
+            resolved, tried = _resolve_include(file_path, include_token, search_dirs=search_dirs)
+
+            if resolved is None:
+                tried_str = ", ".join(str(p) for p in tried)
+                msg = f"File to be included not found: {include_token}. Tried: {tried_str}"
+                if on_missing == "raise":
+                    raise FileNotFoundError(msg)
+                # Keep original line (your old behavior), but annotate for debugging
+                content_parts.append(f"; NOTE: {msg}\n")
+                content_parts.append(line)
+                continue
+
+            if emit_markers:
+                content_parts.append(f"; >>> BEGIN include {include_token} (resolved: {resolved})\n")
+
+            # Recurse
+            content_parts.append(
+                expand_includes(
+                    resolved,
+                    search_dirs=search_dirs,
+                    visited=visited,
+                    on_missing=on_missing,
+                    emit_markers=emit_markers,
+                )
+            )
+
+            if emit_markers:
+                content_parts.append(f"; <<< END include {include_token}\n")
+
+    visited.remove(file_key)
+    return "".join(content_parts)
+
 
 
 def expand_includes_to_temp_file(file_path):
