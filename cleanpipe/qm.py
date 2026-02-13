@@ -5,7 +5,11 @@ import matplotlib.pyplot as plt
 import numpy as np
 import imageio.v2 as imageio
 import plotly.io as pio
+import py3Dmol
+import base64
 from pathlib import Path
+import shutil
+import json
 from PIL import Image
 import os, math, glob
 import plotly.graph_objects as go
@@ -40,6 +44,333 @@ print(f"Wrote HOMO cube for orbital index {homo} into cubes_hf_homo/")
 
 
 """
+
+
+
+
+def _psi4_mol_to_xyz_string(mol):
+    try:
+        return mol.to_string(dtype="xyz")
+    except TypeError:
+        return mol.save_string_xyz()
+
+
+def _render_png_from_xyz(
+    xyz: str,
+    outfile: Path,
+    width=700,
+    height=520,
+    add_labels=False,
+    view_state=None,
+    do_zoom=False,
+):
+    view = py3Dmol.view(width=width, height=height)
+    view.addModel(xyz, "xyz")
+    view.setStyle({"stick": {"radius": 0.18}, "sphere": {"scale": 0.28}})
+    view.setBackgroundColor("0xFFFFFF")
+
+    if add_labels:
+        lines = [ln.strip() for ln in xyz.splitlines() if ln.strip()]
+        nat = int(lines[0])
+        atom_lines = lines[2:2 + nat]
+        for i, ln in enumerate(atom_lines):
+            sym, x, y, z = ln.split()[:4]
+            label = f"{i+1}:{sym}"
+            view.addLabel(
+                label,
+                {
+                    "position": {"x": float(x), "y": float(y), "z": float(z)},
+                    "fontSize": 12,
+                    "fontColor": "black",
+                    "backgroundColor": "white",
+                    "backgroundOpacity": 0.6,
+                    "inFront": True,
+                },
+            )
+
+    if view_state is not None:
+        # Lock camera exactly
+        view.setView(view_state)
+    if do_zoom:
+        # Use this ONLY for the first frame
+        view.zoomTo()
+
+    png_data = view.png()
+    png_bytes = base64.b64decode(png_data.split(",")[1])
+    outfile.write_bytes(png_bytes)
+
+    # Return camera state (so caller can reuse it)
+    return view.getView()
+
+
+def save_all_xyz_pngs_fixed_camera(
+    outdir,
+    xyz_pattern="optimized_torsion_dihedral_*.xyz",
+    png_subdir="frames_fixed_camera",
+    add_labels=False,
+    width=700,
+    height=520,
+):
+    """
+    Reads XYZ files, renders PNG frames with a *locked* camera orientation across all frames.
+    Returns (pngdir, view_state).
+    """
+    outdir = Path(outdir)
+    pngdir = outdir / png_subdir
+    pngdir.mkdir(parents=True, exist_ok=True)
+
+    xyz_files = sorted(outdir.glob(xyz_pattern))
+    if not xyz_files:
+        raise FileNotFoundError(f"No XYZ files found in {outdir} matching {xyz_pattern}")
+
+    view_state = None
+
+    for i, xyz_path in enumerate(xyz_files):
+        xyz_text = xyz_path.read_text()
+
+        out_png = pngdir / f"frame_{i:04d}.png"
+
+        if i == 0:
+            # First frame: zoomTo once, then store camera state
+            view_state = _render_png_from_xyz(
+                xyz_text, out_png,
+                width=width, height=height,
+                add_labels=add_labels,
+                view_state=None,
+                do_zoom=True,
+            )
+        else:
+            # Subsequent frames: reuse exact same camera state
+            _ = _render_png_from_xyz(
+                xyz_text, out_png,
+                width=width, height=height,
+                add_labels=add_labels,
+                view_state=view_state,
+                do_zoom=False,
+            )
+
+    return pngdir, view_state
+
+
+
+def _render_png_from_cube(
+    cube_path: Path,
+    outfile: Path,
+    width=700,
+    height=520,
+    isovalue=0.02,
+    view_state=None,
+    do_zoom=False,
+):
+    view = py3Dmol.view(width=width, height=height)
+    view.addModel(cube_path.read_text(), "cube")
+    view.setBackgroundColor("0xFFFFFF")
+
+    # Positive lobe
+    view.addSurface(
+        py3Dmol.SurfaceType.ISOSURFACE,
+        {"isoval": float(isovalue), "color": "blue", "opacity": 0.85},
+        {"model": 0}
+    )
+    # Negative lobe
+    view.addSurface(
+        py3Dmol.SurfaceType.ISOSURFACE,
+        {"isoval": -float(isovalue), "color": "red", "opacity": 0.85},
+        {"model": 0}
+    )
+
+    # Optional: show the atoms too (usually cube contains them)
+    view.setStyle({"stick": {"radius": 0.12}, "sphere": {"scale": 0.18}})
+
+    if view_state is not None:
+        view.setView(view_state)
+    if do_zoom:
+        view.zoomTo()
+
+    png_data = view.png()
+    png_bytes = base64.b64decode(png_data.split(",")[1])
+    outfile.write_bytes(png_bytes)
+
+    return view.getView()
+
+
+def save_all_homo_cube_pngs_fixed_camera(
+    outdir,
+    cube_glob="ang*_homo*_Psi_a_*.cube",
+    png_subdir="frames_homo_fixed_camera",
+    isovalue=0.02,
+    width=700,
+    height=520,
+    reuse_view_state=None,   # pass a camera state to match XYZ frames exactly
+):
+    """
+    Render HOMO cube files to PNG frames with a locked camera orientation.
+
+    If reuse_view_state is provided, it will be used for ALL frames (no zoomTo).
+    Otherwise, the first cube frame does zoomTo and stores its camera for the rest.
+    Returns (pngdir, view_state_used).
+    """
+    outdir = Path(outdir)
+    pngdir = outdir / png_subdir
+    pngdir.mkdir(parents=True, exist_ok=True)
+
+    cubes = sorted(outdir.glob(cube_glob))
+    if not cubes:
+        raise FileNotFoundError(f"No cube files found in {outdir} matching {cube_glob}")
+
+    view_state = reuse_view_state
+
+    for i, cube in enumerate(cubes):
+        out_png = pngdir / f"frame_{i:04d}.png"
+
+        if view_state is None and i == 0:
+            # First cube frame defines the camera
+            view_state = _render_png_from_cube(
+                cube, out_png,
+                width=width, height=height,
+                isovalue=isovalue,
+                view_state=None,
+                do_zoom=True,
+            )
+        else:
+            # Lock camera
+            _ = _render_png_from_cube(
+                cube, out_png,
+                width=width, height=height,
+                isovalue=isovalue,
+                view_state=view_state,
+                do_zoom=False,
+            )
+
+    return pngdir, view_state
+
+
+def make_gif_from_pngs(folder, pattern="frame_*.png", fps=30, out_name="molecule.gif"):
+    folder = Path(folder)
+    files = sorted(folder.glob(pattern))
+    if not files:
+        raise FileNotFoundError(f"No files found in {folder} matching {pattern}")
+
+    frame_duration_ms = int(1000 / fps)
+    frames = [Image.open(p).convert("RGB") for p in files]
+
+    out_gif = folder / out_name
+    frames[0].save(
+        out_gif,
+        save_all=True,
+        append_images=frames[1:],
+        duration=frame_duration_ms,
+        loop=0,
+        optimize=True,
+    )
+    return out_gif
+
+def reorder_psi4_molecule(mol, gro_id_psi_id, *, output_units="angstrom", keep_directives=True):
+    """
+    Reorder a Psi4 molecule to match GROMACS atom ordering.
+
+    Psi4 stores geometries internally in Bohr. This function converts properly
+    so bond-guessing in viewers doesn't break due to scaling.
+
+    Parameters
+    ----------
+    mol : psi4.core.Molecule
+        Current Psi4 molecule (old ordering).
+    gro_id_psi_id : dict[int,int]
+        keys = desired GROMACS ids (1-based), values = current Psi4 ids (1-based).
+        Atoms not referenced in dict values are appended last (original relative order).
+    output_units : {"angstrom","bohr"}
+        Units to write in the new geometry.
+    keep_directives : bool
+        If True, adds "no_com" and "no_reorient".
+
+    Returns
+    -------
+    psi4.core.Molecule
+        Reordered molecule.
+
+
+
+    Usage:
+    gro_id_psi_id = {
+    1: 3,
+    2: 11,
+    3: 5,
+    4: 15,
+    5: 14,
+    6: 7,
+    7: 8,
+    8: 6,
+    9: 16,
+    10: 17,
+    11: 4,
+    12: 13,
+    13: 12,
+    14: 10,
+    15: 9,
+    16: 1,
+    17: 2,
+    18: 24,
+    19: 23,
+    }
+    proxy = cl.reorder_psi4_molecule(proxy_scrambled_ids, gro_id_psi_id)
+    """
+    n = mol.natom()
+
+    # --- element symbols ---
+    elems = [mol.symbol(i) for i in range(n)]
+
+    # --- coordinates: Psi4 internal geometry is Bohr ---
+    # geometry() returns a Matrix; to_array() gives (n,3) in Bohr
+    geom_bohr = mol.geometry().to_array()
+
+    # Convert if requested
+    if output_units.lower() in ("angstrom", "a", "angs"):
+        conv = psi4.constants.bohr2angstroms
+        geom = geom_bohr * conv
+        units_line = "units angstrom"
+    elif output_units.lower() in ("bohr", "au", "a.u."):
+        geom = geom_bohr
+        units_line = "units bohr"
+    else:
+        raise ValueError("output_units must be 'angstrom' or 'bohr'")
+
+    # --- build new order of old indices (0-based) ---
+    placed_old = []
+    used_old = set()
+
+    for gro_id in sorted(gro_id_psi_id.keys()):
+        old_1 = gro_id_psi_id[gro_id]
+        if not (1 <= old_1 <= n):
+            raise ValueError(f"Mapping points to psi atom id {old_1}, but molecule has {n} atoms.")
+        old_0 = old_1 - 1
+        if old_0 in used_old:
+            raise ValueError(f"Psi atom id {old_1} is assigned more than once in mapping values.")
+        placed_old.append(old_0)
+        used_old.add(old_0)
+
+    leftovers = [i for i in range(n) if i not in used_old]
+    new_order = placed_old + leftovers
+
+    # --- preserve charge and multiplicity ---
+    charge = int(round(mol.molecular_charge()))
+    mult = int(mol.multiplicity())
+
+    # --- compose new geometry string ---
+    lines = []
+    if keep_directives:
+        lines += ["no_com", "no_reorient"]
+    lines.append(units_line)
+    lines.append(f"{charge} {mult}")
+
+    for i in new_order:
+        x, y, z = geom[i]
+        lines.append(f"{elems[i]:<2s}  {x: .10f}  {y: .10f}  {z: .10f}")
+
+    return psi4.geometry("\n".join(lines))
+
+
+
 
 
 
@@ -323,19 +654,21 @@ def qm_angle_scan(chosen_molecule, l_angle_indeces, s_theory='HF', s_basis='6-31
 
 
 
-def qm_dihedral_scan(chosen_molecule, l_dihedral_indeces, s_theory='HF', s_basis='6-31G(d)', s_out_folder_name='dihedral_scan'):
-    """
 
-    cl.qm_dihedral_scan(cya, [8, 0, 2, 3], s_theory='HF', s_basis='6-31G(d)', s_out_folder_name='dihedral_scan')
-    """
 
-    bricksFileSystem.delete(s_out_folder_name)
-    os.makedirs(s_out_folder_name, exist_ok=True)
 
-    
-    #results will be saved here if you need to see them after closing jupyter
-    datafile = Path(s_out_folder_name) / "scan_data.txt"
-   
+def qm_dihedral_scan(chosen_molecule, l_dihedral_indeces,
+                     s_theory='HF', s_basis='6-31G(d)',
+                     s_out_folder_name='dihedral_scan'):
+
+    outdir = Path(s_out_folder_name)
+
+    # Clean output folder completely
+    if outdir.exists():
+        shutil.rmtree(outdir)
+    outdir.mkdir(parents=True, exist_ok=True)
+
+    datafile = outdir / "scan_data.jsonl"
 
     psi4.core.clean()
     psi4.core.clean_options()
@@ -346,12 +679,14 @@ def qm_dihedral_scan(chosen_molecule, l_dihedral_indeces, s_theory='HF', s_basis
         "scf_type": "df",
         "e_convergence": 1e-9,
         "d_convergence": 1e-9,
+        # If ESP cubeprop complains, uncomment:
+        # "DF_BASIS_SCF": "def2-universal-jkfit",
     })
 
-    mol0 = psi4.core.get_active_molecule().clone()
+    mol0 = chosen_molecule.clone()
     energies = []
 
-    for count, a in enumerate(range(0, 360, 5)): #id, final angle, step
+    for count, a in enumerate(range(0, 360, 5)):
         mol = mol0.clone()
 
         geometric_keywords = {
@@ -360,38 +695,81 @@ def qm_dihedral_scan(chosen_molecule, l_dihedral_indeces, s_theory='HF', s_basis
                 'set': [{
                     'type': 'dihedral',
                     'indices': l_dihedral_indeces,
-                    'value': float(a)   # degrees
+                    'value': float(a)
                 }]
             }
         }
 
         try:
-            E = psi4.optimize(
+            E, wfn = psi4.optimize(
                 f'{s_theory}/{s_basis}',
                 molecule=mol,
                 engine='geometric',
-                optimizer_keywords=geometric_keywords
+                optimizer_keywords=geometric_keywords,
+                return_wfn=True
             )
 
-            #store in variable
             energies.append((count, a, E))
-
-            #store in data file, if you need the data after closing jupyter
             with open(datafile, "a") as f:
-                f.write(f"{{'step': {count}, 'angle': {a}, 'energy': {E}}},\n")
+                f.write(json.dumps({"step": count, "angle": a, "energy": E}) + "\n")
 
-            #save molecule geometry file
-            mol.save_xyz_file(
-                os.path.join(s_out_folder_name, f'optimized_torsion_dihedral_{a:03d}.xyz'), 
-                True
-            )
+            mol.save_xyz_file(str(outdir / f'optimized_torsion_dihedral_{a:03d}.xyz'), True)
 
-            
+            # --- cubeprop ---
+            # Try HOMO index; if cubeprop complains, fallback by -1.
+            homo_guess = wfn.nalpha()
+
+            psi4.set_options({
+                "CUBEPROP_TASKS": ["DENSITY", "ORBITALS", "ESP"],
+                "CUBEPROP_FILEPATH": str(outdir),
+                "CUBIC_GRID_SPACING": [0.2, 0.2, 0.2],
+                "CUBIC_GRID_OVERAGE": [4.0, 4.0, 4.0],
+            })
+
+            before = set(p.name for p in outdir.glob("*.cube"))
+
+            # attempt 1
+            try:
+                psi4.set_options({"CUBEPROP_ORBITALS": [homo_guess]})
+                psi4.cubeprop(wfn)
+                homo_used = homo_guess
+            except Exception:
+                # attempt 2: off-by-one fallback
+                psi4.set_options({"CUBEPROP_ORBITALS": [homo_guess - 1]})
+                psi4.cubeprop(wfn)
+                homo_used = homo_guess - 1
+
+            after = set(p.name for p in outdir.glob("*.cube"))
+            new_files = sorted(after - before)
+
+            for name in new_files:
+                src = outdir / name
+                dst = outdir / f"ang{a:03d}_homo{homo_used}_{name}"
+                src.rename(dst)
 
         except Exception as e:
             with open(datafile, "a") as f:
-                f.write(f"{{'step': {count}, 'angle': {a}, 'energy': ERROR}},\n")
+                f.write(json.dumps({"step": count, "angle": a, "energy": None, "error": str(e)}) + "\n")
             continue
+
+    # Render frames + gifs (assumes these helper functions exist in scope)
+    xyz_frames_dir, xyz_cam = save_all_xyz_pngs_fixed_camera(outdir, add_labels=False)
+    xyz_gif = make_gif_from_pngs(xyz_frames_dir, fps=30, out_name="dihedral_scan.xyz.gif")
+
+    homo_frames_dir, _ = save_all_homo_cube_pngs_fixed_camera(
+        outdir,
+        cube_glob="ang*_homo*_Psi_a_*.cube",
+        isovalue=0.02,
+        reuse_view_state=xyz_cam,
+    )
+    homo_gif = make_gif_from_pngs(homo_frames_dir, fps=30, out_name="dihedral_scan.homo.gif")
+
+    print("XYZ GIF:", xyz_gif)
+    print("HOMO GIF:", homo_gif)
+
+    return energies
+
+
 
 
 
@@ -996,7 +1374,7 @@ def create_frames_of_psi_waving(cube_path, out_dir, iso_value=0.05 ):
     )
 
 
-#xxx not sure if this is ok
+
 def see_labeled_molecule(cya):
     """
     the imput must be a molecule generated like so:
@@ -1057,6 +1435,53 @@ def see_labeled_molecule(cya):
 
 
 
+
+
+
+def save_molecule_png(cya, outfile, width=700, height=520, add_labels=False):
+    """
+    Save a PNG snapshot of a Psi4 molecule using py3Dmol.
+    """
+
+    # Get XYZ string from Psi4
+    try:
+        xyz = cya.to_string(dtype="xyz")
+    except TypeError:
+        xyz = cya.save_string_xyz()
+
+    view = py3Dmol.view(width=width, height=height)
+    view.addModel(xyz, "xyz")
+    view.setStyle({"stick": {"radius": 0.18}, "sphere": {"scale": 0.28}})
+    view.setBackgroundColor("0xFFFFFF")
+
+    if add_labels:
+        lines = [ln.strip() for ln in xyz.splitlines() if ln.strip()]
+        nat = int(lines[0])
+        atom_lines = lines[2:2+nat]
+
+        for i, ln in enumerate(atom_lines):
+            sym, x, y, z = ln.split()[:4]
+            label = f"{i+1}:{sym}"
+            view.addLabel(
+                label,
+                {
+                    "position": {"x": float(x), "y": float(y), "z": float(z)},
+                    "fontSize": 12,
+                    "fontColor": "black",
+                    "backgroundColor": "white",
+                    "backgroundOpacity": 0.6,
+                    "inFront": True
+                }
+            )
+
+    view.zoomTo()
+
+    # ---- Save PNG ----
+    png_data = view.png()
+    png_bytes = base64.b64decode(png_data.split(",")[1])
+
+    with open(outfile, "wb") as f:
+        f.write(png_bytes)
 
 
 
