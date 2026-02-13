@@ -12,13 +12,13 @@ display projection orthographic
 # Load density cube as a new molecule (this becomes top)
 #mol new /data2/henrique/qm/cubes_hf/hf_Dt.cube type cube waitfor all
 #mol new /data2/henrique/qm/dihedral_scan/ang000_homo39_Dt.cube type cube waitfor all
-mol new SED_WILL_REPLACE_THIS_1 type cube waitfor all
+mol new /data2/henrique/qm/dihedral_scan/ang000_homo39_Dt.cube type cube waitfor all
 set mid [molinfo top]
 
 # Add ESP cube as an additional volumetric dataset to the SAME molecule
 #mol addfile /data2/henrique/qm/cubes_hf/hf_ESP_clipped.cube type cube waitfor all
 #mol addfile /data2/henrique/qm/dihedral_scan/ang000_homo39_ESP.cube type cube waitfor all
-mol addfile SED_WILL_REPLACE_THIS_2 type cube waitfor all
+mol addfile /data2/henrique/qm/dihedral_scan/ang000_homo39_ESP.cube type cube waitfor all
 
 display resetview
 
