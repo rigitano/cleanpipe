@@ -482,7 +482,7 @@ def open_vmd_with_socket():
     """
 
     # Define the Tcl script as a string
-    tcl_script = """
+    tcl_script_oooooooold = """
     proc start_server {port} {
         set server [socket -server handle_connection $port]
         puts "Server started on port $port"
@@ -502,7 +502,42 @@ def open_vmd_with_socket():
     }
 
     start_server 5555
+
+
     """
+
+    tcl_script = """
+proc start_server {port} {
+    socket -server accept_connection $port
+    puts "Server started on port $port"
+}
+
+proc accept_connection {sock addr port} {
+    puts "Connection from $addr:$port"
+    fconfigure $sock -buffering line -blocking 0 -translation lf
+    fileevent $sock readable [list handle_readable $sock]
+}
+
+proc handle_readable {sock} {
+    if {[eof $sock]} {
+        fileevent $sock readable ""
+        close $sock
+        puts "Connection closed"
+        return
+    }
+    while {[gets $sock line] >= 0} {
+        set code [catch {uplevel #0 $line} result]
+        if {$code != 0} {
+            puts $sock "ERROR: $result"
+        } else {
+            puts $sock $result
+        }
+        flush $sock
+    }
+}
+
+start_server 5555
+"""
 
     # Create a temporary file for the script
     with tempfile.NamedTemporaryFile(delete=False, suffix=".tcl") as temp_script:
@@ -527,27 +562,30 @@ def open_vmd_with_socket():
 
         elif system == "Linux":
             # Linux: run bash as login shell so ~/.bashrc gets sourced
-            bash_command = f"source /etc/profile.d/modules.sh && module load vmd && vmd -e {temp_script_path}"
+            #bash_command = f"source /etc/profile.d/modules.sh && module load vmd && vmd -e {temp_script_path}"
 
-            #env = os.environ.copy()
-            #env["DISPLAY"] = ":1"
+            #process = subprocess.Popen(
+            #    ["/bin/bash", "-l", "-c", bash_command],
+            #    stdout=subprocess.DEVNULL,
+            #    stderr=subprocess.DEVNULL,
+            #    close_fds=True
+            #    
+            #)
 
-            #print("Trying to launch VMD with:")
-            #print("Command:", bash_command)
-            #print("Environment DISPLAY:", env["DISPLAY"])
-
-            
-            process = subprocess.Popen(
-                ["/bin/bash", "-l", "-c", bash_command],
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
-                close_fds=True
-                
+            bash_command = (
+                "source /etc/profile.d/modules.sh && module load vmd && "
+                f"exec vmd -dispdev win -eofexit no -e {temp_script_path}"
             )
-            #stdout, stderr = process.communicate(timeout=10)
-            #print("STDOUT:", stdout.decode())
-            #print("STDERR:", stderr.decode())
 
+            with open("/tmp/vmd_socket.stderr", "wb") as err:
+                process = subprocess.Popen(
+                    ["/bin/bash", "-l", "-c", bash_command],
+                    stdin=subprocess.PIPE,      # <-- keep stdin open (no immediate EOF)
+                    stdout=subprocess.DEVNULL,
+                    stderr=open("/tmp/vmd_socket.stderr", "ab"),
+                    close_fds=True,
+                    start_new_session=True,
+                )
 
         else:
             raise OSError(f"vmd is not in 'C:\\Program Files\\VMD\\vmd' (for windows), nor callable using 'module load vmd' (for linux). This is your system: {system}")
