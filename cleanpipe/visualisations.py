@@ -1759,13 +1759,14 @@ enable_force_visualization
 def see_partial_charges_from_itp(s_gro_file, s_itp_file):
 
     #convert gro to pdb, so I can latter add the charges as bfactor
-    #the out pdb nabe will be ugly. something like foo.gro.pdb
-    bricksFileSystem.run_and_capture(f"gmx editconf -f {s_gro_file} -o {s_gro_file}.pdb")
+    #the out pdb nabe will be ugly, because it will add things after the extension.
+    #ex: foo.gro_with_partialcharges_in_beta.pdb
+    bricksFileSystem.run_and_capture(f"gmx editconf -f {s_gro_file} -o {s_gro_file}_with_partialcharges_in_beta.pdb")
 
 
     #add partial charges to pdb
-    pdb_in=f"{s_gro_file}.pdb" #the ugly name I mentioned
-    pdb_out=f"{s_gro_file}.pdb_with_partialcharges.pdb" #an even uglyer name
+    pdb_in=f"{s_gro_file}_with_partialcharges_in_beta.pdb" #the ugly name I mentioned
+    pdb_out=f"{s_gro_file}_with_partialcharges_in_beta.pdb" #an even uglyer name
     out_pdb = bricksTOP.add_itp_partial_charges_to_bfactor_in_pdb(s_itp_file, pdb_in, pdb_out)
 
     #load that pdb as a new molecule in pdb. and then delete them, so not to polute the folder

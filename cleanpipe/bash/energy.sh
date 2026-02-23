@@ -1,16 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# this script calculates the total potential energy of a system. this is great for dihedral scans 
-# make sure the box is big so pbc dont affect the results
-#
-# Usage:
-#   ./energy.sh -g conf.gro -p topol.top -f charmm36
-#
-# Output:
-#   Creates folder: energy_of_<gro_stem>/
-#   Runs grompp + mdrun -rerun inside it
-#   Writes RESULT.txt containing ONE NUMBER: total Potential energy (kJ/mol)
+# This script calculates the total potential energy of a system (great for dihedral scans).
+# It writes a folder:
+#   dihedral_scan_gromacs/potential_energy_of_<gro_stem>/
+# containing RESULT.txt with ONE NUMBER (kJ/mol).
 
 usage() {
   cat <<'EOF'
@@ -25,7 +19,7 @@ Options:
   -w   maxwarn for grompp (default: 1)
 
 Writes:
-  potential_energy_of_<gro_stem>/RESULT.txt
+  dihedral_scan_gromacs/potential_energy_of_<gro_stem>/RESULT.txt
 EOF
 }
 
@@ -34,7 +28,7 @@ GRO=""
 TOP=""
 FF=""
 GMX_CMD="${GMX:-gmx}"
-MAXWARN=1
+MAXWARN=2
 
 while getopts ":g:p:f:x:w:h" opt; do
   case "$opt" in
@@ -69,6 +63,11 @@ if [[ ! -f "$TOP" ]]; then
   exit 2
 fi
 
+# ---- absolute paths so running in outdir doesn't break relative #includes ----
+GRO_ABS="$(readlink -f "$GRO")"
+TOP_ABS="$(readlink -f "$TOP")"
+TOP_DIR="$(dirname "$TOP_ABS")"
+
 # ---- your requested "options()" pattern ----
 options() {
   declare -A map
@@ -80,18 +79,19 @@ options() {
   echo "${map[$FF]}"
 }
 
-# ---- output folder ----
-gro_base="$(basename "$GRO")"
+# ---- parent folder for all scan points ----
+scan_root="dihedral_scan_gromacs"
+mkdir -p "$scan_root"
+
+# ---- output folder (inside dihedral_scan_gromacs/) ----
+gro_base="$(basename "$GRO_ABS")"
 gro_stem="${gro_base%.*}"
-outdir="potential_energy_of_${gro_stem}"
+outdir="${scan_root}/potential_energy_of_${gro_stem}"
 mkdir -p "$outdir"
 
-# copy inputs so everything stays inside outdir
-cp -f "$GRO" "$outdir/"
-cp -f "$TOP" "$outdir/"
-
-gro_local="$outdir/$(basename "$GRO")"
-top_local="$outdir/$(basename "$TOP")"
+# (optional) keep references to inputs in the outdir without copying (copying can break #includes)
+ln -sf "$GRO_ABS" "$outdir/$(basename "$GRO_ABS")"
+ln -sf "$TOP_ABS" "$outdir/$(basename "$TOP_ABS")"
 
 # ---- generate MDP inside folder (single template + conditional parameters) ----
 mdp_file="$outdir/energy.mdp"
@@ -99,7 +99,6 @@ cat <<EOT > "$mdp_file"
 ; Energy evaluation (single frame) for $FF
 integrator  = md
 nsteps      = 0
-
 
 ; Neighbor searching
 cutoff-scheme = Verlet
@@ -120,17 +119,11 @@ vdw-modifier= $(options charmm36=force-switch martini3=Potential-shift-verlet)
 rvdw-switch = $(options charmm36=1.0 martini3=0)
 DispCorr    = no
 
-
 constraints = $(options charmm36=h-bonds martini3=none)
 
 tcoupl      = no
 pcoupl      = no
 EOT
-
-# NOTE:
-# - For Martini, constraints=none and rvdw-switch=0 are effectively ignored/not used,
-#   but included to keep a single MDP template with "options()" choices.
-# - For "vacuum" avoid self-interaction: ensure your .gro box is large enough.
 
 # ---- run inside outdir ----
 pushd "$outdir" >/dev/null
@@ -138,23 +131,20 @@ pushd "$outdir" >/dev/null
 # 1) grompp -> ener.tpr
 "$GMX_CMD" grompp \
   -f "$(basename "$mdp_file")" \
-  -c "$(basename "$gro_local")" \
-  -p "$(basename "$top_local")" \
+  -c "$GRO_ABS" \
+  -p "$TOP_ABS" \
   -o ener.tpr \
   -maxwarn "$MAXWARN"
 
+
 # 2) mdrun -rerun -> ener.edr
-"$GMX_CMD" mdrun -s ener.tpr -rerun "$(basename "$gro_local")" -deffnm ener
+"$GMX_CMD" mdrun -s ener.tpr -rerun "$GRO_ABS" -deffnm ener
 
 # 3) extract Potential term to potential.xvg
-# We select by name; this usually works. If your build requires a numeric index,
-# run once interactively:  gmx energy -f ener.edr  (see the index for Potential)
 echo "Potential" | "$GMX_CMD" energy -f ener.edr -o potential.xvg >/dev/null 2>&1
 
 # 4) write RESULT.txt with a single number (kJ/mol)
-# Grab 2nd column from first non-comment line
 pot="$(awk '!/^[@#]/{print $2; exit}' potential.xvg)"
-
 printf "%s\n" "$pot" > RESULT.txt
 
 popd >/dev/null
