@@ -13,6 +13,7 @@ import json
 from PIL import Image
 import os, math, glob
 import plotly.graph_objects as go
+import pyvista as pv
 
 from cleanpipe import bricksFileSystem
 
@@ -684,7 +685,7 @@ def cubes_check1(psi_cube_path):
     but this letter info should be properly set only in the reshape funcions
 
     example:
-    cl.qm_check1("cubes_hf/Psi_a_38_38-A.cube"):
+    cl.cubes_check1("results/Psi_a_38_38-A.cube"):
     """
 
 
@@ -717,7 +718,7 @@ def cubes_check2(density_cube,esp_cube):
     this will plot the elctrostatic potential in a jupyter notebook
 
     example:
-    cl.qm_check2("cubes_hf/Dt.cube", "cubes_hf/ESP.cube"):
+    cl.cubes_check2("results/Dt.cube", "results/ESP.cube"):
     """
 
     origin, spacing, dims, rho = read_cube(density_cube)
@@ -753,7 +754,7 @@ def cubes_check3(esp_cube):
 
 
     example:
-    cl.cubes_check3("cubes_hf/ESP.cube"):
+    cl.cubes_check3("results/ESP.cube"):
     """
 
 
@@ -798,8 +799,11 @@ def cubes_check3(esp_cube):
 
 
 
-def clip_cube(infile, outfile, vmin=-0.2, vmax=0.2):
+def trim_cube(infile, outfile, vmin=-0.2, vmax=0.2):
     """
+
+    ex:
+    cl.trim_cube("results/ESP.cube", "results/ESP_trimmed.cube", vmin=-0.12, vmax=0.05)
 
     """
 
