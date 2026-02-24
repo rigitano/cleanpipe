@@ -1,0 +1,15 @@
+REMARK   DATE:     2/ 5/21     14:30:43      CREATED BY USER: nathan                  
+ATOM      1  CG  BEN B   1       0.428   1.335  -0.000  1.00  0.00      BENZ
+ATOM      2  HG  BEN B   1       0.757   2.363  -0.000  1.00  0.00      BENZ
+ATOM      3  CD1 BEN B   1       1.370   0.297   0.000  1.00  0.00      BENZ
+ATOM      4  HD1 BEN B   1       2.425   0.526   0.000  1.00  0.00      BENZ
+ATOM      5  CD2 BEN B   1      -0.942   1.038   0.000  1.00  0.00      BENZ
+ATOM      6  HD2 BEN B   1      -1.668   1.837   0.000  1.00  0.00      BENZ
+ATOM      7  CE1 BEN B   1       0.942  -1.038   0.000  1.00  0.00      BENZ
+ATOM      8  HE1 BEN B   1       1.668  -1.837   0.000  1.00  0.00      BENZ
+ATOM      9  CE2 BEN B   1      -1.370  -0.297  -0.000  1.00  0.00      BENZ
+ATOM     10  HE2 BEN B   1      -2.425  -0.526  -0.000  1.00  0.00      BENZ
+ATOM     11  CZ  BEN B   1      -0.428  -1.335  -0.000  1.00  0.00      BENZ
+ATOM     12  HZ  BEN B   1      -0.757  -2.363  -0.000  1.00  0.00      BENZ
+TER      13      BENZ     1
+END

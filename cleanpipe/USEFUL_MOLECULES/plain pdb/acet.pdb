@@ -1,0 +1,10 @@
+REMARK   DATE:     2/ 5/21     14:26:43      CREATED BY USER: nathan                  
+ATOM      1  C1  ACE A   1      -0.645   0.002  -0.000  1.00  0.00      ACET
+ATOM      2  C2  ACE A   1       0.876   0.003   0.000  1.00  0.00      ACET
+ATOM      3  H1  ACE A   1      -1.042   1.039   0.000  1.00  0.00      ACET
+ATOM      4  H2  ACE A   1      -1.025  -0.522   0.903  1.00  0.00      ACET
+ATOM      5  H3  ACE A   1      -1.025  -0.522  -0.903  1.00  0.00      ACET
+ATOM      6  O1  ACE A   1       1.435   1.131   0.000  1.00  0.00      ACET
+ATOM      7  O2  ACE A   1       1.426  -1.131   0.000  1.00  0.00      ACET
+TER       8      ACET     1
+END

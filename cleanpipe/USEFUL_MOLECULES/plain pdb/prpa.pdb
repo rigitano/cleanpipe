@@ -1,0 +1,14 @@
+REMARK   DATE:     2/ 5/21     14:47:39      CREATED BY USER: nathan                  
+ATOM      1  H11 PRP P   1      -2.174  -0.424  -0.000  1.00  0.00      PRPA
+ATOM      2  H12 PRP P   1      -1.316   0.881  -0.902  1.00  0.00      PRPA
+ATOM      3  H13 PRP P   1      -1.316   0.881   0.902  1.00  0.00      PRPA
+ATOM      4  C1  PRP P   1      -1.279   0.233  -0.000  1.00  0.00      PRPA
+ATOM      5  C2  PRP P   1       0.000  -0.609  -0.000  1.00  0.00      PRPA
+ATOM      6  H21 PRP P   1       0.000  -1.266  -0.898  1.00  0.00      PRPA
+ATOM      7  H22 PRP P   1      -0.000  -1.266   0.898  1.00  0.00      PRPA
+ATOM      8  H31 PRP P   1       2.174  -0.424   0.000  1.00  0.00      PRPA
+ATOM      9  H32 PRP P   1       1.316   0.881   0.902  1.00  0.00      PRPA
+ATOM     10  H33 PRP P   1       1.316   0.881  -0.902  1.00  0.00      PRPA
+ATOM     11  C3  PRP P   1       1.279   0.233   0.000  1.00  0.00      PRPA
+TER      12      PRPA     1
+END
