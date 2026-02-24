@@ -159,7 +159,7 @@ def reorder_psi4_molecule(mol, gro_id_psi_id, *, output_units="angstrom", keep_d
 
 
 
-def qm(chosen_molecule, s_theory, s_basis, s_out_folder_name, b_optimize=True):
+def qm_energy(chosen_molecule, s_theory, s_basis, s_out_folder_name, b_optimize=True):
     """
     chosen_molecule:        molecule created using psi4.geometry
     s_theory:               a string containing "hf" or "dft" or "ccsd(t)"
@@ -203,7 +203,7 @@ def qm(chosen_molecule, s_theory, s_basis, s_out_folder_name, b_optimize=True):
         time.sleep(1)
 
     ############################################
-    if s_theory == "dft":
+    elif s_theory == "dft":
 
 
         # Set calculation options
@@ -227,7 +227,7 @@ def qm(chosen_molecule, s_theory, s_basis, s_out_folder_name, b_optimize=True):
         time.sleep(1)
 
     #########################################
-    if s_theory == "ccsd(t)":
+    elif s_theory == "ccsd(t)":
 
 
         #ATENTION: you might want to do a geometry optimization using DFT first, to speed things up
@@ -259,35 +259,111 @@ def qm(chosen_molecule, s_theory, s_basis, s_out_folder_name, b_optimize=True):
     #now lets export results, for hf and dft theories
 
 
-    lumo_id = wfn.nalpha()
-    homo_id = lumo_id - 1
+    # --- well-organized cube output (density, ESP, all occupied orbitals + only LUMO) ---
+    from pathlib import Path
+    import shutil
+    import datetime
 
+    # Make a run folder 
+    outdir = Path(s_out_folder_name)
+    outdir.mkdir(parents=True, exist_ok=True)
 
-    os.makedirs(s_out_folder_name, exist_ok=True)
+    # Determine which orbitals to write
+    # Psi4 cubeprop orbital indices are 1-based.
+    nocc_a = int(wfn.nalpha())
+    nocc_b = int(wfn.nbeta())
 
+    restricted = (nocc_a == nocc_b) and bool(wfn.same_a_b_orbs())
+
+    if restricted:
+        # write ALL occupied (1..HOMO) + LUMO (HOMO+1)
+        homo_a = nocc_a
+        lumo_a = nocc_a + 1
+        cube_orbs = list(range(1, homo_a + 1)) + [lumo_a]
+    else:
+        # open-shell: write all occupied alpha and beta; and only LUMO for each spin
+        # beta orbitals are requested with negative indices in cubeprop
+        homo_a = nocc_a
+        lumo_a = nocc_a + 1
+        homo_b = nocc_b
+        lumo_b = nocc_b + 1
+        cube_orbs = list(range(1, homo_a + 1)) + [lumo_a] + [-i for i in range(1, homo_b + 1)] + [-(lumo_b)]
+
+    # Run cubeprop into the run folder
     psi4.set_options({
-        "cubeprop_tasks": ["DENSITY","ORBITALS", "ESP"],   # ESP gives ESP.cube (and Dt.cube), ORBITALS gives Psi_a_N.cube
-        "cubeprop_orbitals": [homo_id,lumo_id],             # only the HOMO (alpha). For beta in UHF you'd use negative indices.
+        "CUBEPROP_TASKS": ["DENSITY", "ESP", "ORBITALS"],
+        "CUBEPROP_ORBITALS": cube_orbs,
+        "CUBEPROP_FILEPATH": str(outdir),
 
-        "cubeprop_filepath": s_out_folder_name,
-        "cubic_grid_spacing": [0.2, 0.2, 0.2],
-        "cubic_grid_overage": [4.0, 4.0, 4.0],
+        # grid controls (keep your choices)
+        "CUBIC_GRID_SPACING": [0.2, 0.2, 0.2],
+        "CUBIC_GRID_OVERAGE": [4.0, 4.0, 4.0],
     })
-
     psi4.cubeprop(wfn)
 
-    # --- Rename for convenience ---
-    # Typical outputs you’ll see: ESP.cube, Dt.cube, Psi_a_<homo>.cube
-    #for f in glob.glob(f"{s_out_folder_name}/*.cube"):
-    #    base = os.path.basename(f)
-    #    new = os.path.join(s_out_folder_name, f"hf_homo{homo_id}_{base}")
-    #    os.rename(f, new)
+    """
+    # Organize and rename produced cube files
+    # Typical names include: DENSITY.cube, ESP.cube, Dt.cube, Psi_a_#.cube, Psi_b_#.cube
+    for p in outdir.glob("*.cube"):
+        name = p.name
 
-    print(f"CLEANPIPE MESSAGE cube files writen at {s_out_folder_name}")
+        # density / esp
+        if name.upper().startswith("DENSITY"):
+            shutil.move(str(p), str(dens_dir / "density.cube"))
+            continue
+        if name.upper().startswith("ESP"):
+            shutil.move(str(p), str(esp_dir / "esp.cube"))
+            continue
+        if name.upper().startswith("DT"):
+            shutil.move(str(p), str(esp_dir / "dt.cube"))
+            continue
 
-    print(f"CLEANPIPE MESSAGE the energy is {energy}")
+        import re
 
-    print(energy)
+        # orbitals
+        m = re.match(r"^Psi_a_(\d+)", name)
+        if m and name.endswith(".cube"):
+            idx = int(m.group(1))
+            dest = (lumo_dir if idx == lumo_a else occ_dir)
+            tag = "lumo" if dest == lumo_dir else "occ"
+            shutil.move(str(p), str(dest / f"alpha_{tag}_{idx:04d}.cube"))
+            continue
+
+        m = re.match(r"^Psi_b_(\d+)", name)
+        if m and name.endswith(".cube"):
+            idx = int(m.group(1))
+            dest = (lumo_dir if (not restricted and idx == lumo_b) else occ_dir)
+            tag = "lumo" if dest == lumo_dir else "occ"
+            shutil.move(str(p), str(dest / f"beta_{tag}_{idx:04d}.cube"))
+            continue
+
+        # anything unexpected -> keep but group
+        misc_dir = outdir / "misc"
+        misc_dir.mkdir(exist_ok=True)
+        shutil.move(str(p), str(misc_dir / name))
+
+    # Write a small manifest for convenience
+    manifest = outdir / "manifest.txt"
+    manifest.write_text(
+        "\n".join([
+            f"theory: {s_theory}",
+            f"basis:  {s_basis}",
+            f"energy: {energy}",
+            f"restricted: {restricted}",
+            f"alpha HOMO index: {homo_a}",
+            f"alpha LUMO index: {lumo_a}",
+            *([] if restricted else [f"beta  HOMO index: {homo_b}", f"beta  LUMO index: {lumo_b}"]),
+            "",
+            "Folders:",
+            f"  density:  {dens_dir}",
+            f"  esp:      {esp_dir}",
+            f"  occ MOs:  {occ_dir}",
+            f"  lumo:     {lumo_dir}",
+        ]) + "\n"
+    )
+    """
+
+    print(f"CLEANPIPE MESSAGE cube files written at {outdir}")
 
     return energy, wfn
 
