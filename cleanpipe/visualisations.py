@@ -651,7 +651,7 @@ def see_interactions(s_top,s_gro,s_mol_name):
 
     
     
-    what_to_plot = ["[ bonds ]","[ angles ]","[ dihedrals ]","[ cmap ]","[ pairs ]","[ exclusions ]","[ constraints ]","[ position_restraints ]"]
+    what_to_plot = ["[ atoms ]","[ bonds ]","[ angles ]","[ dihedrals ]","[ cmap ]","[ pairs ]","[ exclusions ]","[ constraints ]","[ position_restraints ]"]
     #what_to_plot = ["[ bonds ]","[ dihedrals ]","[ cmap ]","[ position_restraints ]"]
     #what_to_plot = ["[ dihedrals ]","[ cmap ]","[ pairs ]","[ exclusions ]","[ position_restraints ]"]
     #what_to_plot = ["[ bonds ]","[ angles ]","[ dihedrals ]","[ cmap ]","[ pairs ]","[ exclusions ]"]
@@ -1108,15 +1108,15 @@ def see_interactions(s_top,s_gro,s_mol_name):
             n_index_prev_mol = n_index_prev_mol + n_atoms_in_mol
 
     
-    # ATOM NAMES ACCORDING TO FF
+    # ATOM NAMES ACCORDING TO FF, TAKEN IN THE [ atoms ] DIRECTIVE
     # generate a list of atom names to write 
     l_atom_names = [row[1] for row in ll_atoms]
-    #write local and global ids
+    
     if l_atom_names !=[]:
         print("CLEAN PIPE processing names")
 
 
-        #write local ids
+        
         l_tcl_commads.append(f"mol load graphics {{{s_mol_name[0:5]}-name}}")
         l_tcl_commads.append("display resetview")#required after creating a new molecule so it doesnt have different coordinates and transformations
         l_tcl_commads.append("graphics top material Opaque")
@@ -1140,7 +1140,37 @@ def see_interactions(s_top,s_gro,s_mol_name):
             #the for loop that goes trought all molecules of a certain type ends after this line that updates the n_index_prev_mol to be used in the next iteration
             n_index_prev_mol = n_index_prev_mol + n_atoms_in_mol
 
+    # THE PARTIAL CHARGES, TAKEN IN THE [ atoms ] DIRECTIVE
+    # generate a list of CHARGES to write 
+    l_atom_charges = [row[6] for row in ll_atoms]
+    
+    if l_atom_charges !=[]:
+        print("CLEAN PIPE processing charges")
 
+
+        
+        l_tcl_commads.append(f"mol load graphics {{{s_mol_name[0:5]}-charges}}")
+        l_tcl_commads.append("display resetview")#required after creating a new molecule so it doesnt have different coordinates and transformations
+        l_tcl_commads.append("graphics top material Opaque")
+        l_tcl_commads.append("graphics top color green")
+
+
+        # go throught all the instantiations of molecules of a certain type that are present in the gro, appending plotting commands
+        n_index_prev_mol = n_first_id -1
+        for n_molecule_counter in range(1,n_molecules+1):
+
+            for count_atom in range(0,len(l_atom_charges)):
+                atom_id   = l_atom_ids[count_atom]
+                atom_charge = l_atom_charges[count_atom]
+
+                coords_i = df_coordinates.loc[str(int(atom_id)+n_index_prev_mol), ['x', 'y', 'z']].astype(float).to_dict()
+
+                l_tcl_commads.append(f'graphics top text {{{coords_i.get("x")*10+0.5:.3f} {coords_i.get("y")*10+0.5:.3f} {coords_i.get("z")*10+0.5:.3f}}} "{str(atom_charge)}" size 1')
+                l_tcl_commads.append("display update")
+                l_tcl_commads.append("mol off top")
+
+            #the for loop that goes trought all molecules of a certain type ends after this line that updates the n_index_prev_mol to be used in the next iteration
+            n_index_prev_mol = n_index_prev_mol + n_atoms_in_mol
 
 
     if "[ bonds ]" in what_to_plot and ll_bonds_filled !=[]:
