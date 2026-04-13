@@ -10,6 +10,13 @@ import platform
 from pathlib import Path
 import re
 
+
+from PIL import Image
+import time
+
+
+
+
 from cleanpipe import lltools
 from cleanpipe import algelin
 from cleanpipe import bricksTOP
@@ -599,9 +606,11 @@ start_server 5555
 
 
 
-def send_command_to_vmd(s_command):
+def old_send_command_to_vmd(s_command):
     """"
     xxx this should be used in the app
+
+    attention: it only accepts one line. multiline commands will not work
 
 
     ex: 
@@ -610,13 +619,28 @@ def send_command_to_vmd(s_command):
 
     print("CLEAN PIPE command sent to vmd:\n" + s_command)
 
-    send_command_to_vmd
+
     with socket.create_connection(("localhost", 5555)) as sock:
         command = s_command 
         sock.sendall(command.encode('utf-8') + b'\n')
         response = sock.recv(1024)
         print("Response:", response.decode('utf-8'))
 
+
+def send_command_to_vmd(s_command):
+    """
+    Sends a single-line command to VMD via socket and returns the response.
+    Attention: only accepts one line — multiline commands will not work.
+
+    Example:
+        cl.send_command_to_vmd("graphics top cylinder {0 0 0} {10 10 10} radius 0.1")
+    """
+    print("CLEAN PIPE command sent to vmd:\n" + s_command)
+    with socket.create_connection(("localhost", 5555)) as sock:
+        sock.sendall(s_command.encode("utf-8") + b"\n")
+        response = sock.recv(65536).decode("utf-8")
+    print("Response:", response)
+    return response
 
 
 def see_interactions(s_top,s_gro,s_mol_name):
@@ -1859,7 +1883,106 @@ def see_partial_charges_from_itp(s_gro_file, s_itp_file):
 
 
 
+def load_files_into_vmd_frames(s_full_path_with_spetial_char):
+    """
+    Load a series of numbered structure files into VMD as trajectory frames.
+
+    Examples that will all work:
+        torsion_dihedral_1.gro
+        torsion_dihedral_00123.pdb
+
+    Example usage:
+        cl.load_files_into_vmd_frames("/data2/henrique/qm/proxy_initial_dihedral_scan/all_gros/proxy_initial_dih%03d.gro")
+    """
+
+    tcl_script = (
+        f'set molid [mol new [format "{s_full_path_with_spetial_char}" 0] type gro waitfor all]; '
+        'for {set i 5} {$i <= 355} {incr i 5} { '
+        f'set f [format "{s_full_path_with_spetial_char}" $i]; '
+        'mol addfile $f type gro molid $molid waitfor all; '
+        'puts "after $i: [molinfo $molid get numframes]" '
+        '}; '
+    )
+
+    send_command_to_vmd(tcl_script)
 
 
 
 
+def create_gif_from_vmd_frames(out_folder="/home/hrigitano/Desktop/vmd_gif",duration=40):
+    """
+
+    example:
+
+    cl.create_gif_from_vmd_frames("/home/hrigitano/Desktop/vmd_gif_test")
+    """
+
+import re
+import time
+from pathlib import Path
+from PIL import Image
+
+
+def create_gif_from_vmd_frames(out_folder="/home/hrigitano/Desktop/vmd_gif", duration=40):
+    """
+    Captures all frames from the current VMD molecule and saves them as a GIF.
+
+    Args:
+        out_folder (str): Directory where frames and the final GIF will be saved.
+        duration (int): Duration per frame in milliseconds (default: 40 ms ≈ 25 fps).
+
+    Returns:
+        str: Path to the generated GIF file.
+
+    Example:
+        cl.create_gif_from_vmd_frames("/home/hrigitano/Desktop/vmd_gif_test")
+    """
+def create_gif_from_vmd_frames(out_folder="/home/hrigitano/Desktop/vmd_gif", duration=40):
+    folder = Path(out_folder)
+    folder.mkdir(parents=True, exist_ok=True)
+
+    # Clean old frames
+    for f in folder.glob("frame_*.tga"):
+        f.unlink()
+
+    # Tell VMD to render all frames
+    tcl_script = (
+        f'set outdir "{out_folder}"; '
+        'file mkdir $outdir; '
+        'for {set i 0} {$i < [molinfo top get numframes]} {incr i} {'
+        'animate goto $i; '
+        'display update; '
+        'render TachyonInternal "$outdir/frame_[format "%04d" $i].tga"'
+        '}'
+    )
+    send_command_to_vmd(tcl_script)
+
+    # Wait until no new frames appear for 5 consecutive seconds
+    print("Waiting for frames...")
+    prev_count = -1
+    stable = 0
+    while stable < 5:
+        files = list(folder.glob("frame_*.tga"))
+        if len(files) == prev_count:
+            stable += 1
+        else:
+            stable = 0
+            prev_count = len(files)
+        time.sleep(1)
+    print(f"Done. {len(files)} frames captured.")
+
+    # Build GIF
+    def natural_key(p):
+        return [int(x) if x.isdigit() else x for x in re.split(r"(\d+)", p.name)]
+
+    tga_files = sorted(folder.glob("frame_*.tga"), key=natural_key)
+    frames = []
+    for f in tga_files:
+        with Image.open(f) as im:
+            frames.append(im.convert("RGBA").convert("P", palette=Image.ADAPTIVE))
+
+    output = folder / "movie.gif"
+    frames[0].save(output, save_all=True, append_images=frames[1:],
+                   duration=duration, loop=0, optimize=True)
+    print(f"GIF saved at: {output}")
+    return str(output)

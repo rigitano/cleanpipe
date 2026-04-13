@@ -100,6 +100,12 @@ cat <<EOT > "$mdp_file"
 integrator  = md
 nsteps      = 0
 
+; in case you want to minimize first
+; Integrator =	steep
+; emtol      =	1000 ;100
+; emstep     =	0.01
+; nsteps     =    100000 ; this is the max value to be used just if emtol is never reached
+
 ; Neighbor searching
 cutoff-scheme = Verlet
 nstlist     = $(options charmm36=10 martini3=20)
