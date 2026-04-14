@@ -619,7 +619,89 @@ def qm_dihedral_scan(chosen_molecule, l_dihedral_indeces,
 
 
 
+def collect_optimized_gromacs_scan(base_path):
+    """
+    the input is the name of the folder, without a slash in the end
+    
+    Parse the table section of a GROMACS dihedral scan result file.
 
+    Returns
+    -------
+    dict
+        Dictionary with:
+        key   = first column (int, angle in degrees)
+        value = second column (float, potential energy)
+    """
+    data = {}
+    in_table = False
+
+    filename = base_path + "/dihedral_scan_results.dat"
+
+    with open(filename, "r", encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+
+            # Skip empty lines
+            if not line:
+                continue
+
+            # Detect the table header
+            if line.startswith("# Angle(deg)"):
+                in_table = True
+                continue
+
+            # Ignore comment lines
+            if line.startswith("#"):
+                continue
+
+            # Only parse lines after the header
+            if in_table:
+                parts = line.split()
+
+                # Expect at least 2 columns: angle and energy
+                if len(parts) >= 2:
+                    angle = int(parts[0])
+                    energy = float(parts[1])
+                    data[angle] = energy
+
+
+
+
+    #values are absolute kJ/mol, lets make it relative setting the min value as zero
+    emin = min(data.values())
+    d_relative_data = {k: (v - emin) for k, v in data.items()}
+
+    
+    return d_relative_data
+
+
+
+
+
+def collect_optimized_qm_scan(base_path):
+    """
+    the input is the name of the folder, without a slash in the end
+    
+    example:
+    collect_optimized_qm_scan("optimized_qm_scan")
+    """
+
+    
+    import json
+    with open(base_path+"/scan_data.jsonl") as f:
+        d_collected = {
+            entry["angle"]: entry["energy"]
+            for entry in (json.loads(line) for line in f)
+        }
+
+
+    #values are absolute hartree, lets make it relative setting the min value as zero, and also convert it to kJ/mol
+    emin = min(d_collected.values())
+    HARTREE_TO_KJMOL = 2625.5
+    d_collected_relative_converted =  {k: (v - emin) * HARTREE_TO_KJMOL for k, v in d_collected.items()}
+
+    
+    return d_collected_relative_converted
 
 
 def read_cube(cube_file):
