@@ -9,13 +9,17 @@ import os
 import platform
 from pathlib import Path
 import re
-
-
+import nglview as nv
+import MDAnalysis as mda
+import mdtraj as md
 from PIL import Image
 import time
 
-
-
+import matplotlib.pyplot as plt
+from matplotlib.ticker import ScalarFormatter, LogLocator
+import matplotlib.colors as mcolors
+import matplotlib.patches as mpatches
+from matplotlib.colors import BoundaryNorm
 
 from cleanpipe import lltools
 from cleanpipe import algelin
@@ -25,17 +29,13 @@ from cleanpipe import bricksFileSystem
 
 
 
-import matplotlib.pyplot as plt
-from matplotlib.ticker import ScalarFormatter, LogLocator
-import matplotlib.colors as mcolors
-import matplotlib.patches as mpatches
-from matplotlib.colors import BoundaryNorm
 
 
 
-import nglview as nv
-import MDAnalysis as mda
-import mdtraj as md
+
+
+
+
 
 import seaborn as sns
 
@@ -1894,12 +1894,14 @@ def load_files_into_vmd_frames(s_full_path_with_spetial_char):
     Example usage:
         cl.load_files_into_vmd_frames("/data2/henrique/qm/proxy_initial_dihedral_scan/all_gros/proxy_initial_dih%03d.gro")
     """
+    #get the file extension ex: gro or xyz
+    extension = os.path.splitext(s_full_path_with_spetial_char)[1].lstrip('.')
 
     tcl_script = (
-        f'set molid [mol new [format "{s_full_path_with_spetial_char}" 0] type gro waitfor all]; '
+        f'set molid [mol new [format "{s_full_path_with_spetial_char}" 0] type {extension} waitfor all]; '
         'for {set i 5} {$i <= 355} {incr i 5} { '
         f'set f [format "{s_full_path_with_spetial_char}" $i]; '
-        'mol addfile $f type gro molid $molid waitfor all; '
+        f'mol addfile $f type {extension} molid $molid waitfor all; '
         'puts "after $i: [molinfo $molid get numframes]" '
         '}; '
     )
@@ -1910,10 +1912,7 @@ def load_files_into_vmd_frames(s_full_path_with_spetial_char):
 
 
 
-import re
-import time
-from pathlib import Path
-from PIL import Image
+
 
 
 def create_gif_from_vmd_frames(out_folder="/home/hrigitano/Desktop/vmd_gif", duration=40):

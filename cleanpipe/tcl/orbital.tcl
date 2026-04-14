@@ -16,7 +16,7 @@ display projection orthographic
 # Add orbital cube as another volumetric dataset on the SAME molecule
 #mol addfile /data2/henrique/qm/cubes_hf_homo/hf_homo38_hf_homo38_Psi_a_38_38-A.cube type cube waitfor all
 #mol addfile /data2/henrique/qm/dihedral_scan/ang000_homo39_Psi_a_39_39-A.cube type cube waitfor all
-mol new SED_WILL_REPLACE_THIS_1 type cube waitfor all
+#mol new SED_WILL_REPLACE_THIS_1 type cube waitfor all
 set mid [molinfo top]
 
 display resetview
