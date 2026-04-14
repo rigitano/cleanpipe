@@ -1909,13 +1909,6 @@ def load_files_into_vmd_frames(s_full_path_with_spetial_char):
 
 
 
-def create_gif_from_vmd_frames(out_folder="/home/hrigitano/Desktop/vmd_gif",duration=40):
-    """
-
-    example:
-
-    cl.create_gif_from_vmd_frames("/home/hrigitano/Desktop/vmd_gif_test")
-    """
 
 import re
 import time
@@ -1986,3 +1979,43 @@ def create_gif_from_vmd_frames(out_folder="/home/hrigitano/Desktop/vmd_gif", dur
                    duration=duration, loop=0, optimize=True)
     print(f"GIF saved at: {output}")
     return str(output)
+
+
+
+def align_using_selected_atoms():
+    """
+
+    after clicking in some atoms in VMD using the button "1", this function will alging the molecule based on those clicked atoms
+
+    Example usage:
+        cl.align_using_selected_atoms()
+    """
+
+    tcl_script = (
+        'set labeled [label list Atoms]; '
+        'if {[llength $labeled] == 0} { error "No labeled atoms found. Use Mouse -> Query and click atoms first." }; '
+        'set molid [molinfo top]; '
+        'set picked_idx {}; '
+        'foreach lbl $labeled { '
+            'set lbl_molid [lindex [lindex $lbl 0] 0]; '
+            'set lbl_atomid [lindex [lindex $lbl 0] 1]; '
+            'if {$lbl_molid == $molid} { lappend picked_idx $lbl_atomid } '
+        '}; '
+        'if {[llength $picked_idx] == 0} { error "No labeled atoms belong to the top molecule." }; '
+        'puts "Labeled atom indices: $picked_idx"; '
+        'set fit_sel "index $picked_idx"; '
+        'puts "Fit selection: $fit_sel"; '
+        'set n [molinfo top get numframes]; '
+        'set ref_fit [atomselect top $fit_sel frame 0]; '
+        'for {set i 0} {$i < $n} {incr i} { '
+            'set mob_fit [atomselect top $fit_sel frame $i]; '
+            'set mob_all [atomselect top "all" frame $i]; '
+            'set trans [measure fit $mob_fit $ref_fit]; '
+            '$mob_all move $trans; '
+            '$mob_fit delete; '
+            '$mob_all delete; '
+        '}; '
+        '$ref_fit delete;'
+    )
+
+    send_command_to_vmd(tcl_script)
