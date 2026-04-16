@@ -17,6 +17,9 @@ import pyvista as pv
 
 from cleanpipe import bricksFileSystem
 
+from __future__ import annotations
+
+import subprocess
 
 
 #THIS HERE WILL SAVE THE wfn_hf THAT CAME AS A RESULT OF psi4.optimize INTO CUBE FILES THAT i WILL BE ABLE TO VISUALIZE
@@ -2232,4 +2235,459 @@ def make_complex_color_rod_gif_3d(
     anim.save(filename, writer=PillowWriter(fps=fps), dpi=dpi, **save_kwargs)
     plt.close(fig)
     return filename
+
+
+
+
+
+
+def xyz2multiple_formats_with_defined_dihedral(
+    xyz_file: str | Path,
+    *,
+    dihedral_definition: list[int],
+    step: float = 5.0,
+    angles: list[float] | None = None,
+    out_folder: str | Path | None = None,
+) -> Path:
+    """from a XYZ file, you get XYZ + PDB + GRO files with the desided dihedral, following the GROMACS convention.
+    
+        GROMACS dihedral convention
+        ---------------------------
+          0°   = cis   (atoms i and l eclipsed when viewed along j→k)
+          180° = trans
+          Positive angles = counter-clockwise when viewed along j→k  (right-hand rule)
+
+        The file labelled *_000.* is therefore always the cis conformation.
+        Atom indices are 0-based (matching Python / GROMACS internal numbering).
+
+    Reads *xyz_file*, rotates the dihedral i–j–k–l through the requested
+    angles, and writes one ``.xyz`` and one ``.pdb`` per conformation.
+
+    The bond that is rotated is **j–k**.  All atoms on the **l-side** of
+    that bond are moved rigidly; atoms on the i-side stay fixed.
+
+    Parameters
+    ----------
+    xyz_file : str | Path
+        Path to the input XYZ file.
+    dihedral_definition : list[int]
+        a list containing the four ids that define the dihedral. e.g. [i, j, k, l]
+        the indices must be 1-based 
+    step : float, optional
+        Angular step size in degrees when *angles* is not given.
+        Default 5° → 72 conformations (0°, 5°, …, 355°).
+    angles : list[float], optional
+        Explicit list of target dihedral angles.  Overrides *step*.
+    out_folder : str | Path | None, optional
+        Output directory.  Defaults to ``<xyz_stem>_dihedralscan/``
+        next to the input file.  Recreated fresh on every call.
+
+    Returns
+    -------
+    Path
+        Path to the output directory.
+
+
+
+    Examples
+    --------
+
+    # Default (full circle using 72 conformations, 5° step, from 0 to 255):
+    >>> cl.xyz2multiple_formats_with_defined_dihedral("proxy_initial.xyz", i=14, j=15, k=0, l=10, out_folder="gromacs_scan_rigid")
+
+    # Just certain dihedral angles:
+    >>> cl.xyz2multiple_formats_with_defined_dihedral("proxy_initial.xyz", i=14, j=15, k=0, l=10, out_folder="gromacs_scan_rigid", angles=[0, 60, 120])
+
+
+    # 10° step:
+    >>> cl.xyz2multiple_formats_with_defined_dihedral("proxy_initial.xyz", i=14, j=15, k=0, l=10, out_folder="gromacs_scan_rigid", step=10)
+
+
+    """
+    
+    
+    
+    # ============================================================================
+    # XYZ reader
+    # ============================================================================
+
+    def _read_xyz(xyz_path: str | Path) -> tuple[list[str], np.ndarray]:
+        """Parse a standard XYZ file.
+
+        Returns
+        -------
+        symbols : list[str]   e.g. ['C', 'H', 'H', ...]
+        coords  : np.ndarray  shape (N, 3), Angstroms
+        """
+        lines = Path(xyz_path).read_text().splitlines()
+        n_atoms = int(lines[0].strip())
+        # line 1 is the comment/title — skip it
+        symbols, coords = [], []
+        for line in lines[2:2 + n_atoms]:
+            parts = line.split()
+            if len(parts) < 4:
+                continue
+            symbols.append(parts[0])
+            coords.append([float(parts[1]), float(parts[2]), float(parts[3])])
+        if len(symbols) != n_atoms:
+            raise ValueError(
+                f"XYZ header says {n_atoms} atoms but {len(symbols)} were parsed."
+            )
+        return symbols, np.array(coords, dtype=float)
+
+
+    # ============================================================================
+    # Geometry helpers
+    # ============================================================================
+
+    def _dihedral_angle(p1: np.ndarray, p2: np.ndarray,
+                        p3: np.ndarray, p4: np.ndarray) -> float:
+        """Dihedral angle i-j-k-l in degrees (GROMACS/IUPAC convention).
+
+        0° = cis, 180° = trans, positive = CCW along j→k.
+        """
+        b1 = p2 - p1
+        b2 = p3 - p2
+        b3 = p4 - p3
+
+        n1 = np.cross(b1, b2)
+        n2 = np.cross(b2, b3)
+
+        norm1 = np.linalg.norm(n1)
+        norm2 = np.linalg.norm(n2)
+        if norm1 < 1e-10 or norm2 < 1e-10:
+            return 0.0
+
+        n1 = n1 / norm1
+        n2 = n2 / norm2
+
+        b2_unit = b2 / np.linalg.norm(b2)
+        m1 = np.cross(n1, b2_unit)
+
+        return math.degrees(math.atan2(np.dot(m1, n2), np.dot(n1, n2)))
+
+
+    def _build_bond_graph(symbols: list[str],
+                          coords: np.ndarray) -> dict[int, list[int]]:
+        """Build a connectivity graph from covalent-radius distance criteria."""
+        # Approximate covalent radii (Angstroms)
+        radii = {
+            'H': 0.31, 'C': 0.76, 'N': 0.71, 'O': 0.66, 'F': 0.57,
+            'P': 1.07, 'S': 1.05, 'Cl': 1.02, 'Br': 1.20, 'I': 1.39,
+        }
+        default_r = 0.90
+        graph: dict[int, list[int]] = {idx: [] for idx in range(len(symbols))}
+        n = len(symbols)
+        for a in range(n):
+            for b in range(a + 1, n):
+                r_sum = (radii.get(symbols[a], default_r) +
+                         radii.get(symbols[b], default_r))
+                dist = float(np.linalg.norm(coords[a] - coords[b]))
+                if dist < r_sum * 1.3:          # 30 % tolerance
+                    graph[a].append(b)
+                    graph[b].append(a)
+        return graph
+
+
+    def _l_side_atoms(graph: dict[int, list[int]],
+                      j: int, k: int) -> set[int]:
+        """BFS from k (not crossing j) — returns all atoms on the l-side."""
+        visited: set[int] = {j}
+        queue = [k]
+        while queue:
+            node = queue.pop()
+            if node in visited:
+                continue
+            visited.add(node)
+            queue.extend(graph[node])
+        visited.discard(j)
+        return visited
+
+
+    def _rodrigues(axis: np.ndarray, theta_deg: float) -> np.ndarray:
+        """3×3 rotation matrix for rotation by *theta_deg* around *axis*."""
+        axis = axis / np.linalg.norm(axis)
+        t = math.radians(theta_deg)
+        c, s = math.cos(t), math.sin(t)
+        u, v, w = axis
+        return np.array([
+            [c + u*u*(1-c),   u*v*(1-c) - w*s, u*w*(1-c) + v*s],
+            [v*u*(1-c) + w*s, c + v*v*(1-c),   v*w*(1-c) - u*s],
+            [w*u*(1-c) - v*s, w*v*(1-c) + u*s, c + w*w*(1-c)  ],
+        ])
+
+
+    def _normalize_angle(deg: float) -> float:
+        """Wrap an angle into (-180, +180]."""
+        deg = deg % 360.0
+        if deg > 180.0:
+            deg -= 360.0
+        return deg
+
+
+    def _set_dihedral(coords: np.ndarray,
+                      i: int, j: int, k: int, l: int,
+                      target_deg: float,
+                      graph: dict[int, list[int]]) -> np.ndarray:
+        """Return a copy of *coords* with dihedral i-j-k-l set to *target_deg*.
+
+        Only the atoms on the l-side of bond j–k are moved (BFS-determined),
+        keeping the rest of the molecule rigid.
+
+        The rotation delta is normalized into (-180, +180] to guarantee the
+        rotation lands exactly on the requested angle regardless of the starting
+        conformation.
+        """
+        coords = coords.copy()
+        current = _dihedral_angle(coords[i], coords[j], coords[k], coords[l])
+
+        # Normalize to (-180, +180], then negate: rotating the l-side atoms by
+        # +delta around j→k moves the dihedral in the *negative* direction, so
+        # the sign must be flipped to land on the requested target.
+        delta = -_normalize_angle(target_deg - current)
+
+        axis = coords[k] - coords[j]
+        if np.linalg.norm(axis) < 1e-10:
+            return coords
+
+        R = _rodrigues(axis, delta)
+        pivot = coords[j]
+
+        for idx in _l_side_atoms(graph, j, k):
+            coords[idx] = pivot + R @ (coords[idx] - pivot)
+
+        # Verify the result (debug guard — silent in normal use)
+        achieved = _dihedral_angle(coords[i], coords[j], coords[k], coords[l])
+        diff = abs(math.fmod(achieved - target_deg, 360.0))
+        if diff > 180.0:
+            diff = 360.0 - diff
+        if diff > 0.1:
+            import warnings
+            warnings.warn(
+                f"Dihedral verification failed: requested {target_deg:.2f}°, "
+                f"achieved {achieved:.2f}° (error {diff:.2f}°). "
+                f"Check atom indices or bond graph.",
+                RuntimeWarning, stacklevel=2,
+            )
+
+        return coords
+
+
+    # ============================================================================
+    # Writers
+    # ============================================================================
+
+    def _write_xyz(path: Path, angle: float,
+                   symbols: list[str], coords: np.ndarray) -> None:
+        with open(path, "w") as fh:
+            fh.write(f"{len(symbols)}\n")
+            fh.write(
+                f"dihedral = {angle:.1f} deg  "
+                f"(GROMACS convention: 0=cis, positive=CCW along j->k)\n"
+            )
+            for sym, (x, y, z) in zip(symbols, coords):
+                fh.write(f"{sym:<4s}  {x:12.6f}  {y:12.6f}  {z:12.6f}\n")
+
+
+    def _write_pdb(path: Path, angle: float,
+                   symbols: list[str], coords: np.ndarray,
+                   graph: dict[int, list[int]]) -> None:
+        with open(path, "w") as fh:
+            fh.write(
+                f"REMARK  dihedral = {angle:.1f} deg  "
+                f"(GROMACS convention: 0=cis, positive=CCW along j->k)\n"
+            )
+            for idx, (sym, (x, y, z)) in enumerate(zip(symbols, coords), start=1):
+                fh.write(
+                    f"HETATM{idx:5d}  {sym:<4s}LIG A   1    "
+                    f"{x:8.3f}{y:8.3f}{z:8.3f}  1.00  0.00          {sym:>2s}\n"
+                )
+            # CONECT records — each bond written once
+            written: set[tuple[int, int]] = set()
+            for a, neighbours in graph.items():
+                for b in neighbours:
+                    bond = (min(a, b), max(a, b))
+                    if bond not in written:
+                        fh.write(f"CONECT{a+1:5d}{b+1:5d}\n")
+                        written.add(bond)
+            fh.write("END\n")
+
+
+
+    def _pdb_2_gro(path_out: Path, path_in: Path) -> None:
+        """
+        Convert a PDB file to a GRO file using GROMACS `gmx editconf`.
+
+        Parameters
+        ----------
+        path_out : Path
+            Output `.gro` file path.
+        path_in : Path
+            Input `.pdb` file path.
+
+        Raises
+        ------
+        FileNotFoundError
+            If the input file does not exist.
+        RuntimeError
+            If the GROMACS command fails.
+        """
+        path_in = Path(path_in)
+        path_out = Path(path_out)
+
+        if not path_in.exists():
+            raise FileNotFoundError(f"Input file not found: {path_in}")
+
+        path_out.parent.mkdir(parents=True, exist_ok=True)
+
+        cmd = [
+            "gmx",
+            "editconf",
+            "-f", str(path_in),
+            "-o", str(path_out),
+            "-c",
+            "-d", "2.0",
+            "-bt", "cubic",
+        ]
+
+        try:
+            result = subprocess.run(
+                cmd,
+                check=True,
+                capture_output=True,
+                text=True,
+            )
+        except FileNotFoundError as e:
+            raise RuntimeError(
+                "Could not find `gmx` in PATH. Make sure GROMACS is installed and loaded."
+            ) from e
+        except subprocess.CalledProcessError as e:
+            raise RuntimeError(
+                f"GROMACS editconf failed.\n"
+                f"STDOUT:\n{e.stdout}\n\n"
+                f"STDERR:\n{e.stderr}"
+            ) from e
+
+
+
+    # ============================================================================
+    # Main part of the function
+    # ============================================================================
+    
+    #obtain each index
+    i = dihedral_definition[0]
+    j = dihedral_definition[1]
+    k = dihedral_definition[2]
+    l = dihedral_definition[3]
+    
+    #the input should be 1-based for convenience of the user, but internally the function was coded to be 0-based, so here ther ids are converted
+    i=i-1
+    j=j-1
+    k=k-1
+    l=l-1
+    
+    
+    xyz_path = Path(xyz_file)
+    if not xyz_path.exists():
+        raise FileNotFoundError(f"XYZ file not found: {xyz_path}")
+
+    # ---- resolve output folder ----
+    if out_folder is None:
+        out_folder = xyz_path.parent / f"{xyz_path.stem}_dihedralscan"
+    outdir = Path(out_folder)
+    if outdir.exists():
+        shutil.rmtree(outdir)
+    outdir.mkdir(parents=True, exist_ok=True)
+
+    # ---- resolve angle list ----
+    if angles is None:
+        n_steps = round(360.0 / step)
+        angles = [step * n for n in range(n_steps)]
+
+    # ---- read geometry ----
+    symbols, coords = _read_xyz(xyz_path)
+    n_atoms = len(symbols)
+
+    # ---- validate atom indices ----
+    for name, val in [("i", i), ("j", j), ("k", k), ("l", l)]:
+        if not (0 <= val < n_atoms):
+            raise IndexError(
+                f"Atom index {name}={val} is out of range "
+                f"(molecule has {n_atoms} atoms, valid range 0–{n_atoms-1})."
+            )
+
+    # ---- build connectivity ----
+    graph = _build_bond_graph(symbols, coords)
+
+    # ---- report ----
+    current_angle = _dihedral_angle(
+        coords[i], coords[j], coords[k], coords[l]
+    )
+    print(f"Input        : {xyz_path.name}  ({n_atoms} atoms)")
+    print(f"Dihedral     : {i}({symbols[i]}) – {j}({symbols[j]}) – "
+          f"{k}({symbols[k]}) – {l}({symbols[l]})")
+    print(f"Current angle: {current_angle:+.2f}°")
+    print(f"Scan         : {len(angles)} conformations, "
+          f"{angles[0]:.1f}° → {angles[-1]:.1f}°  (step = {step}°)")
+    print(f"Output       : {outdir}/")
+
+    # ---- generate and write conformations ----
+    for angle in angles:
+        new_coords = _set_dihedral(
+            coords, i, j, k, l, float(angle), graph
+        )
+        label = int(round(angle))
+        stem = f"torsion_dihedral_{label:03d}"
+        _write_xyz(outdir / f"{stem}.xyz", angle, symbols, new_coords)
+        _write_pdb(outdir / f"{stem}.pdb", angle, symbols, new_coords, graph)
+        _pdb_2_gro(outdir / f"{stem}.gro", outdir / f"{stem}.pdb")
+
+    print(f"\nDone — {len(angles)} conformations written.")
+    print(f"  *_000.*  =  cis conformation  (0°, GROMACS)")
+
+    return outdir
+    
+    
+def xyz2psi4_object(xyz_path, charge=0, multiplicity=1):
+    """
+    Convert a standard .xyz file into a Psi4 molecule object.
+
+    Expected XYZ format:
+        line 1: number of atoms
+        line 2: comment
+        line 3+: element x y z
+    """
+    xyz_path = Path(xyz_path)
+
+    with open(xyz_path, "r", encoding="utf-8") as f:
+        lines = [line.rstrip() for line in f if line.strip()]
+
+    if len(lines) < 3:
+        raise ValueError(f"File {xyz_path} does not look like a valid .xyz file.")
+
+    try:
+        n_atoms = int(lines[0].split()[0])
+    except Exception:
+        raise ValueError(f"First line of {xyz_path} must contain the number of atoms.")
+
+    atom_lines = lines[2:]  # skip atom count + comment line
+
+    if len(atom_lines) != n_atoms:
+        raise ValueError(
+            f"Atom count mismatch in {xyz_path}: first line says {n_atoms}, "
+            f"but found {len(atom_lines)} coordinate lines."
+        )
+
+    # Build Psi4 geometry string in Cartesian format
+    geom_text = [f"{charge} {multiplicity}"]
+    geom_text.extend(atom_lines)
+    geom_text.append("symmetry c1")
+    geom_text.append("no_reorient")
+    geom_text.append("no_com")
+
+    geom_string = "\n".join(geom_text)
+    mol = psi4.geometry(geom_string)
+    return mol
+
+
 
