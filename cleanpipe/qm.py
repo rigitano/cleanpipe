@@ -2242,8 +2242,8 @@ def make_complex_color_rod_gif_3d(
 
 def xyz2multiple_formats_with_defined_dihedral(
     xyz_file: str | Path,
-    *,
     dihedral_definition: list[int],
+    *,
     step: float = 5.0,
     angles: list[float] | None = None,
     out_folder: str | Path | None = None,

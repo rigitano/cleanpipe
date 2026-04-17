@@ -1929,7 +1929,7 @@ def create_gif_from_vmd_frames(out_folder="/home/hrigitano/Desktop/vmd_gif", dur
     Example:
         cl.create_gif_from_vmd_frames("/home/hrigitano/Desktop/vmd_gif_test")
     """
-def create_gif_from_vmd_frames(out_folder="/home/hrigitano/Desktop/vmd_gif", duration=40):
+
     folder = Path(out_folder)
     folder.mkdir(parents=True, exist_ok=True)
 
