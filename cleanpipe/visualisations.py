@@ -1901,9 +1901,13 @@ def load_files_into_vmd_frames(s_full_path_with_spetial_char):
         f'set molid [mol new [format "{s_full_path_with_spetial_char}" 0] type {extension} waitfor all]; '
         'for {set i 5} {$i <= 355} {incr i 5} { '
         f'set f [format "{s_full_path_with_spetial_char}" $i]; '
+        'if {[file exists $f]} { '
         f'mol addfile $f type {extension} molid $molid waitfor all; '
-        'puts "after $i: [molinfo $molid get numframes]" '
-        '}; '
+        'puts "Loaded $f → frames: [molinfo $molid get numframes]" '
+        '} else { '
+        'puts "Missing: $f" '
+        '} '
+        '};'
     )
 
     send_command_to_vmd(tcl_script)
