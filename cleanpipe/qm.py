@@ -2689,4 +2689,25 @@ def xyz2psi4_object(xyz_path, charge=0, multiplicity=1):
     return mol
 
 
+def gro2psi4_object(s_gro_path, charge=0, multiplicity=1):
+    """
+    Convert a standard .xyz file into a Psi4 molecule object.
 
+
+    """
+
+    #first, gro is converted to xyz using openbabel, the result is captured
+    result = subprocess.run(
+        ["obabel", s_gro_path, "-oxyz", "-h"],
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+
+    xyz_text = result.stdout
+
+    qmol = psi4.driver.qcdb.Molecule.from_string(xyz_text, dtype="xyz")
+    qmol.set_molecular_charge(charge)
+    qmol.set_multiplicity(multiplicity)
+
+    return psi4.geometry(qmol.create_psi4_string_from_molecule())
