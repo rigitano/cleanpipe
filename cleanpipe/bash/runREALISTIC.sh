@@ -629,7 +629,7 @@ cat <<EOT >> "script.${NAME}.sh"
 
 #SBATCH --partition=calcul
 #SBATCH --cpus-per-task=${NTOMP}
-##SBATCH --gres=gpu:1
+#SBATCH --gres=gpu:1
 ##SBATCH --mem-per-cpu=1GB
 ##SBATCH --nodes=1
 #SBATCH --job-name=${NAME}.realistic
@@ -720,7 +720,7 @@ echo "#############################################################"
 cd 1_EM || exit
 
 #${GMX} grompp -f ${file_em_mdp} -c "../0_SC/sc.gro" -p "../../${TOP}" -o "em.tpr" 2>&1 | tee "outanderr.grompp"	
-${GMX} grompp -f ${file_em_mdp} -c "../../${GRO}" -p "../../${TOP}" -o "em.tpr" 2>&1 | tee "outanderr.grompp"
+${GMX} grompp -f ${file_em_mdp} -c "../../${GRO}" -p "../../${TOP}" -o "em.tpr" -maxwarn 1 2>&1 | tee "outanderr.grompp"
 
 if grep -q "Error" "outanderr.grompp"; then
     echo "GROMACS reported an error — stopping script."

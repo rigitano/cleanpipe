@@ -23,7 +23,7 @@ def check_extention(file_path,v_alowedExtentions):
         if file_extension in v_alowedExtentions:
             return "ok"
         else:
-            raise ValueError(f"Error: Invalid file extension '{file_path}'. Only .pdb or .gro are allowed.")
+            raise ValueError(f"Error: Invalid file extension '{file_path}'. Only {v_alowedExtentions} are allowed.")
     else:
         raise FileNotFoundError(f"Error: The file '{file_path}' does not exist.")
     

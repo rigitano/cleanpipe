@@ -1984,7 +1984,6 @@ def create_gif_from_vmd_frames(out_folder="/home/hrigitano/Desktop/vmd_gif", dur
     return str(output)
 
 
-
 def align_using_selected_atoms():
     """
 
