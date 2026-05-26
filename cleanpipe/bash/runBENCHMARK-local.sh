@@ -82,12 +82,12 @@ for ((i = 0; i < len; i++)); do
     cat > "try$((i+1))/job.sh" <<EOF
 #!/bin/bash
 
-module purge
-module load cuda/11.8
-module load gromacs/2024.5
+#module purge
+#module load cuda/11.8
+#module load gromacs/2024.5
 
 
-gmx mdrun -deffnm ${TPR_WITHOUT_EXTENSION} ${keywords[i]} -nsteps 50000 > mdrun.out 2> mdrun.err
+gmx mdrun -deffnm ${TPR_WITHOUT_EXTENSION} ${keywords[i]} -nsteps 10000 > mdrun.out 2> mdrun.err
  
 
 
