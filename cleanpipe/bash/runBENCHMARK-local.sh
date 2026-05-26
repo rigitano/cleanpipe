@@ -33,17 +33,17 @@ keywords=(\
 	"-ntmpi 2 -ntomp 32" \
 	"-ntmpi 4 -ntomp 8" \
 	"-ntmpi 8 -ntomp 4" \
-	"-dd 2 2 2 -npme 1 -dlb yes" \
-	"-dd 2 2 2 -npme 2 -dlb yes" \
-	"-dd 2 2 2 -npme 4 -dlb yes" \
-	"-dd 2 2 3 -npme 2 -dlb yes" \
-	"-dd 2 2 3 -npme 3 -dlb yes" \
-	"-dd 2 2 3 -npme 4 -dlb yes" \
-	"-dd 2 3 3 -npme 7 -dlb yes" \
-	"-dd 2 3 3 -npme 8 -dlb yes" \
-	"-dd 2 3 3 -npme 9 -dlb yes" \
-	"-dd 3 3 3 -npme 10 -dlb yes" \
-	"-dd 3 3 3 -npme 13 -dlb yes")
+	"-dd 2 2 2 -npme 1 -ntmpi 9 -dlb yes" \
+	"-dd 2 2 2 -npme 2 -ntmpi 10 -dlb yes" \
+	"-dd 2 2 2 -npme 4 -ntmpi 12 -dlb yes" \
+	"-dd 2 2 3 -npme 2 -ntmpi 14 -dlb yes" \
+	"-dd 2 2 3 -npme 3 -ntmpi 15 -dlb yes" \
+	"-dd 2 2 3 -npme 4 -ntmpi 16 -dlb yes" \
+	"-dd 2 3 3 -npme 7 -ntmpi 25 -dlb yes" \
+	"-dd 2 3 3 -npme 8 -ntmpi 27 -dlb yes" \
+	"-dd 2 3 3 -npme 9 -ntmpi 28 -dlb yes" \
+	"-dd 3 3 3 -npme 10 -ntmpi 37 -dlb yes" \
+	"-dd 3 3 3 -npme 13 -ntmpi 40 -dlb yes")
 
 
 
