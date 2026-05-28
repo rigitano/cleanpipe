@@ -1,0 +1,26 @@
+REMARK   DATE:     2/ 5/21     14:27:17      CREATED BY USER: nathan                  
+ATOM      1  C1  ACT A   1      -4.375  -0.016   0.000  1.00  0.00      ACTF
+ATOM      2  H1X ACT A   1      -5.164   0.766  -0.000  1.00  0.00      ACTF
+ATOM      3  H1Y ACT A   1      -4.507  -0.651  -0.902  1.00  0.00      ACTF
+ATOM      4  H1Z ACT A   1      -4.507  -0.650   0.902  1.00  0.00      ACTF
+ATOM      5  C2  ACT A   1      -2.986   0.629  -0.000  1.00  0.00      ACTF
+ATOM      6  H2A ACT A   1      -2.893   1.279   0.899  1.00  0.00      ACTF
+ATOM      7  H2B ACT A   1      -2.893   1.279  -0.899  1.00  0.00      ACTF
+ATOM      8  C3  ACT A   1      -1.827  -0.379   0.000  1.00  0.00      ACTF
+ATOM      9  HX  ACT A   1      -1.912  -1.020  -0.907  1.00  0.00      ACTF
+ATOM     10  HY  ACT A   1      -1.912  -1.020   0.907  1.00  0.00      ACTF
+ATOM     11  O31 ACT A   1      -0.576   0.324  -0.000  1.00  0.00      ACTF
+ATOM     12  C31 ACT A   1       0.496  -0.466  -0.000  1.00  0.00      ACTF
+ATOM     13  O32 ACT A   1       0.483  -1.685  -0.000  1.00  0.00      ACTF
+ATOM     14  C32 ACT A   1       1.755   0.402  -0.000  1.00  0.00      ACTF
+ATOM     15  H2X ACT A   1       1.754   1.049   0.903  1.00  0.00      ACTF
+ATOM     16  H2Y ACT A   1       1.754   1.049  -0.903  1.00  0.00      ACTF
+ATOM     17  C33 ACT A   1       3.015  -0.481  -0.000  1.00  0.00      ACTF
+ATOM     18  H3X ACT A   1       3.004  -1.136  -0.900  1.00  0.00      ACTF
+ATOM     19  H3Y ACT A   1       3.004  -1.136   0.900  1.00  0.00      ACTF
+ATOM     20  C34 ACT A   1       4.324   0.315   0.000  1.00  0.00      ACTF
+ATOM     21  H4X ACT A   1       4.384   0.960   0.902  1.00  0.00      ACTF
+ATOM     22  H4Y ACT A   1       4.384   0.960  -0.902  1.00  0.00      ACTF
+ATOM     23  H4Z ACT A   1       5.195  -0.375   0.000  1.00  0.00      ACTF
+TER      24      ACTF     1
+END

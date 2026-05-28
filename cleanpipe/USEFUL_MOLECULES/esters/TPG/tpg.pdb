@@ -1,0 +1,41 @@
+REMARK   DATE:     2/ 5/21     14:49:40      CREATED BY USER: nathan                  
+ATOM      1  C13 TPG T   1      -6.358  -0.622   0.045  1.00  0.00      TPG 
+ATOM      2 H13A TPG T   1      -7.153   0.046   0.438  1.00  0.00      TPG 
+ATOM      3 H13B TPG T   1      -6.467  -0.678  -1.060  1.00  0.00      TPG 
+ATOM      4 H13C TPG T   1      -6.516  -1.636   0.471  1.00  0.00      TPG 
+ATOM      5  C12 TPG T   1      -4.978  -0.076   0.431  1.00  0.00      TPG 
+ATOM      6 H12A TPG T   1      -4.846   0.943   0.007  1.00  0.00      TPG 
+ATOM      7 H12B TPG T   1      -4.895  -0.016   1.538  1.00  0.00      TPG 
+ATOM      8  C11 TPG T   1      -3.881  -0.994  -0.109  1.00  0.00      TPG 
+ATOM      9  O12 TPG T   1      -4.071  -2.013  -0.750  1.00  0.00      TPG 
+ATOM     10  O11 TPG T   1      -2.694  -0.500   0.236  1.00  0.00      TPG 
+ATOM     11  C1  TPG T   1      -1.576  -1.277  -0.222  1.00  0.00      TPG 
+ATOM     12  H1A TPG T   1      -1.589  -1.367  -1.332  1.00  0.00      TPG 
+ATOM     13  H1B TPG T   1      -1.609  -2.295   0.226  1.00  0.00      TPG 
+ATOM     14  C2  TPG T   1      -0.256  -0.595   0.206  1.00  0.00      TPG 
+ATOM     15  H2A TPG T   1      -0.281  -0.494   1.316  1.00  0.00      TPG 
+ATOM     16  O21 TPG T   1      -0.184   0.691  -0.434  1.00  0.00      TPG 
+ATOM     17  C21 TPG T   1       0.482   1.647   0.208  1.00  0.00      TPG 
+ATOM     18  O22 TPG T   1       1.003   1.550   1.304  1.00  0.00      TPG 
+ATOM     19  C22 TPG T   1       0.491   2.907  -0.658  1.00  0.00      TPG 
+ATOM     20 H22A TPG T   1       0.960   2.676  -1.639  1.00  0.00      TPG 
+ATOM     21 H22B TPG T   1      -0.555   3.240  -0.833  1.00  0.00      TPG 
+ATOM     22  C23 TPG T   1       1.279   4.019   0.043  1.00  0.00      TPG 
+ATOM     23 H23A TPG T   1       1.286   4.934  -0.588  1.00  0.00      TPG 
+ATOM     24 H23B TPG T   1       0.816   4.277   1.020  1.00  0.00      TPG 
+ATOM     25 H23C TPG T   1       2.332   3.710   0.216  1.00  0.00      TPG 
+ATOM     26  C3  TPG T   1       0.967  -1.464  -0.188  1.00  0.00      TPG 
+ATOM     27  H3A TPG T   1       0.970  -1.579  -1.296  1.00  0.00      TPG 
+ATOM     28  H3B TPG T   1       0.847  -2.468   0.278  1.00  0.00      TPG 
+ATOM     29  O31 TPG T   1       2.190  -0.860   0.258  1.00  0.00      TPG 
+ATOM     30  C31 TPG T   1       3.292  -1.515  -0.101  1.00  0.00      TPG 
+ATOM     31  O32 TPG T   1       3.330  -2.550  -0.743  1.00  0.00      TPG 
+ATOM     32  C32 TPG T   1       4.512  -0.756   0.423  1.00  0.00      TPG 
+ATOM     33 H32A TPG T   1       4.512   0.273   0.004  1.00  0.00      TPG 
+ATOM     34 H32B TPG T   1       4.455  -0.689   1.531  1.00  0.00      TPG 
+ATOM     35  C33 TPG T   1       5.798  -1.482   0.014  1.00  0.00      TPG 
+ATOM     36 H33A TPG T   1       6.683  -0.929   0.395  1.00  0.00      TPG 
+ATOM     37 H33B TPG T   1       5.824  -2.510   0.436  1.00  0.00      TPG 
+ATOM     38 H33C TPG T   1       5.881  -1.548  -1.093  1.00  0.00      TPG 
+TER      39      TPG      1
+END

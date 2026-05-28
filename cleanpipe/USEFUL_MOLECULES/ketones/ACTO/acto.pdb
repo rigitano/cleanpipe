@@ -1,0 +1,13 @@
+REMARK   DATE:     2/ 5/21     14:26:52      CREATED BY USER: nathan                  
+ATOM      1  O1  ACT A   1      -0.000   1.866   0.000  1.00  0.00      ACTO
+ATOM      2  C1  ACT A   1      -0.000   0.636  -0.000  1.00  0.00      ACTO
+ATOM      3  C2  ACT A   1      -1.272  -0.162   0.000  1.00  0.00      ACTO
+ATOM      4  C3  ACT A   1       1.272  -0.162  -0.000  1.00  0.00      ACTO
+ATOM      5  H21 ACT A   1      -2.148   0.521   0.000  1.00  0.00      ACTO
+ATOM      6  H22 ACT A   1      -1.317  -0.805  -0.904  1.00  0.00      ACTO
+ATOM      7  H23 ACT A   1      -1.317  -0.805   0.904  1.00  0.00      ACTO
+ATOM      8  H31 ACT A   1       1.317  -0.805  -0.904  1.00  0.00      ACTO
+ATOM      9  H32 ACT A   1       2.148   0.521  -0.000  1.00  0.00      ACTO
+ATOM     10  H33 ACT A   1       1.317  -0.805   0.904  1.00  0.00      ACTO
+TER      11      ACTO     1
+END

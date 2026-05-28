@@ -1,0 +1,14 @@
+REMARK   DATE:     2/ 5/21     14:39:43      CREATED BY USER: nathan                  
+ATOM      1  C1  MAS M   1      -1.824   0.168   0.000  1.00  0.00      MAS 
+ATOM      2  C   MAS M   1      -0.416  -0.408   0.000  1.00  0.00      MAS 
+ATOM      3  OM  MAS M   1       0.466   0.590   0.000  1.00  0.00      MAS 
+ATOM      4  C2  MAS M   1       1.834   0.158  -0.000  1.00  0.00      MAS 
+ATOM      5  O   MAS M   1      -0.149  -1.597  -0.000  1.00  0.00      MAS 
+ATOM      6  H11 MAS M   1      -2.569  -0.656   0.000  1.00  0.00      MAS 
+ATOM      7  H12 MAS M   1      -1.982   0.793  -0.904  1.00  0.00      MAS 
+ATOM      8  H13 MAS M   1      -1.982   0.793   0.904  1.00  0.00      MAS 
+ATOM      9  H21 MAS M   1       2.499   1.047   0.000  1.00  0.00      MAS 
+ATOM     10  H22 MAS M   1       2.062  -0.443   0.909  1.00  0.00      MAS 
+ATOM     11  H23 MAS M   1       2.062  -0.443  -0.909  1.00  0.00      MAS 
+TER      12      MAS      1
+END

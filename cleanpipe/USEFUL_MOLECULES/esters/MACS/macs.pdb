@@ -1,0 +1,17 @@
+REMARK   DATE:     2/ 5/21     14:42: 9      CREATED BY USER: nathan                  
+ATOM      1  C1  MAC M   1      -1.897  -0.620  -0.177  1.00  0.00      MACS
+ATOM      2  H11 MAC M   1      -2.952  -0.649   0.170  1.00  0.00      MACS
+ATOM      3  H12 MAC M   1      -1.892  -0.623  -1.288  1.00  0.00      MACS
+ATOM      4  H13 MAC M   1      -1.383  -1.537   0.182  1.00  0.00      MACS
+ATOM      5  C2  MAC M   1      -1.199   0.633   0.356  1.00  0.00      MACS
+ATOM      6  H21 MAC M   1      -1.729   1.543  -0.000  1.00  0.00      MACS
+ATOM      7  H22 MAC M   1      -1.203   0.633   1.467  1.00  0.00      MACS
+ATOM      8  C3  MAC M   1       0.237   0.656  -0.160  1.00  0.00      MACS
+ATOM      9  O1  MAC M   1       0.644   1.390  -1.044  1.00  0.00      MACS
+ATOM     10  O2  MAC M   1       0.961  -0.240   0.506  1.00  0.00      MACS
+ATOM     11  C4  MAC M   1       2.327  -0.283   0.079  1.00  0.00      MACS
+ATOM     12  H41 MAC M   1       2.876  -1.048   0.668  1.00  0.00      MACS
+ATOM     13  H42 MAC M   1       2.390  -0.557  -0.997  1.00  0.00      MACS
+ATOM     14  H43 MAC M   1       2.816   0.702   0.239  1.00  0.00      MACS
+TER      15      MACS     1
+END

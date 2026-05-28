@@ -1,0 +1,17 @@
+REMARK   DATE:     2/ 5/21     14:37:20      CREATED BY USER: nathan                  
+ATOM      1  C1  ETA E   1      -2.459   0.391   0.000  1.00  0.00      ETAC
+ATOM      2  C   ETA E   1      -1.235  -0.512  -0.000  1.00  0.00      ETAC
+ATOM      3  OM  ETA E   1      -0.136   0.240   0.000  1.00  0.00      ETAC
+ATOM      4  C2  ETA E   1       1.090  -0.507   0.000  1.00  0.00      ETAC
+ATOM      5  O   ETA E   1      -1.267  -1.730  -0.000  1.00  0.00      ETAC
+ATOM      6  H11 ETA E   1      -3.383  -0.226  -0.000  1.00  0.00      ETAC
+ATOM      7  H12 ETA E   1      -2.460   1.036  -0.904  1.00  0.00      ETAC
+ATOM      8  H13 ETA E   1      -2.460   1.036   0.904  1.00  0.00      ETAC
+ATOM      9  H22 ETA E   1       1.151  -1.151   0.907  1.00  0.00      ETAC
+ATOM     10  H23 ETA E   1       1.151  -1.151  -0.907  1.00  0.00      ETAC
+ATOM     11  C21 ETA E   1       2.276   0.461  -0.000  1.00  0.00      ETAC
+ATOM     12 H211 ETA E   1       3.234  -0.103  -0.000  1.00  0.00      ETAC
+ATOM     13 H212 ETA E   1       2.249   1.109  -0.902  1.00  0.00      ETAC
+ATOM     14 H213 ETA E   1       2.249   1.109   0.902  1.00  0.00      ETAC
+TER      15      ETAC     1
+END
