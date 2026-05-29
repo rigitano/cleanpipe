@@ -279,7 +279,7 @@ def molecule2molecule_in_water_and_oil(molecule, s_oil_choice, s_folderName, s_f
             solvent2  = [ solvents_dir / "martini22" / "xxxxx"     / "xxxxxx",  ff_dir / "martini22" / "xxxxxxx" ]
 
         elif "charmm" in s_forceField.lower():
-            solvent2   = [ solvents_dir / "charmm36" / "Wet Octanol" / "wet_octanol.gro",  solvents_dir / "charmm36" / "Wet Octanol" / "OCTO.itp",  solvents_dir / "charmm36" / "Wet Octanol" / "tip3p.itp" ]
+            solvent2   = [ solvents_dir / "charmm36" / "Wet Octanol" / "prod.gro",  solvents_dir / "charmm36" / "Wet Octanol" / "OCTO.itp",  solvents_dir / "charmm36" / "Wet Octanol" / "tip3p.itp" ]
 
 
 
