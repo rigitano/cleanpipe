@@ -388,8 +388,8 @@ cat <<EOT > "3_NPT/${file_npt_mdp}"
 ; Run control
 integrator               = md
 tinit                    = 0
-dt                       = $(options charmm36=0.002 martini3=0.02)
-nsteps                   = 100000
+dt                       = $(options charmm36=0.001 martini3=0.02)
+nsteps                   = 10000000
 nstcomm                  = 50000
 
 ; Output control

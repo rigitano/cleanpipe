@@ -109,7 +109,7 @@ def molecule2molecule_in_solvent(molecule, s_outSytemName, solvent, s_forceField
     examples:
 
     cl.molecule2molecule_in_solvent("g12H.pdb", "g12HW", "tip3p", 'charmm36-jul2022', "6 6 6", "6943")
-    cl.molecule2molecule_in_solvent("g12H.pdb", "g12HO", ["~/repos/cleanpipe/cleanpipe/USEFUL_SOLVENT_BOXES/charmm36/Wet Octanol/wet_octanol.gro","~/repos/cleanpipe/cleanpipe/USEFUL_SOLVENT_BOXES/charmm36/Octane/octn.itp"], 'charmm36-jul2022', "6.1 6.1 6.1", "712")
+    cl.molecule2molecule_in_solvent("g12H.pdb", "g12HO", ["~/repos/cleanpipe/cleanpipe/USEFUL_SOLVENT_BOXES/charmm36/Wet_Octanol/wet_octanol.gro","~/repos/cleanpipe/cleanpipe/USEFUL_SOLVENT_BOXES/charmm36/Octane/octn.itp"], 'charmm36-jul2022', "6.1 6.1 6.1", "712")
 
     cl.molecule2molecule_in_solvent("g12H.pdb", "g12HW_cg", ["~/solvents/martini/Water-pure/water.gro","~/ff/martini3001/martini_v3.0.0_solvents_v1.itp"], '~/ff/martini3001', "6 6 6", "1736", "-ss HHHHHHHHHHHH")
     cl.molecule2molecule_in_solvent("g12H.pdb", "g12HO_cg", ["~/solvents/martini/Octane/OCT_PRO1.gro", "~/ff/martini3001/martini_v3.0.0_solvents_v1.itp"], '~/ff/martini3001', "6.1 6.1 6.1", "712", "-ss HHHHHHHHHHHH")
@@ -279,7 +279,7 @@ def molecule2molecule_in_water_and_oil(molecule, s_oil_choice, s_folderName, s_f
             solvent2  = [ solvents_dir / "martini22" / "xxxxx"     / "xxxxxx",  ff_dir / "martini22" / "xxxxxxx" ]
 
         elif "charmm" in s_forceField.lower():
-            solvent2   = [ solvents_dir / "charmm36" / "Wet Octanol" / "prod.gro",  solvents_dir / "charmm36" / "Wet Octanol" / "OCTO.itp",  solvents_dir / "charmm36" / "Wet Octanol" / "tip3p.itp" ]
+            solvent2   = [ solvents_dir / "charmm36" / "Wet_Octanol" / "prod.gro",  solvents_dir / "charmm36" / "Wet_Octanol" / "OCTO.itp",  solvents_dir / "charmm36" / "Wet_Octanol" / "tip3p.itp" ]
 
 
 

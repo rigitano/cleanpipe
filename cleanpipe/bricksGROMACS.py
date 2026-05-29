@@ -200,7 +200,7 @@ def molecule2system(molecule, s_outName, s_forceField, s_boxSize, s_aditional_ar
         bricksFileSystem.check_extention(s_itp,['.itp']) 
 
         #get the name of the molecule inside the itp
-        ll_moleculetype = bricksTOP.parse_directive("OCTO.itp",'[ moleculetype ]')
+        ll_moleculetype = bricksTOP.parse_directive(s_itp,'[ moleculetype ]')
         s_extracted_mol_name = ll_moleculetype[0][0]
 
         # bring the original gro and itp to the system folder
