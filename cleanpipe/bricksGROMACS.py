@@ -61,7 +61,7 @@ def pdb2system(s_pdbfile, s_outName, s_forceField, s_boxSize, s_aditional_argume
         s_ffLocation = bricksFileSystem.get_file_location(s_forceField) # get forcefiled original location (relative to where the program was louched)
         s_forceField       = bricksFileSystem.get_filename_without_extension(s_forceField) # now we update the variable so It will have just the ff name. without location nor extention
 
-    bricksFileSystem.check_extention(s_pdbfile,['.pdb','.gro']) #check if the filename inside s_pdbfile is valid
+    bricksFileSystem.check_extention(s_pdbfile,['.pdb']) #check if the filename inside s_pdbfile is valid
     s_molName = bricksFileSystem.get_filename_without_extension(s_pdbfile)#get the pdb basename. it should be the name of the protagonist molecule
 
     # create output folder. and 
