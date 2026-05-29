@@ -78,7 +78,7 @@ def pdb2system(s_pdbfile, s_outName, s_forceField, s_boxSize, s_aditional_argume
 
     # in the case of charmm, there is an extra folder
     if "charmm36" in s_forceField.lower():
-        bricksFileSystem.run_and_capture(f'cp -r "{str(module_path / "USEFUL_MOLECULES" / "charmm36" / "toppar")}" "{s_outName.rstrip("/")}/"')
+        bricksFileSystem.run_and_capture(f'cp -r "{str(module_path / "USEFUL_FORCEFIELDS" / "toppar")}" "{s_outName.rstrip("/")}/"')
 
 
 
