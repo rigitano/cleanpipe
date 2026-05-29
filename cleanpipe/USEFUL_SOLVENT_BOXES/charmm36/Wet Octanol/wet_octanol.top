@@ -1,0 +1,10 @@
+#include "charmm36-jul2022.ff/forcefield.itp"
+#include "OCTO.itp"
+#include "tip3p.itp"
+
+[ system ]
+300 octanol + 100 water
+
+[ molecules ]
+OCTO    300
+SOL     100

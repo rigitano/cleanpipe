@@ -29,8 +29,10 @@ def ensure_original_directory(func):
 
 
 @ensure_original_directory
-def pdb2system(s_pdbfile, s_outName, s_forceField, s_boxSize, s_aditional_arguments=''):
+def old_pdb2system(s_pdbfile, s_outName, s_forceField, s_boxSize, s_aditional_arguments=''):
     """
+    THIS FUNCTION WAS REPLACED BY molecule2system !!!!! BECAUSE IT CAN TAKE AS INPUTS ALSO GRO/ITP INSTEAD OF JUST A PDB
+
     creates a new folder with the system name. and a gro and top files inside it with that same system name
     the top will be a socked top, all the molecules will be outside
 
@@ -399,15 +401,23 @@ def solvate_and_neutralize(s_systemFolder, solvent, s_maxsol=0, b_neutralize=Fal
     s_systemFolder : system to be solvated, this mean the input is a system with only the protagonist solute that must be solvated. with a gro and top in its file
 
     solvent        : well, here Im doing an odd thing to try to simplify gromacs madness:
-                     you have two options (1) to put a string with a famous model
-                     ("tip3p", "spc" or "spce"). or (2) to put a vector containing the gro file of
-                     the box of solvent, folowed by the itp files of all the molecules in that box. for example
-                     ["box_full_of_octn.gro","octn.itp"]. but these names should be set in relation to the system top folder. ex: ../box_full_of_octn.gro
+                     you have two options 
+
+                     (1) to put a string with a famous model
+                     ("tip3p", "spc" or "spce"). 
+                     
+                     or (2) to put a vector containing the gro file of
+                     the box of solvent, folowed by the itp files of all the molecules in that box. 
+                     for example: ["box_full_of_octn.gro","octn.itp"]. 
+                     but these names should be set in relation to the system top folder. 
+                     ex: ../box_full_of_octn.gro
+
+
                      in option (1) I'll set the proper gro and itps myself, presuming you are 
                      working with charmm36 and that there is a charmm36 in the system folder.
                      what I'll do is to set -cs spc216.gro, and then add an itp to the system 
                      top file, according to the chosen model
-                     in option (2) I'll just inser your choices. this means to set -cs "box_full_of_octn.gro"
+                     in option (2) I'll just insert your choices. this means to set -cs "box_full_of_octn.gro"
                      and #include "octn.itp"
 
 
