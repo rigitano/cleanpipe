@@ -100,19 +100,6 @@ for ((i = 0; i < len1; i++)); do
 #
 #@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ CLUSTER SETTINGS @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
-#MSUB   -r ${TPR_WITHOUT_EXTENSION}-try$((i+1))            # Job name
-#MSUB   -n ${keywords1[i]}         # Number of tasks in parallel mode
-#MSUB   -c 1                       # Number of cores per parallel task
-# #MSUB -N 1                       # Number of nodes to allocate (Inferred)
-#MSUB   -W yes                     # Let multiple jobs sharing same name & user run simultaneously
-#MSUB   -o GMX.job.IR.output.%I    # Output file
-#MSUB   -e GMX.job.IR.outerr.%I    # Output file for errors
-#MSUB   -q rome                    # Partition:    rome        
-#MSUB   -A gen13458                # Project code: gen10138 or spe00017
-#MSUB   -m scratch,work,store      # File system:  scratch,work,store
-#MSUB   -Q normal                  # Quality of Service (test,normal,long) (ccc_mqinfo)
-#MSUB   -T 3540                    # Maximum walltime in seconds
-
 #SBATCH --partition=calcul
 #SBATCH --cpus-per-task=${keywords1[i]}
 #SBATCH --gres=gpu:1
