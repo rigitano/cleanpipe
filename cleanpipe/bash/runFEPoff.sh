@@ -749,6 +749,7 @@ cat <<EOT >>  "t${t}.l${i}.sh"
 #SBATCH --cpus-per-task=${NTOMP}
 #SBATCH --job-name=${NAME}.${t}.${i}.fep
 #SBATCH --output=t${t}.l${i}.scheduler.outanderr
+#SBATCH --gres=gpu:1
 #SBATCH --exclude=node-15
 
 module purge
