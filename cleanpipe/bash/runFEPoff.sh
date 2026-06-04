@@ -16,8 +16,8 @@
 # 6-forcefield to use in mdp construction (must be "charmm36" or "martini3")
 # 7-architecture (pc, slurm, rome, adastra)
 # 8-molecule to be decoupled
-# 9-ntOMP
-# 10-ntMPI
+# 9-ntOMP     #igonred in rome, because -dd works great!
+# 10-ntMPI    #igonred in rome, because -dd works great!
 
 if [ $# -lt 10 ]; then
     echo "10 arguments needed : name filename.gro filename.top numberOfNanoseconds temperatureList forceFieldName architecture moleculeName ntOMP ntMPI"
@@ -705,7 +705,7 @@ if [[ $ARCHITECTURE == "rome" ]]; then # insert the rome header, if the user cho
 cat <<EOT >>  "t${t}.l${i}.sh"
 
 #MSUB   -r ${NAME}.${t}.${i}.fep             # Job name
-#MSUB   -n ${NTMPI}                          # Number of tasks in parallel mode (ntmpi)
+#MSUB   -n 40                                # Number of tasks in parallel mode (ntmpi)
 #MSUB   -c 1                                 # Number of cores per parallel task
 #MSUB   -W yes                               # Let multiple jobs sharing same name & user run simultaneously
 #MSUB   -o t${t}.l${i}.%I.scheduler.out      # Output file
@@ -736,9 +736,9 @@ EOT
 GMX="ccc_mprun gmx_mpi"
 
 #GMX MDRUN ADITIONAL OPTIONS. ATENTION: this must be coherent with #MSUB -n
-#MDRUN_OPTIONS="-dd 3 3 3 -npme 13 -dlb yes" #this requires #MSUB -n 40 , but domain decomposition dont work with steep 
+MDRUN_OPTIONS="-dd 3 3 3 -npme 13 -dlb yes" #this requires #MSUB -n 40 , but domain decomposition dont work with steep 
 #MDRUN_OPTIONS="-nt 1" #doesbt work, because -nt, -ntomp, -ntmpi, cant be used in rome, you have to set OMP_NUM_THREADS and #MSUB -n instead
-MDRUN_OPTIONS=""
+#MDRUN_OPTIONS=""
 
 #########################################################################################################
 elif [[ $ARCHITECTURE == "slurm" ]]; then # insert the slurm header, if the user chose this architecture
