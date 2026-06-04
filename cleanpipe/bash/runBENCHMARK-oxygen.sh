@@ -7,26 +7,19 @@
 # @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
 # Define the pair of keywords to be replaced in the (.moab) file. each pair will be a specific try. 
-#           1 | 2   3   4   5   6 | 7   8   9   10   11 | 12  13   14 | 15  16  17 | 18 19 |
-keywords1=("1" "2" "4" "8" "16" "32" "1" "2" "4" "8" "16" "32" "2" "4" "8" "16" "32" "16" "32" "64" "9" "10" "12" "14" "15" "16" "25" "26" "27" "37" "40") # mpi cores
-#keywords2=("1" "2" "4" "8" "16" "32" "1" "1" "1" "1" "1" "2" "2" "2" "8" "16" "32" "4" "8" "1" "1" "1" "1" "1" "1" "1" "1" "1" "1" "1") # ompi
-
-
-
-
+#           1 | 2   3     4    5   6 |  7   8     9   10   11 | 12  13  14 | 15  16  17 | 18   19   20   21   22   23   24   25   26   27   28   
+keywords1=("1" "8" "16" "32" "40" "8" "12" "16" "24" "32" "2" "4" "8" "16" "32" "16" "32" "20" "40" "40" "40" "20" "20" "20" "10" "10" "10" "12" "22" "22" "37" "40" "40" "42") # mpi cores
 
 keywords3=(\
 	"-nt 1" \
-	"-nt 2" \
-	"-nt 4" \
 	"-nt 8" \
 	"-nt 16" \
 	"-nt 32" \
-	"-ntmpi 1 -ntomp 1" \
-	"-ntmpi 1 -ntomp 2" \
-	"-ntmpi 1 -ntomp 4" \
+	"-nt 40" \
 	"-ntmpi 1 -ntomp 8" \
+	"-ntmpi 1 -ntomp 12" \
 	"-ntmpi 1 -ntomp 16" \
+	"-ntmpi 1 -ntomp 24" \
 	"-ntmpi 1 -ntomp 32" \
 	"-ntmpi 2 -ntomp 1" \
 	"-ntmpi 4 -ntomp 1" \
@@ -35,18 +28,23 @@ keywords3=(\
 	"-ntmpi 32 -ntomp 1" \
 	"-ntmpi 8 -ntomp 2" \
 	"-ntmpi 16 -ntomp 2" \
-	"-ntmpi 32 -ntomp 2" \
-	"-dd 2 2 2 -npme 1 -dlb yes" \
-	"-dd 2 2 2 -npme 2 -dlb yes" \
-	"-dd 2 2 2 -npme 4 -dlb yes" \
-	"-dd 2 2 3 -npme 2 -dlb yes" \
-	"-dd 2 2 3 -npme 3 -dlb yes" \
-	"-dd 2 2 3 -npme 4 -dlb yes" \
-	"-dd 2 3 3 -npme 7 -dlb yes" \
-	"-dd 2 3 3 -npme 8 -dlb yes" \
-	"-dd 2 3 3 -npme 9 -dlb yes" \
-	"-dd 3 3 3 -npme 10 -dlb yes" \
-	"-dd 3 3 3 -npme 13 -dlb yes")
+	"-ntmpi 1 -ntomp 40 -nb gpu -pme gpu -bonded gpu -update gpu" \
+	"-ntmpi 1 -ntomp 40 -nb gpu -pme gpu -npme 1 -bonded cpu" \
+	"-ntmpi 1 -ntomp 40 -nb gpu -pme cpu" \
+	"-ntmpi 2 -ntomp 20 -nb gpu -pme gpu -bonded gpu -update gpu" \
+	"-ntmpi 2 -ntomp 20 -nb gpu -pme gpu -npme 1 -bonded cpu" \
+	"-ntmpi 2 -ntomp 20 -nb gpu -pme cpu" \
+	"-ntmpi 4 -ntomp 10 -nb gpu -pme gpu -bonded gpu -update gpu" \
+	"-ntmpi 4 -ntomp 10 -nb gpu -pme gpu -npme 1 -bonded cpu" \
+	"-ntmpi 4 -ntomp 10 -nb gpu -pme cpu" \
+	"-dd 2 2 2 -npme 2  -ntmpi 10 -ntomp 1 -dlb yes" \
+	"-dd 2 2 2 -npme 2  -ntmpi 10 -ntomp 2 -dlb yes" \
+	"-dd 2 2 4 -npme 6  -ntmpi 22 -dlb yes" \
+	"-dd 2 2 4 -npme 6  -ntmpi 22 -ntomp 2 -dlb yes" \
+	"-dd 3 3 3 -npme 10 -ntmpi 37 -dlb yes" \
+	"-dd 3 3 3 -npme 13 -ntmpi 40 -dlb yes" \
+	"-dd 3 3 3 -npme 13 -ntmpi 40 -ntomp 2 -dlb yes" \
+	"-dd 3 3 3 -npme 15 -ntmpi 42 -dlb yes")
 
 
 
@@ -104,9 +102,10 @@ for ((i = 0; i < len1; i++)); do
 #SBATCH --cpus-per-task=${keywords1[i]}
 #SBATCH --gres=gpu:1
 #SBATCH --nodes=1
-#SBATCH --job-name=${TPR_WITHOUT_EXTENSION}-try$((i+1))
+#SBATCH --job-name=${TPR_WITHOUT_EXTENSION}try$((i+1))
 #SBATCH --output=scheduler.out.and.err
 ##SBATCH --exclude=node-15
+#SBATCH --time=00:05:00
 
 
 module purge  # retire tous les modules déchargeables de l'environnement
