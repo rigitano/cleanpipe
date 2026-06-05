@@ -206,17 +206,17 @@ rvdw-switch              = 0
 rvdw                     = 1.1
 
 ; Free energy variables
-free-energy = yes
-init-lambda              = 0.01
+free-energy = yes                 ;I think this might be useless, after Veronica's explanation
+init-lambda              = 0.01   ;according to Veronica, this is kept during the entire EM
 sc-alpha                 = 4
 sc-power                 = 2
 sc-coul                  = yes
 nstdhdl                  = 0 
 couple-moltype           = system
 ; we are changing both the vdw and the charge. In the initial state, both are on
-couple-lambda0           = vdw-q
+couple-lambda0           = vdw-q   ;this looks backward. Veronica discovered this is ignored. em is always at 0.01 without increasing nor decreasing
 ; in the final state, both are off.
-couple-lambda1           = none
+couple-lambda1           = none    ;this looks backward. Veronica discovered this is ignored. em is always at 0.01 without increasing nor decreasing
 couple-intramol          = yes
 
 
@@ -388,8 +388,8 @@ cat <<EOT > "3_NPT/${file_npt_mdp}"
 ; Run control
 integrator               = md
 tinit                    = 0
-dt                       = $(options charmm36=0.001 martini3=0.02)
-nsteps                   = 10000000
+dt                       = $(options charmm36=0.002 martini3=0.02)
+nsteps                   = 3000000
 nstcomm                  = 50000
 
 ; Output control
