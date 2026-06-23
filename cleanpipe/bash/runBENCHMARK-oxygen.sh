@@ -28,15 +28,15 @@ keywords3=(\
 	"-ntmpi 32 -ntomp 1" \
 	"-ntmpi 8 -ntomp 2" \
 	"-ntmpi 16 -ntomp 2" \
+	"-ntmpi 1 -ntomp 8 -nb gpu -pme gpu -bonded gpu -update gpu" \
+	"-ntmpi 1 -ntomp 16 -nb gpu -pme gpu -bonded gpu -update gpu" \
+	"-ntmpi 1 -ntomp 24 -nb gpu -pme gpu -bonded gpu -update gpu" \
+	"-ntmpi 1 -ntomp 28 -nb gpu -pme gpu -bonded gpu -update gpu" \
+	"-ntmpi 1 -ntomp 30 -nb gpu -pme gpu -bonded gpu -update gpu" \
+	"-ntmpi 1 -ntomp 32 -nb gpu -pme gpu -bonded gpu -update gpu" \
 	"-ntmpi 1 -ntomp 40 -nb gpu -pme gpu -bonded gpu -update gpu" \
-	"-ntmpi 1 -ntomp 40 -nb gpu -pme gpu -npme 1 -bonded cpu" \
-	"-ntmpi 1 -ntomp 40 -nb gpu -pme cpu" \
 	"-ntmpi 2 -ntomp 20 -nb gpu -pme gpu -bonded gpu -update gpu" \
-	"-ntmpi 2 -ntomp 20 -nb gpu -pme gpu -npme 1 -bonded cpu" \
-	"-ntmpi 2 -ntomp 20 -nb gpu -pme cpu" \
 	"-ntmpi 4 -ntomp 10 -nb gpu -pme gpu -bonded gpu -update gpu" \
-	"-ntmpi 4 -ntomp 10 -nb gpu -pme gpu -npme 1 -bonded cpu" \
-	"-ntmpi 4 -ntomp 10 -nb gpu -pme cpu" \
 	"-dd 2 2 2 -npme 2  -ntmpi 10 -ntomp 1 -dlb yes" \
 	"-dd 2 2 2 -npme 2  -ntmpi 10 -ntomp 2 -dlb yes" \
 	"-dd 2 2 4 -npme 6  -ntmpi 22 -dlb yes" \
