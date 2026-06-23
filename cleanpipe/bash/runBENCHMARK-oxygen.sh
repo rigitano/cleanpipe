@@ -105,7 +105,7 @@ for ((i = 0; i < len1; i++)); do
 #SBATCH --job-name=${TPR_WITHOUT_EXTENSION}try$((i+1))
 #SBATCH --output=scheduler.out.and.err
 ##SBATCH --exclude=node-15
-#SBATCH --time=00:05:00
+##SBATCH --time=00:05:00
 
 
 module purge  # retire tous les modules déchargeables de l'environnement
