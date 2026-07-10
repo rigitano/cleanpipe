@@ -2711,3 +2711,6 @@ def gro2psi4_object(s_gro_path, charge=0, multiplicity=1):
     qmol.set_multiplicity(multiplicity)
 
     return psi4.geometry(qmol.create_psi4_string_from_molecule())
+
+
+

@@ -612,27 +612,13 @@ export I_MPI_PIN_DOMAIN=auto
 
 OMP_NUM_THREADS=${NTOMP}      # number of OpenMP threads
 
-
-
-# ---- 24h-wall self-chaining : queue the follow-up job now ----
-# If production is already finished, stop the chain.
-if [[ -f "4_PROD/prod.fitted.xtc" ]]; then
-    echo "Simulation already complete. Exiting."
-    exit 0
-fi
-# Otherwise queue the NEXT copy of this job, to start when THIS one ends OK.
-ccc_msub -E "--dependency=afterok:\${BRIDGE_MSUB_JOBID}" script.${NAME}.sh
-# --------------------------------------------------------------
-
-
-
-
 EOT
 
 GMX="ccc_mprun gmx_mpi"
 #MDRUN_OPTIONS="-dd 3 3 3 -npme 13 -dlb yes" #ATENTION: this must be coherent with #MSUB -n 40 #domain decomposition dont work with steep 
 #MDRUN_OPTIONS="-nt 1" #nt cant be used in rome, just set OMP_NUM_THREADS and #MSUB -n
-MDRUN_OPTIONS="-maxh 23 -cpi"   # stop cleanly at ~23h, auto-continue from checkpoint
+MDRUN_OPTIONS=""
+
 
 
 
@@ -730,30 +716,26 @@ echo "#############################################################"
 echo "######################### EM grompp #########################"
 echo "#############################################################"
 
-
+#cd ../1_EM || exit
 cd 1_EM || exit
-####cd ../1_EM || exit
 
-cd 1_EM || exit
-if [[ ! -f "em.gro" ]]; then                # skip if this stage already finished
-  if [[ ! -f "em.tpr" ]]; then              # build the tpr only once
-    ${GMX} grompp -f ${file_em_mdp} -c "../../${GRO}" -p "../../${TOP}" -o "em.tpr" -maxwarn 1 2>&1 | tee "outanderr.grompp"
-    ####${GMX} grompp -f ${file_em_mdp} -c "../0_SC/sc.gro" -p "../../${TOP}" -o "em.tpr" 2>&1 | tee "outanderr.grompp"	
-    if grep -q "Error" "outanderr.grompp"; then
-        echo "GROMACS reported an error — stopping script."
-        exit 1
-    fi
-  fi
-  echo "######################### EM mdrun ##############################"
-  ${GMX} mdrun -deffnm "em" ${MDRUN_OPTIONS} 2>&1 | tee "outanderr.mdrun"
-  if grep -q "Error" "outanderr.mdrun"; then
-      echo "GROMACS reported an error — stopping script."
-      exit 1
-  fi
-  if [[ ! -f "em.gro" ]]; then              
-      echo "em finished without savind a gro file. this can be an error, or the 23h limit in rome"
-      exit 0
-  fi
+#${GMX} grompp -f ${file_em_mdp} -c "../0_SC/sc.gro" -p "../../${TOP}" -o "em.tpr" 2>&1 | tee "outanderr.grompp"	
+${GMX} grompp -f ${file_em_mdp} -c "../../${GRO}" -p "../../${TOP}" -o "em.tpr" -maxwarn 1 2>&1 | tee "outanderr.grompp"
+
+if grep -q "Error" "outanderr.grompp"; then
+    echo "GROMACS reported an error — stopping script."
+    exit 1
+fi
+
+
+
+echo "######################### EM mdrun #############################"
+
+${GMX} mdrun -deffnm "em" ${MDRUN_OPTIONS} 2>&1 | tee "outanderr.mdrun"
+
+if grep -q "Error" "outanderr.mdrun"; then
+    echo "GROMACS reported an error — stopping script."
+    exit 1
 fi
 
 echo "#############################################################"
@@ -761,24 +743,23 @@ echo "######################### NVT grompp #########################"
 echo "#############################################################"
 
 cd ../2_NVT || exit
-if [[ ! -f "nvt.gro" ]]; then                # skip if this stage already finished
-  if [[ ! -f "nvt.tpr" ]]; then              # build the tpr only once
-    ${GMX} grompp -f ${file_nvt_mdp} -c "../1_EM/em.gro" -r "../1_EM/em.gro" -p "../../${TOP}" -o "nvt.tpr" -maxwarn 1 2>&1 | tee "outanderr.grompp"
-    if grep -q "Error" "outanderr.grompp"; then
-        echo "GROMACS reported an error — stopping script."
-        exit 1
-    fi
-  fi
-  echo "######################### NVT mdrun ##############################"
-  ${GMX} mdrun -v -deffnm "nvt" ${MDRUN_OPTIONS} 2>&1 | tee "outanderr.mdrun"
-  if grep -q "Error" "outanderr.mdrun"; then
-      echo "GROMACS reported an error — stopping script."
-      exit 1
-  fi
-  if [[ ! -f "nvt.gro" ]]; then
-      echo "nvt finished without savind a gro file. this can be an error, or the 23h limit in rome"
-      exit 0
-  fi
+
+${GMX} grompp -f ${file_nvt_mdp} -c "../1_EM/em.gro" -r "../1_EM/em.gro" -p "../../${TOP}" -o "nvt.tpr" -maxwarn 1 2>&1 | tee "outanderr.grompp"
+
+if grep -q "Error" "outanderr.grompp"; then
+    echo "GROMACS reported an error — stopping script."
+    exit 1
+fi
+
+
+
+echo "######################### NVT mdrun ##############################"
+
+${GMX} mdrun -v -deffnm "nvt" ${MDRUN_OPTIONS} 2>&1 | tee "outanderr.mdrun"
+
+if grep -q "Error" "outanderr.mdrun"; then
+    echo "GROMACS reported an error — stopping script."
+    exit 1
 fi
 
 
@@ -787,24 +768,23 @@ echo "######################### NPT grompp #########################"
 echo "##############################################################"
 
 cd ../3_NPT || exit
-if [[ ! -f "npt.gro" ]]; then                # skip if this stage already finished
-  if [[ ! -f "npt.tpr" ]]; then              # build the tpr only once
-    ${GMX} grompp -f ${file_npt_mdp} -c "../2_NVT/nvt.gro" -r "../2_NVT/nvt.gro" -p "../../${TOP}" -o "npt.tpr" -maxwarn 1 2>&1 | tee "outanderr.grompp"
-    if grep -q "Error" "outanderr.grompp"; then
-        echo "GROMACS reported an error — stopping script."
-        exit 1
-    fi
-  fi
-  echo "######################### NPT mdrun ##############################"
-  ${GMX} mdrun -v -deffnm "npt" ${MDRUN_OPTIONS} 2>&1 | tee "outanderr.mdrun"
-  if grep -q "Error" "outanderr.mdrun"; then
-      echo "GROMACS reported an error — stopping script."
-      exit 1
-  fi
-  if [[ ! -f "npt.gro" ]]; then
-      echo "npt finished without savind a gro file. this can be an error, or the 23h limit in rome"
-      exit 0
-  fi
+
+${GMX} grompp -f ${file_npt_mdp} -c "../2_NVT/nvt.gro" -r "../2_NVT/nvt.gro" -p "../../${TOP}" -o "npt.tpr" -maxwarn 1 2>&1 | tee "outanderr.grompp"
+
+if grep -q "Error" "outanderr.grompp"; then
+    echo "GROMACS reported an error — stopping script."
+    exit 1
+fi
+
+
+
+echo "######################### NPT mdrun ##############################"
+
+${GMX} mdrun -v -deffnm "npt" ${MDRUN_OPTIONS} 2>&1 | tee "outanderr.mdrun"
+
+if grep -q "Error" "outanderr.mdrun"; then
+    echo "GROMACS reported an error — stopping script."
+    exit 1
 fi
 
 
@@ -828,24 +808,22 @@ echo "#################### PRODUCTION grompp #######################"
 echo "#############################################################"
 
 cd ../4_PROD || exit
-if [[ ! -f "prod.gro" ]]; then               # skip if this stage already finished
-  if [[ ! -f "prod.tpr" ]]; then             # build the tpr only once
-    ${GMX} grompp -f ${file_prod_mdp} -c "../3_NPT/npt.gro" -p "../../${TOP}" -o "prod.tpr" -maxwarn 1 2>&1 | tee "outanderr.grompp"
-    if grep -q "Error" "outanderr.grompp"; then
-        echo "GROMACS reported an error — stopping script."
-        exit 1
-    fi
-  fi
-  echo "###################### PRODUCTION mdrun #################################"
-  ${GMX} mdrun -v -deffnm "prod" ${MDRUN_OPTIONS} 2>&1 | tee "outanderr.mdrun"
-  if grep -q "Error" "outanderr.mdrun"; then
-      echo "GROMACS reported an error — stopping script."
-      exit 1
-  fi
-  if [[ ! -f "prod.gro" ]]; then             # no final .gro => 23h wall hit mid-stage
-      echo "prod: wall reached, checkpoint saved. Ending; the queued follow-up will resume here."
-      exit 0
-  fi
+	
+${GMX} grompp -f ${file_prod_mdp} -c "../3_NPT/npt.gro" -p "../../${TOP}" -o "prod.tpr" -maxwarn 1 2>&1 | tee "outanderr.grompp"
+
+if grep -q "Error" "outanderr.grompp"; then
+    echo "GROMACS reported an error — stopping script."
+    exit 1
+fi
+
+
+echo "###################### PRODUCTION mdrun #################################"
+
+${GMX} mdrun -v -deffnm "prod" ${MDRUN_OPTIONS} 2>&1 | tee "outanderr.mdrun"
+
+if grep -q "Error" "outanderr.mdrun"; then
+    echo "GROMACS reported an error — stopping script."
+    exit 1
 fi
 
 
@@ -853,26 +831,23 @@ fi
 
 echo "############################## CENTER AND FIT ###################################"
 
-if [[ -f "prod.gro" ]]; then          # only post-process once PROD has truly finished
 
+printf '1\n0' | ${GMX} trjconv -s "prod.tpr" -f "prod.xtc" -o "prod.centered.xtc" -center -pbc mol 2>&1 | tee "log.center"
 
-
-    printf '1\n0' | ${GMX} trjconv -s "prod.tpr" -f "prod.xtc" -o "prod.centered.xtc" -center -pbc mol 2>&1 | tee "log.center"
-
-    if grep -q "Error" "log.center"; then
-        echo "GROMACS reported an error — stopping script."
-        exit 1
-    fi
-
-
-
-    printf '1\n0' | ${GMX} trjconv -s "prod.tpr" -f "prod.centered.xtc" -o "prod.fitted.xtc" -fit progressive 2>&1 | tee "log.fit"
-
-    if grep -q "Error" "log.fit"; then
-        echo "GROMACS reported an error — stopping script."
-        exit 1
-    fi
+if grep -q "Error" "log.center"; then
+    echo "GROMACS reported an error — stopping script."
+    exit 1
 fi
+
+
+
+printf '1\n0' | ${GMX} trjconv -s "prod.tpr" -f "prod.centered.xtc" -o "prod.fitted.xtc" -fit progressive 2>&1 | tee "log.fit"
+
+if grep -q "Error" "log.fit"; then
+    echo "GROMACS reported an error — stopping script."
+    exit 1
+fi
+
 
 cd ../.. # get out of runREALISTIC
 
