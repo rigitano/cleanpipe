@@ -90,7 +90,6 @@ if [[ "$NTOMP" =~ ^[0-9]+$ ]]; then
     echo "NTOMP OK (is an integer)"
 else
     echo "NTOMP is NOT an integer"
-    exit 1
 fi
 
 
@@ -100,7 +99,6 @@ if [[ "$NTMPI" =~ ^[0-9]+$ ]]; then
     echo "NTMPI OK (is an integer)"
 else
     echo "NTMPI is NOT an integer"
-    exit 1
 fi
 echo " "
 
@@ -163,67 +161,67 @@ options() {
 
 
 # Definition of the name of the mdp files of the current lambda
-#file_sc_mdp="sc.mdp"
+file_sc_mdp="sc.mdp"
 file_em_mdp="em.mdp"
 file_nvt_mdp="nvt.mdp"
 file_npt_mdp="npt.mdp"
 file_prod_mdp="prod.mdp"
 
-#echo "creating ${file_sc_mdp}"
-#cat <<EOT > "0_SC/${file_sc_mdp}"
-#
-#; the original  came from
-#; https://github.com/jacksoncrowley/TS2CG-Setup-Pipeline/blob/main/mdp/em1.mdp
-#; but the important part is of the free energy variables. mainly setting the forces as 1% and putting some sc potential. jackson has no strong feeling #about the rest of the parameters.
-##
+echo "creating ${file_sc_mdp}"
+cat <<EOT > "0_SC/${file_sc_mdp}"
+
+; the original  came from
+; https://github.com/jacksoncrowley/TS2CG-Setup-Pipeline/blob/main/mdp/em1.mdp
+; but the important part is of the free energy variables. mainly setting the forces as 1% and putting some sc potential. jackson has no strong feeling about the rest of the parameters.
 
 
 
-#define			 = -DFLEXIBLE
 
-#integrator               = steep
-#nsteps                   = 500
-#nstxout                  = 0
-#nstfout                  = 0
-#nstlog                   = 100 
+define			 = -DFLEXIBLE
 
-#; NEIGHBORSEARCHING PARAMETERS
-#cutoff-scheme            = Verlet
-#nstlist                  = 20
-#pbc                      = xyz
-#periodic-molecules       = no
-#verlet-buffer-tolerance  = 0.005
-#rlist                    = 1
+integrator               = steep
+nsteps                   = 500
+nstxout                  = 0
+nstfout                  = 0
+nstlog                   = 100 
 
-#; OPTIONS FOR ELECTROSTATICS AND VDW
-#coulombtype              = cut-off
-#coulomb-modifier         = Potential-shift-Verlet
-#rcoulomb-switch          = 0
-#rcoulomb                 = 1.1
-#epsilon_r                = 15
-#epsilon_rf               = 0
-#vdw_type                 = cutoff
-#vdw-modifier             = Potential-shift-verlet
-#rvdw-switch              = 0
-#rvdw                     = 1.1
+; NEIGHBORSEARCHING PARAMETERS
+cutoff-scheme            = Verlet
+nstlist                  = 20
+pbc                      = xyz
+periodic-molecules       = no
+verlet-buffer-tolerance  = 0.005
+rlist                    = 1
 
-#; Free energy variables
-#free-energy = yes                 ;I think this might be useless, after Veronica's explanation
-#init-lambda              = 0.01   ;according to Veronica, this is kept during the entire EM
-#sc-alpha                 = 4
-#sc-power                 = 2
-#sc-coul                  = yes
-#nstdhdl                  = 0 
-#couple-moltype           = system
-#; we are changing both the vdw and the charge. In the initial state, both are on
-#couple-lambda0           = vdw-q   ;this looks backward. Veronica discovered this is ignored. em is always at 0.01 without increasing nor decreasing
-#; in the final state, both are off.
-#couple-lambda1           = none    ;this looks backward. Veronica discovered this is ignored. em is always at 0.01 without increasing nor decreasing
-#couple-intramol          = yes
+; OPTIONS FOR ELECTROSTATICS AND VDW
+coulombtype              = cut-off
+coulomb-modifier         = Potential-shift-Verlet
+rcoulomb-switch          = 0
+rcoulomb                 = 1.1
+epsilon_r                = 15
+epsilon_rf               = 0
+vdw_type                 = cutoff
+vdw-modifier             = Potential-shift-verlet
+rvdw-switch              = 0
+rvdw                     = 1.1
+
+; Free energy variables
+free-energy = yes                 ;I think this might be useless, after Veronica's explanation
+init-lambda              = 0.01   ;according to Veronica, this is kept during the entire EM
+sc-alpha                 = 4
+sc-power                 = 2
+sc-coul                  = yes
+nstdhdl                  = 0 
+couple-moltype           = system
+; we are changing both the vdw and the charge. In the initial state, both are on
+couple-lambda0           = vdw-q   ;this looks backward. Veronica discovered this is ignored. em is always at 0.01 without increasing nor decreasing
+; in the final state, both are off.
+couple-lambda1           = none    ;this looks backward. Veronica discovered this is ignored. em is always at 0.01 without increasing nor decreasing
+couple-intramol          = yes
 
 
 
-#EOT
+EOT
 
 
 
@@ -302,9 +300,8 @@ cat <<EOT > "2_NVT/${file_nvt_mdp}"
 integrator               = md
 tinit                    = 0
 dt                       = $(options charmm36=0.002 martini3=0.02)
-
-nsteps                   = 50000
-nstcomm                  = 100
+nsteps                   = 100000 ; 0.2 ns
+nstcomm                  = 50000
 
 ; Output control
 nstxout                  = 5000
@@ -391,15 +388,15 @@ cat <<EOT > "3_NPT/${file_npt_mdp}"
 integrator               = md
 tinit                    = 0
 dt                       = $(options charmm36=0.002 martini3=0.02)
-nsteps                   = 3000000
-nstcomm                  = 100
+nsteps                   = 2000000 ; 4 ns
+nstcomm                  = 50000
 
 ; Output control
-nstxout                  = 5000
-nstvout                  = 5000
-nstfout                  = 5000
-nstlog                   = 5000
-nstenergy                = 5000
+nstxout                  = 50000
+nstvout                  = 50000
+nstfout                  = 50000
+nstlog                   = 50000
+nstenergy                = 50000
 nstxout-compressed       = 0
 
 
@@ -590,7 +587,7 @@ cat <<EOT >> "script.${NAME}.sh"
 
 #MSUB   -r ${NAME}.realistic       # Job name
 #MSUB   -n ${NTMPI}                # Number of tasks in parallel mode
-#MSUB   -c ${NTOMP}                       # Number of cores per parallel task
+#MSUB   -c ${NTOMP}                # Number of cores per parallel task
 #MSUB   -W yes                     # Let multiple jobs sharing same name & user run simultaneously
 #MSUB   -o out.scheduler.%I.${NAME}            # Output file
 #MSUB   -e err.scheduler.%I.${NAME}            # Output file for errors
@@ -613,18 +610,19 @@ export I_MPI_PIN_CELL=core
 export I_MPI_PIN_DOMAIN=auto
 
 export OMP_NUM_THREADS=${NTOMP}      # number of OpenMP threads
-export OMP_DYNAMIC=FALSE
+
 
 
 # ---- 24h-wall self-chaining : queue the follow-up job now ----
-# If production is already finished, stop the chain. I'll know this checking for a done.txt file, that is created in the post processing
-if [[ -f "4_PROD/done.txt" ]]; then
+# If production is already finished, stop the chain.
+if [[ -f "4_PROD/prod.fitted.xtc" ]]; then
     echo "Simulation already complete. Exiting."
     exit 0
 fi
 # Otherwise queue the NEXT copy of this job, to start when THIS one ends OK.
 ccc_msub -E "--dependency=afterok:\${BRIDGE_MSUB_JOBID}" script.${NAME}.sh
 # --------------------------------------------------------------
+
 
 
 
@@ -655,23 +653,10 @@ module purge
 module load cuda/11.8
 module load gromacs/2024.5
 
-
-# ---- 48h-wall self-chaining : queue the follow-up job now ----
-# If production is already finished, stop the chain. I'll know this checking for a done.txt file, that is created in the post processing
-if [[ -f "4_PROD/done.txt" ]]; then
-    echo "Simulation already complete. Exiting."
-    exit 0
-fi
-# Otherwise queue the NEXT copy of this job, to start when THIS one ends OK.
-sbatch "--dependency=afterok:\${SLURM_JOB_ID}" script.${NAME}.sh
-# --------------------------------------------------------------
-
-
-
 EOT
 
 GMX="gmx"
-MDRUN_OPTIONS="-ntomp ${NTOMP} -ntmpi ${NTMPI} -maxh 47 -cpi" #ATENTION: -ntomp and -ntmpi must be coherent with #SBATCH --cpus-per-task
+MDRUN_OPTIONS="-ntomp ${NTOMP} -ntmpi ${NTMPI}" #ATENTION: this must be coherent with #SBATCH --cpus-per-task
 
 
 
@@ -703,41 +688,7 @@ fi # end of if that inserts preparations before the gromacs commands
 
 cat <<EOT >> "script.${NAME}.sh"
 
-set -o pipefail  
-
-
-
-##### function to check if a simulation reached the planned number of steps #####
-planned_steps_reached() {
-    local TPR="\$1" CPT="\$2"                                                        # the inputs are the TPR filename, and checkpoint filename.
-
-    [[ -s "\$TPR" && -s "\$CPT" ]] || return 1                                       # Return false if one of the input files is missing or empty.
-
-    local CURRENT_STEP PLANNED_STEPS
-    CURRENT_STEP=\$(${GMX} dump -cp "\$CPT" 2>/dev/null | awk -F= '/^[[:space:]]*step[[:space:]]*=/{gsub(/[[:space:]]/,"",\$2); print \$2; exit}')
-    PLANNED_STEPS=\$(${GMX} dump -s "\$TPR" 2>/dev/null | awk -F= '/^[[:space:]]*nsteps[[:space:]]*=/{gsub(/[[:space:]]/,"",\$2); print \$2; exit}')
-
-    [[ "\$CURRENT_STEP" =~ ^[0-9]+$ && "\$PLANNED_STEPS" =~ ^[0-9]+$ ]] || return 1  # Return false if one of the value is empty or negative 
-    (( CURRENT_STEP >= PLANNED_STEPS ))                                              # Return true if the planned number of steps has been reached.
-}
-
-##### function to inspect gmx outanderr file, looking for failure messages #####
-gmx_failed() {
-    local LABEL="\$1"
-    local OUTANDERR_FILE="\$2"
-    local PATTERN
-
-    PATTERN='fatal[[:space:]]+error|error[[:space:]]+in[[:space:]]+user[[:space:]]+input|ERROR[[:space:]]+[1-9][0-9]*|there (was|were) [1-9][0-9]* errors?|inconsistency[[:space:]]+in[[:space:]]+user[[:space:]]+input|too[[:space:]]+many[[:space:]]+warnings|failed|failure|assertion[[:space:]]+failed|segmentation[[:space:]]+fault|floating[[:space:]]+point[[:space:]]+exception|bus[[:space:]]+error|core[[:space:]]+dumped|aborted|killed|out[[:space:]]+of[[:space:]]+memory|cannot[[:space:]]+allocate[[:space:]]+memory|permission[[:space:]]+denied|no[[:space:]]+such[[:space:]]+file|cannot[[:space:]]+open|could[[:space:]]+not[[:space:]]+be[[:space:]]+opened|command[[:space:]]+not[[:space:]]+found'
-
-
-    if LC_ALL=C grep -Eiq "\$PATTERN" "\$OUTANDERR_FILE"; then
-        echo "error during \$LABEL. this is reported in \$OUTANDERR_FILE — stopping script."
-        return 0
-    fi
-
-    return 1
-}
-
+set -o pipefail  # stop if any part of a pipeline fails
 
 
 
@@ -749,143 +700,178 @@ gmx_failed() {
 #
 #cd 0_SC || exit
 #       
-#if planned_steps_reached "sc.tpr" "sc.cpt"; then
-#    echo "Planned steps reached, skipping sc."
-#else
-#
 #${GMX} grompp -f ${file_sc_mdp} -c "../../${GRO}" -p "../../${TOP}" -o "sc.tpr" 2>&1 | tee "outanderr.grompp"
-#if gmx_failed "sc" "outanderr.grompp"; then exit 1; fi
-#if [[ ! -f "sc.tpr" ]]; then echo "sc finished without saving a TPR file."; exit 1; fi
+#
+#if grep -q "Error" "outanderr.grompp"; then
+#    echo "GROMACS reported an error — stopping script."
+#    exit 1
+#fi
+#
 #
 #
 #echo "########################## SC mdrun #############################"
 #
 #
 #${GMX} mdrun -v -deffnm "sc" ${MDRUN_OPTIONS} 2>&1 | tee "outanderr.mdrun"
-#if [[ ! -f "sc.gro" ]]; then echo "sc finished without saving a GRO file. This may be an error, or the -maxh limit was reached."; exit 1; fi
+#
+#if grep -q "Error" "outanderr.mdrun"; then
+#    echo "GROMACS reported an error — stopping script."
+#    exit 1
+#fi
 #
 #
 #
 #module unload gromacs
 #module load gromacs/2024.5
-#fi
 
 
 echo "#############################################################"
 echo "######################### EM grompp #########################"
 echo "#############################################################"
+
+
 cd 1_EM || exit
 ####cd ../1_EM || exit
-if [[ -s "em.gro" ]]; then
-    echo "skipping em (em.gro already there)"
-else
 
 
-
-
-  ${GMX} grompp -f ${file_em_mdp} -c "../../${GRO}" -p "../../${TOP}" -o "em.tpr" -maxwarn 1 2>&1 | tee "outanderr.grompp" 
- #${GMX} grompp -f ${file_em_mdp} -c "../0_SC/sc.gro" -p "../../${TOP}" -o "em.tpr" 2>&1 | tee "outanderr.grompp"	
-  if gmx_failed "em" "outanderr.grompp"; then exit 1; fi
-  if [[ ! -f "em.tpr" ]]; then echo "em finished without saving a TPR file."; exit 1; fi
-
-  
+if [[ ! -f "em.gro" ]]; then                # skip if this stage already finished
+  if [[ ! -f "em.tpr" ]]; then              # build the tpr only once
+    ${GMX} grompp -f ${file_em_mdp} -c "../../${GRO}" -p "../../${TOP}" -o "em.tpr" -maxwarn 1 2>&1 | tee "outanderr.grompp"
+    ####${GMX} grompp -f ${file_em_mdp} -c "../0_SC/sc.gro" -p "../../${TOP}" -o "em.tpr" 2>&1 | tee "outanderr.grompp"	
+    if grep -q "Error" "outanderr.grompp"; then
+        echo "GROMACS reported an error — stopping script."
+        exit 1
+    fi
+  fi
   echo "######################### EM mdrun ##############################"
   ${GMX} mdrun -deffnm "em" ${MDRUN_OPTIONS} 2>&1 | tee "outanderr.mdrun"
-  if gmx_failed "em" "outanderr.mdrun"; then exit 1; fi
-  if [[ ! -f "em.gro" ]]; then echo "em finished without saving a GRO file. This may be an error, or the -maxh limit was reached."; exit 1; fi
-
-
-
+  if grep -q "Error" "outanderr.mdrun"; then
+      echo "GROMACS reported an error — stopping script."
+      exit 1
+  fi
+  if [[ ! -f "em.gro" ]]; then              
+      echo "em finished without savind a gro file. this can be an error, or the 23h limit in rome"
+      exit 0
+  fi
 fi
+
 echo "#############################################################"
-echo "######################### NVT grompp ########################"
+echo "######################### NVT grompp #########################"
 echo "#############################################################"
+
 cd ../2_NVT || exit
-if planned_steps_reached "nvt.tpr" "nvt.cpt"; then
-    echo "skipping nvt (steps reached)"
-else
-
-
-
-
-  ${GMX} grompp -f ${file_nvt_mdp} -c "../1_EM/em.gro" -r "../1_EM/em.gro" -p "../../${TOP}" -o "nvt.tpr" -maxwarn 1 2>&1 | tee "outanderr.grompp"
-  if gmx_failed "nvt" "outanderr.grompp"; then exit 1; fi
-  if [[ ! -f "nvt.tpr" ]]; then echo "nvt finished without saving a TPR file."; exit 1; fi
-
-  
+if [[ ! -f "nvt.gro" ]]; then                # skip if this stage already finished
+  if [[ ! -f "nvt.tpr" ]]; then              # build the tpr only once
+    ${GMX} grompp -f ${file_nvt_mdp} -c "../1_EM/em.gro" -r "../1_EM/em.gro" -p "../../${TOP}" -o "nvt.tpr" -maxwarn 1 2>&1 | tee "outanderr.grompp"
+    if grep -q "Error" "outanderr.grompp"; then
+        echo "GROMACS reported an error — stopping script."
+        exit 1
+    fi
+  fi
   echo "######################### NVT mdrun ##############################"
   ${GMX} mdrun -v -deffnm "nvt" ${MDRUN_OPTIONS} 2>&1 | tee "outanderr.mdrun"
-  if gmx_failed "nvt" "outanderr.mdrun"; then exit 1; fi
-  if [[ ! -f "nvt.gro" ]]; then echo "nvt finished without saving a GRO file. This may be an error, or the -maxh limit was reached."; exit 1; fi
-
-
-
+  if grep -q "Error" "outanderr.mdrun"; then
+      echo "GROMACS reported an error — stopping script."
+      exit 1
+  fi
+  if [[ ! -f "nvt.gro" ]]; then
+      echo "nvt finished without savind a gro file. this can be an error, or the 23h limit in rome"
+      exit 0
+  fi
 fi
+
+
 echo "##############################################################"
 echo "######################### NPT grompp #########################"
 echo "##############################################################"
+
 cd ../3_NPT || exit
-if planned_steps_reached "npt.tpr" "npt.cpt"; then
-    echo "skipping npt (steps reached)"
-else
-
-
-
-
-  ${GMX} grompp -f ${file_npt_mdp} -c "../2_NVT/nvt.gro" -r "../2_NVT/nvt.gro" -p "../../${TOP}" -o "npt.tpr" -maxwarn 1 2>&1 | tee "outanderr.grompp"
-  if gmx_failed "npt" "outanderr.grompp"; then exit 1; fi
-  if [[ ! -f "npt.tpr" ]]; then echo "npt finished without saving a TPR file."; exit 1; fi
-
-  
+if [[ ! -f "npt.gro" ]]; then                # skip if this stage already finished
+  if [[ ! -f "npt.tpr" ]]; then              # build the tpr only once
+    ${GMX} grompp -f ${file_npt_mdp} -c "../2_NVT/nvt.gro" -r "../2_NVT/nvt.gro" -p "../../${TOP}" -o "npt.tpr" -maxwarn 1 2>&1 | tee "outanderr.grompp"
+    if grep -q "Error" "outanderr.grompp"; then
+        echo "GROMACS reported an error — stopping script."
+        exit 1
+    fi
+  fi
   echo "######################### NPT mdrun ##############################"
   ${GMX} mdrun -v -deffnm "npt" ${MDRUN_OPTIONS} 2>&1 | tee "outanderr.mdrun"
-  if gmx_failed "npt" "outanderr.mdrun"; then exit 1; fi
-  if [[ ! -f "npt.gro" ]]; then echo "npt finished without saving a GRO file. This may be an error, or the -maxh limit was reached."; exit 1; fi
-  
-  
-  
+  if grep -q "Error" "outanderr.mdrun"; then
+      echo "GROMACS reported an error — stopping script."
+      exit 1
+  fi
+  if [[ ! -f "npt.gro" ]]; then
+      echo "npt finished without savind a gro file. this can be an error, or the 23h limit in rome"
+      exit 0
+  fi
 fi
+
+
+# !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+# !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+# !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+# if the intent of the script is realy just make REALISTIC, you could quit here
+# thats why I usually put time 1 ns. by doing this the next step is as short as possible
+
+# !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+# !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+# !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+
+
+
 echo "#############################################################"
-echo "#################### PRODUCTION grompp ######################"
+echo "#################### PRODUCTION grompp #######################"
 echo "#############################################################"
+
 cd ../4_PROD || exit
-if planned_steps_reached "prod.tpr" "prod.cpt"; then
-    echo "skipping prod (steps reached)"
-else
-
-
-
-
-  ${GMX} grompp -f ${file_prod_mdp} -c "../3_NPT/npt.gro" -p "../../${TOP}" -o "prod.tpr" -maxwarn 1 2>&1 | tee "outanderr.grompp"
-  if gmx_failed "prod" "outanderr.grompp"; then exit 1; fi
-  if [[ ! -f "prod.tpr" ]]; then echo "prod finished without saving a TPR file."; exit 1; fi
-
-  
-  echo "################### PRODUCTION mdrun ############################"
+if [[ ! -f "prod.gro" ]]; then               # skip if this stage already finished
+  if [[ ! -f "prod.tpr" ]]; then             # build the tpr only once
+    ${GMX} grompp -f ${file_prod_mdp} -c "../3_NPT/npt.gro" -p "../../${TOP}" -o "prod.tpr" -maxwarn 1 2>&1 | tee "outanderr.grompp"
+    if grep -q "Error" "outanderr.grompp"; then
+        echo "GROMACS reported an error — stopping script."
+        exit 1
+    fi
+  fi
+  echo "###################### PRODUCTION mdrun #################################"
   ${GMX} mdrun -v -deffnm "prod" ${MDRUN_OPTIONS} 2>&1 | tee "outanderr.mdrun"
-  if gmx_failed "prod" "outanderr.mdrun"; then exit 1; fi
-  if [[ ! -f "prod.gro" ]]; then echo "prod finished without saving a GRO file. This may be an error, or the -maxh limit was reached."; exit 1; fi
-
-
-
+  if grep -q "Error" "outanderr.mdrun"; then
+      echo "GROMACS reported an error — stopping script."
+      exit 1
+  fi
+  if [[ ! -f "prod.gro" ]]; then             # no final .gro => 23h wall hit mid-stage
+      echo "prod: wall reached, checkpoint saved. Ending; the queued follow-up will resume here."
+      exit 0
+  fi
 fi
-echo "#################### CENTER AND FIT ###############################"
-if planned_steps_reached "prod.tpr" "prod.cpt"; then # only post-process once PROD has truly finished
-    touch "done.txt"
 
 
 
-    printf '1\n0' | ${GMX} trjconv -s "prod.tpr" -f "prod.xtc" -o "prod.centered.xtc" -center -pbc mol 2>&1 | tee "outanderr.center"
-    if gmx_failed "center" "outanderr.center"; then exit 1; fi
+
+echo "############################## CENTER AND FIT ###################################"
+
+if [[ -f "prod.gro" ]]; then          # only post-process once PROD has truly finished
 
 
-    printf '1\n0' | ${GMX} trjconv -s "prod.tpr" -f "prod.centered.xtc" -o "prod.fitted.xtc" -fit progressive 2>&1 | tee "outanderr.fit"
-    if gmx_failed "fit" "outanderr.fit"; then exit 1; fi
-    
-    
-    
+
+    printf '1\n0' | ${GMX} trjconv -s "prod.tpr" -f "prod.xtc" -o "prod.centered.xtc" -center -pbc mol 2>&1 | tee "log.center"
+
+    if grep -q "Error" "log.center"; then
+        echo "GROMACS reported an error — stopping script."
+        exit 1
+    fi
+
+
+
+    printf '1\n0' | ${GMX} trjconv -s "prod.tpr" -f "prod.centered.xtc" -o "prod.fitted.xtc" -fit progressive 2>&1 | tee "log.fit"
+
+    if grep -q "Error" "log.fit"; then
+        echo "GROMACS reported an error — stopping script."
+        exit 1
+    fi
 fi
-echo "###################################################################"
 
 cd ../.. # get out of runREALISTIC
 
@@ -909,8 +895,6 @@ elif [[ $ARCHITECTURE == "pc" ]]; then
     
 
 fi
-
-
 
 
 
