@@ -20,6 +20,7 @@ setup(
         'seaborn',
         'MDAnalysis',
         'nglview',
+        'py3Dmol',
     ],
 
     include_package_data=True,  # this triggers MANIFEST.in handling

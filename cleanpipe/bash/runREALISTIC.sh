@@ -753,16 +753,16 @@ gmx_failed() {
 #    echo "Planned steps reached, skipping sc."
 #else
 #
-#${GMX} grompp -f ${file_sc_mdp} -c "../../${GRO}" -p "../../${TOP}" -o "sc.tpr" 2>&1 | tee "outanderr.grompp"
+#${GMX} grompp -f ${file_sc_mdp} -c "../../${GRO}" -p "../../${TOP}" -o "sc.tpr" -maxwarn 2 2>&1 | tee "outanderr.grompp"
 #if gmx_failed "sc" "outanderr.grompp"; then exit 1; fi
-#if [[ ! -f "sc.tpr" ]]; then echo "sc finished without saving a TPR file."; exit 1; fi
+#if [[ ! -f "sc.tpr" ]]; then echo "sc finished without saving a TPR file"; exit 1; fi
 #
 #
 #echo "########################## SC mdrun #############################"
 #
 #
 #${GMX} mdrun -v -deffnm "sc" ${MDRUN_OPTIONS} 2>&1 | tee "outanderr.mdrun"
-#if [[ ! -f "sc.gro" ]]; then echo "sc finished without saving a GRO file. This may be an error, or the -maxh limit was reached."; exit 1; fi
+#if [[ ! -f "sc.gro" ]]; then echo "sc finished without saving a GRO file"; exit 1; fi
 #
 #
 #
@@ -786,13 +786,13 @@ else
   ${GMX} grompp -f ${file_em_mdp} -c "../../${GRO}" -p "../../${TOP}" -o "em.tpr" -maxwarn 1 2>&1 | tee "outanderr.grompp" 
  #${GMX} grompp -f ${file_em_mdp} -c "../0_SC/sc.gro" -p "../../${TOP}" -o "em.tpr" 2>&1 | tee "outanderr.grompp"	
   if gmx_failed "em" "outanderr.grompp"; then exit 1; fi
-  if [[ ! -f "em.tpr" ]]; then echo "em finished without saving a TPR file."; exit 1; fi
+  if [[ ! -f "em.tpr" ]]; then echo "em finished without saving a TPR file"; exit 1; fi
 
   
   echo "######################### EM mdrun ##############################"
   ${GMX} mdrun -deffnm "em" ${MDRUN_OPTIONS} 2>&1 | tee "outanderr.mdrun"
   if gmx_failed "em" "outanderr.mdrun"; then exit 1; fi
-  if [[ ! -f "em.gro" ]]; then echo "em finished without saving a GRO file. This may be an error, or the -maxh limit was reached."; exit 1; fi
+  if [[ ! -f "em.gro" ]]; then echo "em finished without saving a GRO file"; exit 1; fi
 
 
 
@@ -810,13 +810,13 @@ else
 
   ${GMX} grompp -f ${file_nvt_mdp} -c "../1_EM/em.gro" -r "../1_EM/em.gro" -p "../../${TOP}" -o "nvt.tpr" -maxwarn 1 2>&1 | tee "outanderr.grompp"
   if gmx_failed "nvt" "outanderr.grompp"; then exit 1; fi
-  if [[ ! -f "nvt.tpr" ]]; then echo "nvt finished without saving a TPR file."; exit 1; fi
+  if [[ ! -f "nvt.tpr" ]]; then echo "nvt finished without saving a TPR file"; exit 1; fi
 
   
   echo "######################### NVT mdrun ##############################"
   ${GMX} mdrun -v -deffnm "nvt" ${MDRUN_OPTIONS} 2>&1 | tee "outanderr.mdrun"
   if gmx_failed "nvt" "outanderr.mdrun"; then exit 1; fi
-  if [[ ! -f "nvt.gro" ]]; then echo "nvt finished without saving a GRO file. This may be an error, or the -maxh limit was reached."; exit 1; fi
+  if [[ ! -f "nvt.gro" ]]; then echo "nvt finished without saving a GRO file"; exit 1; fi
 
 
 
@@ -834,13 +834,13 @@ else
 
   ${GMX} grompp -f ${file_npt_mdp} -c "../2_NVT/nvt.gro" -r "../2_NVT/nvt.gro" -p "../../${TOP}" -o "npt.tpr" -maxwarn 1 2>&1 | tee "outanderr.grompp"
   if gmx_failed "npt" "outanderr.grompp"; then exit 1; fi
-  if [[ ! -f "npt.tpr" ]]; then echo "npt finished without saving a TPR file."; exit 1; fi
+  if [[ ! -f "npt.tpr" ]]; then echo "npt finished without saving a TPR file"; exit 1; fi
 
   
   echo "######################### NPT mdrun ##############################"
   ${GMX} mdrun -v -deffnm "npt" ${MDRUN_OPTIONS} 2>&1 | tee "outanderr.mdrun"
   if gmx_failed "npt" "outanderr.mdrun"; then exit 1; fi
-  if [[ ! -f "npt.gro" ]]; then echo "npt finished without saving a GRO file. This may be an error, or the -maxh limit was reached."; exit 1; fi
+  if [[ ! -f "npt.gro" ]]; then echo "npt finished without saving a GRO file"; exit 1; fi
   
   
   
@@ -858,13 +858,13 @@ else
 
   ${GMX} grompp -f ${file_prod_mdp} -c "../3_NPT/npt.gro" -p "../../${TOP}" -o "prod.tpr" -maxwarn 1 2>&1 | tee "outanderr.grompp"
   if gmx_failed "prod" "outanderr.grompp"; then exit 1; fi
-  if [[ ! -f "prod.tpr" ]]; then echo "prod finished without saving a TPR file."; exit 1; fi
+  if [[ ! -f "prod.tpr" ]]; then echo "prod finished without saving a TPR file"; exit 1; fi
 
   
   echo "################### PRODUCTION mdrun ############################"
   ${GMX} mdrun -v -deffnm "prod" ${MDRUN_OPTIONS} 2>&1 | tee "outanderr.mdrun"
   if gmx_failed "prod" "outanderr.mdrun"; then exit 1; fi
-  if [[ ! -f "prod.gro" ]]; then echo "prod finished without saving a GRO file. This may be an error, or the -maxh limit was reached."; exit 1; fi
+  if [[ ! -f "prod.gro" ]]; then echo "prod finished without saving a GRO file"; exit 1; fi
 
 
 

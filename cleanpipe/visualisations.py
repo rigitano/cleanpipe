@@ -14,6 +14,7 @@ import MDAnalysis as mda
 import mdtraj as md
 from PIL import Image
 import time
+import py3Dmol
 
 import matplotlib.pyplot as plt
 from matplotlib.ticker import ScalarFormatter, LogLocator
@@ -37,36 +38,36 @@ from cleanpipe import bricksFileSystem
 
 
 
+
 import seaborn as sns
 
 
-def view_coord(s_coord):
+def view_coords(s_coord, width=800, height=600):
     """
-    
-    example:
-    cl.view_coord("pepticat.pdb")
+    Robust molecular viewer using py3Dmol — no Jupyter widget system,
+    so there is nothing to enable and nothing to break.
+    Example: cl.view_coord("pepticat.pdb")
     """
+    p = Path(s_coord)
+    if not p.exists():
+        raise FileNotFoundError(f"Coordinate file not found: {p.resolve()}")
 
+    fmt = p.suffix.lower().lstrip(".")                 # pdb, gro, mol2, sdf, xyz, cif...
+    v = py3Dmol.view(width=width, height=height)
+    v.addModel(p.read_text(), fmt)
 
-    view = nv.show_file(s_coord)
-    view.clear()
-    view.add_representation('ball+stick', selection='all')
+    v.setStyle({}, {"stick": {"radius": 0.12}})                 # everything: thin sticks
+    v.addStyle({}, {"cartoon": {"color": "red"}})               # cartoon only draws on protein
+    v.setStyle({"resn": ["SOL", "HOH", "WAT"]}, {"line": {}})   # water: faint lines
+    v.setStyle({"resn": ["OCT"]},
+               {"stick": {"color": "yellow", "radius": 0.1}})   # octanol: thin yellow
+    v.setStyle({"resn": ["CL", "CL-"]},
+               {"sphere": {"color": "yellow", "scale": 0.4}})   # chloride
+    v.setStyle({"resn": ["NA", "NA+"]},
+               {"sphere": {"color": "green", "scale": 0.4}})    # sodium
 
-    view.add_representation('cartoon', selection='protein', color='red')
-
-    view.add_representation('ball+stick', selection='not (SOL or OCT)') #new
-
-    #view.add_representation('ball+stick', selection='not protein', opacity=0.1)
-
-    view.add_representation('licorice', selection='SOL', color='blue', opacity=0.2)
-    view.add_representation('licorice', selection='OCT', color='yellow', opacity=0.2)
-
-    view.add_representation('ball+stick', selection='CL', color='yellow', aspectRatio=10)
-    view.add_representation('ball+stick', selection='NA', color='green', aspectRatio=10)
-
-
-
-    return view
+    v.zoomTo()
+    return v
 
 
 
