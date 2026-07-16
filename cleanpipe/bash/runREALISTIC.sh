@@ -734,7 +734,7 @@ echo "#############################################################"
 cd 1_EM || exit
 ####cd ../1_EM || exit
 
-cd 1_EM || exit
+
 if [[ ! -f "em.gro" ]]; then                # skip if this stage already finished
   if [[ ! -f "em.tpr" ]]; then              # build the tpr only once
     ${GMX} grompp -f ${file_em_mdp} -c "../../${GRO}" -p "../../${TOP}" -o "em.tpr" -maxwarn 1 2>&1 | tee "outanderr.grompp"
