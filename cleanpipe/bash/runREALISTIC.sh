@@ -13,6 +13,10 @@
 # 8-ntOMP
 # 9-ntMPI
 
+
+SC="no" # hardcoded option to use SC before em or not. to use it, set this to "yes".
+
+
 if [ $# -lt 9 ]; then
     echo "9 arguments needed : name filename.gro filename.top numberOfNanoseconds temperatureList forceFieldName architecture ntOMP ntMPI"
     exit 1
@@ -137,7 +141,9 @@ fi
 
 ######################## create folder structure ########################
 
-#mkdir -p runREALISTIC_${NAME}/0_SC
+if [[ $SC == "yes" ]]; then #SC will be used before EM, to the respective folder must be created
+ mkdir -p runREALISTIC_${NAME}/0_SC
+fi
 mkdir -p runREALISTIC_${NAME}/1_EM
 mkdir -p runREALISTIC_${NAME}/2_NVT
 mkdir -p runREALISTIC_${NAME}/3_NPT
@@ -163,68 +169,73 @@ options() {
 
 
 # Definition of the name of the mdp files of the current lambda
-#file_sc_mdp="sc.mdp"
+if [[ $SC == "yes" ]]; then #SC will be used before EM, to the respective mdp must be created
+ file_sc_mdp="sc.mdp"
+fi
 file_em_mdp="em.mdp"
 file_nvt_mdp="nvt.mdp"
 file_npt_mdp="npt.mdp"
 file_prod_mdp="prod.mdp"
 
-#echo "creating ${file_sc_mdp}"
-#cat <<EOT > "0_SC/${file_sc_mdp}"
-#
-#; the original  came from
-#; https://github.com/jacksoncrowley/TS2CG-Setup-Pipeline/blob/main/mdp/em1.mdp
-#; but the important part is of the free energy variables. mainly setting the forces as 1% and putting some sc potential. jackson has no strong feeling #about the rest of the parameters.
-##
+
+
+if [[ $SC == "yes" ]]; then #SC will be used before EM, to the respective mdp must be created
+  
+echo "creating ${file_sc_mdp}"
+cat <<EOT > "0_SC/${file_sc_mdp}"
+
+; the original  came from
+; https://github.com/jacksoncrowley/TS2CG-Setup-Pipeline/blob/main/mdp/em1.mdp
+; but the important part is of the free energy variables. mainly setting the forces as 1% and putting some sc potential. jackson has no strong feeling #about the rest of the parameters.
+
+
+define			 = -DFLEXIBLE
+
+integrator               = steep
+nsteps                   = 500
+nstxout                  = 0
+nstfout                  = 0
+nstlog                   = 100 
+
+; NEIGHBORSEARCHING PARAMETERS
+cutoff-scheme            = Verlet
+nstlist                  = 20
+pbc                      = xyz
+periodic-molecules       = no
+verlet-buffer-tolerance  = 0.005
+rlist                    = 1
+
+; OPTIONS FOR ELECTROSTATICS AND VDW
+coulombtype              = cut-off
+coulomb-modifier         = Potential-shift-Verlet
+rcoulomb-switch          = 0
+rcoulomb                 = 1.1
+epsilon_r                = 15
+epsilon_rf               = 0
+vdw_type                 = cutoff
+vdw-modifier             = Potential-shift-verlet
+rvdw-switch              = 0
+rvdw                     = 1.1
+
+; Free energy variables
+free-energy = yes                 ;I think this might be useless, after Veronica's explanation
+init-lambda              = 0.01   ;according to Veronica, this is kept during the entire EM
+sc-alpha                 = 4
+sc-power                 = 2
+sc-coul                  = yes
+nstdhdl                  = 0 
+couple-moltype           = system
+; we are changing both the vdw and the charge. In the initial state, both are on
+couple-lambda0           = vdw-q   ;this looks backward. Veronica discovered this is ignored. em is always at 0.01 without increasing nor decreasing
+; in the final state, both are off.
+couple-lambda1           = none    ;this looks backward. Veronica discovered this is ignored. em is always at 0.01 without increasing nor decreasing
+couple-intramol          = yes
 
 
 
-#define			 = -DFLEXIBLE
+EOT
 
-#integrator               = steep
-#nsteps                   = 500
-#nstxout                  = 0
-#nstfout                  = 0
-#nstlog                   = 100 
-
-#; NEIGHBORSEARCHING PARAMETERS
-#cutoff-scheme            = Verlet
-#nstlist                  = 20
-#pbc                      = xyz
-#periodic-molecules       = no
-#verlet-buffer-tolerance  = 0.005
-#rlist                    = 1
-
-#; OPTIONS FOR ELECTROSTATICS AND VDW
-#coulombtype              = cut-off
-#coulomb-modifier         = Potential-shift-Verlet
-#rcoulomb-switch          = 0
-#rcoulomb                 = 1.1
-#epsilon_r                = 15
-#epsilon_rf               = 0
-#vdw_type                 = cutoff
-#vdw-modifier             = Potential-shift-verlet
-#rvdw-switch              = 0
-#rvdw                     = 1.1
-
-#; Free energy variables
-#free-energy = yes                 ;I think this might be useless, after Veronica's explanation
-#init-lambda              = 0.01   ;according to Veronica, this is kept during the entire EM
-#sc-alpha                 = 4
-#sc-power                 = 2
-#sc-coul                  = yes
-#nstdhdl                  = 0 
-#couple-moltype           = system
-#; we are changing both the vdw and the charge. In the initial state, both are on
-#couple-lambda0           = vdw-q   ;this looks backward. Veronica discovered this is ignored. em is always at 0.01 without increasing nor decreasing
-#; in the final state, both are off.
-#couple-lambda1           = none    ;this looks backward. Veronica discovered this is ignored. em is always at 0.01 without increasing nor decreasing
-#couple-intramol          = yes
-
-
-
-#EOT
-
+fi #end of condition defining that SC will be used before EM
 
 
 
@@ -738,53 +749,60 @@ gmx_failed() {
     return 1
 }
 
+if [[ ${SC} == "yes" ]]; then  #use SC before EM
+   echo "#############################################################"
+   echo "######################### SC grompp #########################"
+   echo "#############################################################"
+   module unload gromacs
+   module load gromacs/2023 # this is an ugly fix because in newer versions the SC run will give an arror related to decupling and coulomb. But here that error, whatever it means, is irrelevant. Im just trying to get rid of superpositions.
+   
+   cd 0_SC || exit
+          
+   if [[ -s "sc.gro" ]]; then
+     echo "skipping sc (sc.gro already there)"
+   else
+   
+   ${GMX} grompp -f ${file_sc_mdp} -c "../../${GRO}" -p "../../${TOP}" -o "sc.tpr" -maxwarn 2 2>&1 | tee "outanderr.grompp"
+   if gmx_failed "sc" "outanderr.grompp"; then exit 1; fi
+   if [[ ! -f "sc.tpr" ]]; then echo "sc finished without saving a TPR file"; exit 1; fi
+   
+   
+   echo "########################## SC mdrun #############################"
+   
+   
+   ${GMX} mdrun -v -deffnm "sc" ${MDRUN_OPTIONS} 2>&1 | tee "outanderr.mdrun"
+   if [[ ! -f "sc.gro" ]]; then echo "sc finished without saving a GRO file"; exit 1; fi
+   
+   
+   
+   module unload gromacs
+   module load gromacs/2024.5
+   fi
 
-
-
-#echo "#############################################################"
-#echo "######################### SC grompp #########################"
-#echo "#############################################################"
-#module unload gromacs
-#module load gromacs/2023 # this is an ugly fix because in newer versions the SC run will give an arror related to decupling and coulomb. But here that error, whatever it means, is irrelevant. Im just trying to get rid of superpositions.
-#
-#cd 0_SC || exit
-#       
-#if planned_steps_reached "sc.tpr" "sc.cpt"; then
-#    echo "Planned steps reached, skipping sc."
-#else
-#
-#${GMX} grompp -f ${file_sc_mdp} -c "../../${GRO}" -p "../../${TOP}" -o "sc.tpr" -maxwarn 2 2>&1 | tee "outanderr.grompp"
-#if gmx_failed "sc" "outanderr.grompp"; then exit 1; fi
-#if [[ ! -f "sc.tpr" ]]; then echo "sc finished without saving a TPR file"; exit 1; fi
-#
-#
-#echo "########################## SC mdrun #############################"
-#
-#
-#${GMX} mdrun -v -deffnm "sc" ${MDRUN_OPTIONS} 2>&1 | tee "outanderr.mdrun"
-#if [[ ! -f "sc.gro" ]]; then echo "sc finished without saving a GRO file"; exit 1; fi
-#
-#
-#
-#module unload gromacs
-#module load gromacs/2024.5
-#fi
-
+fi #end of condition to use SC before EM
 
 echo "#############################################################"
 echo "######################### EM grompp #########################"
 echo "#############################################################"
-cd 1_EM || exit
-####cd ../1_EM || exit
+
+if [[ ${SC} == "yes" ]]; then #SC was used before EM
+    cd ../1_EM || exit #come from 0_SC
+else
+    cd 1_EM || exit    #begin at 1_EM
+fi
+
 if [[ -s "em.gro" ]]; then
     echo "skipping em (em.gro already there)"
 else
 
 
 
-
+if [[ ${SC} == "yes" ]]; then #SC was used before EM
+  ${GMX} grompp -f ${file_em_mdp} -c "../0_SC/sc.gro" -p "../../${TOP}" -o "em.tpr" 2>&1 | tee "outanderr.grompp"	
+else
   ${GMX} grompp -f ${file_em_mdp} -c "../../${GRO}" -p "../../${TOP}" -o "em.tpr" -maxwarn 1 2>&1 | tee "outanderr.grompp" 
- #${GMX} grompp -f ${file_em_mdp} -c "../0_SC/sc.gro" -p "../../${TOP}" -o "em.tpr" 2>&1 | tee "outanderr.grompp"	
+fi
+
   if gmx_failed "em" "outanderr.grompp"; then exit 1; fi
   if [[ ! -f "em.tpr" ]]; then echo "em finished without saving a TPR file"; exit 1; fi
 

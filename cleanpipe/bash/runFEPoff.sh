@@ -14,7 +14,7 @@
 # 4-nanoseconds of production
 # 5-temperatures (remeber that martini3 was parametrized at 310)
 # 6-forcefield to use in mdp construction (must be "charmm36" or "martini3")
-# 7-architecture (pc, slurm, rome, adastra)
+# 7-architecture (pc, slurm, rome, genoa) # rome is a tgcc partition, genoa is an adastra partiion
 # 8-molecule to be decoupled
 # 9-ntOMP     #igonred in rome, because -dd works great!
 # 10-ntMPI    #igonred in rome, because -dd works great!
@@ -699,7 +699,7 @@ EOT
 
 
 ########################################################################################################
-if [[ $ARCHITECTURE == "rome" ]]; then # insert the rome header, if the user chose this architecture
+if [[ $ARCHITECTURE == "rome" ]]; then # insert the tgcc-rome header, if the user chose this architecture
 
 
 cat <<EOT >>  "t${t}.l${i}.sh"
@@ -740,38 +740,9 @@ MDRUN_OPTIONS="-dd 3 3 3 -npme 13 -dlb yes" #this requires #MSUB -n 40 , but dom
 #MDRUN_OPTIONS="-nt 1" #doesbt work, because -nt, -ntomp, -ntmpi, cant be used in rome, you have to set OMP_NUM_THREADS and #MSUB -n instead
 #MDRUN_OPTIONS=""
 
-#########################################################################################################
-elif [[ $ARCHITECTURE == "slurm" ]]; then # insert the slurm header, if the user chose this architecture
-
-cat <<EOT >>  "t${t}.l${i}.sh"
-
-#SBATCH --partition=calcul
-#SBATCH --cpus-per-task=${NTOMP}
-#SBATCH --job-name=${NAME}.${t}.${i}.fep
-#SBATCH --output=t${t}.l${i}.scheduler.outanderr
-#SBATCH --gres=gpu:1
-#SBATCH --exclude=node-15
-
-module purge
-module load cuda/11.8
-module load gromacs/2024.5
-
-#alternative:
-#module purge
-#module load cuda/12.2
-#module load gromacs/2025.0
-
-EOT
-
-#GMX ENGINE
-GMX="gmx"
-
-#GMX MDRUN ADITIONAL OPTIONS. ATENTION: this must be coherent with #SBATCH --cpus-per-task
-MDRUN_OPTIONS="-ntomp ${NTOMP} -ntmpi ${NTMPI}" #this requires  #SBATCH --cpus-per-task=1
-
 
 #########################################################################################################
-elif [[ $ARCHITECTURE == "adastra" ]]; then # insert the adastra header, if the user chose this architecture
+elif [[ $ARCHITECTURE == "genoa" ]]; then # insert the adastra-genoa header, if the user chose this architecture
 
 cat <<EOT >>  "t${t}.l${i}.sh"
 
@@ -804,6 +775,39 @@ GMX="gmx_mpi"
 
 #GMX MDRUN ADITIONAL OPTIONS. ATENTION: this must be coherent with #SBATCH
 MDRUN_OPTIONS=""
+
+
+
+
+
+#########################################################################################################
+elif [[ $ARCHITECTURE == "slurm" ]]; then # insert the slurm header, if the user chose this architecture
+
+cat <<EOT >>  "t${t}.l${i}.sh"
+
+#SBATCH --partition=calcul
+#SBATCH --cpus-per-task=${NTOMP}
+#SBATCH --job-name=${NAME}.${t}.${i}.fep
+#SBATCH --output=t${t}.l${i}.scheduler.outanderr
+#SBATCH --gres=gpu:1
+#SBATCH --exclude=node-15
+
+module purge
+module load cuda/11.8
+module load gromacs/2024.5
+
+#alternative:
+#module purge
+#module load cuda/12.2
+#module load gromacs/2025.0
+
+EOT
+
+#GMX ENGINE
+GMX="gmx"
+
+#GMX MDRUN ADITIONAL OPTIONS. ATENTION: this must be coherent with #SBATCH --cpus-per-task
+MDRUN_OPTIONS="-ntomp ${NTOMP} -ntmpi ${NTMPI}" #this requires  #SBATCH --cpus-per-task=1
 
 
 
@@ -999,6 +1003,14 @@ if [[ $ARCHITECTURE == "slurm" ]]; then
 
     echo "job was sent (t: ${t} Lambda: ${i}) - id ${jid}"
 
+elif [[ $ARCHITECTURE == "genoa" ]]; then
+    jid=$(sbatch t${t}.l${i}.sh | awk '{print $4}')
+    #build list of ids sent, to use to set the dependency of the analysis script 
+    slurm_ids+=($jid)
+    DEPENDENCY_STRING=$(printf "afterok:%s:" "${slurm_ids[@]}")
+    DEPENDENCY_STRING=${DEPENDENCY_STRING%:}    # remove final colon
+
+    echo "job was sent (t: ${t} Lambda: ${i}) - id ${jid}"
 
 elif [[ $ARCHITECTURE == "rome" ]]; then
     jid=$(ccc_msub t${t}.l${i}.sh | grep -Eo '[0-9]+' | tail -n1)
@@ -1405,6 +1417,10 @@ if [[ $ARCHITECTURE == "slurm" ]]; then
 
 elif [[ $ARCHITECTURE == "rome" ]]; then
     ccc_msub ${NAME}.${t}.ConcatAndBar.sh
+    echo "analysis job was sent. it will wait until dependencies finish"
+
+elif [[ $ARCHITECTURE == "genoa" ]]; then
+    sbatch ${NAME}.${t}.ConcatAndBar.sh
     echo "analysis job was sent. it will wait until dependencies finish"
 
 
