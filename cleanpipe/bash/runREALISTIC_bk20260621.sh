@@ -13,9 +13,9 @@
 # 8-ntOMP
 # 9-ntMPI
 
-# hardcoded option to use Soft Core or Slow Groth before EM. You can set JUST ONE to "yes"
-SC="no" # Soft Core
-SG="no" # Slow Groth
+
+SC="no" # hardcoded option to use SC before em or not. to use it, set this to "yes".
+
 
 if [ $# -lt 9 ]; then
     echo "9 arguments needed : name filename.gro filename.top numberOfNanoseconds temperatureList forceFieldName architecture ntOMP ntMPI"
@@ -141,11 +141,8 @@ fi
 
 ######################## create folder structure ########################
 
-if [[ $SC == "yes" ]]; then # Soft Core option
- mkdir -p runREALISTIC_${NAME}/0_SC 
-fi
-if [[ $SG == "yes" ]]; then # Slow groth option
- mkdir -p runREALISTIC_${NAME}/0_SG
+if [[ $SC == "yes" ]]; then #SC will be used before EM, to the respective folder must be created
+ mkdir -p runREALISTIC_${NAME}/0_SC
 fi
 mkdir -p runREALISTIC_${NAME}/1_EM
 mkdir -p runREALISTIC_${NAME}/2_NVT
@@ -172,11 +169,8 @@ options() {
 
 
 # Definition of the name of the mdp files of the current lambda
-if [[ $SC == "yes" ]]; then # Soft Core option
+if [[ $SC == "yes" ]]; then #SC will be used before EM, to the respective mdp must be created
  file_sc_mdp="sc.mdp"
-fi
-if [[ $SC == "yes" ]]; then # Slow Groth option
- file_sg_mdp="sg.mdp"
 fi
 file_em_mdp="em.mdp"
 file_nvt_mdp="nvt.mdp"
@@ -185,176 +179,57 @@ file_prod_mdp="prod.mdp"
 
 
 
-if [[ $SC == "yes" ]]; then #Soft Core will be used before EM
+if [[ $SC == "yes" ]]; then #SC will be used before EM, to the respective mdp must be created
   
 echo "creating ${file_sc_mdp}"
 cat <<EOT > "0_SC/${file_sc_mdp}"
 
+; the original  came from
+; https://github.com/jacksoncrowley/TS2CG-Setup-Pipeline/blob/main/mdp/em1.mdp
+; but the important part is of the free energy variables. mainly setting the forces as 1% and putting some sc potential. jackson has no strong feeling #about the rest of the parameters.
 
 
-integrator              = steep
-emtol                   = 500 
-nsteps                  = 5000
+define			 = -DFLEXIBLE
 
-; box config
+integrator               = steep
+nsteps                   = 500
+nstxout                  = 0
+nstfout                  = 0
+nstlog                   = 100 
+
+; NEIGHBORSEARCHING PARAMETERS
+cutoff-scheme            = Verlet
+nstlist                  = 20
 pbc                      = xyz
+periodic-molecules       = no
+verlet-buffer-tolerance  = 0.005
+rlist                    = 1
 
-
-; neighborsearch algorith
-cutoff-scheme            = verlet
-nstlist                  = $(options charmm36=10 martini3=20)
-rlist                    = $(options charmm36=1.2 martini3=1.1) ;this has to match the rcoulomb and rvdw
-
-
-; non-bonded electrostatic forces
-rcoulomb                =     $(options charmm36=1.2 martini3=1.1)                ; ideal potential up to this radius
-coulombtype             =     $(options charmm36=PME martini3=reaction-field)     ; what to do after that radius
-;PME demands for 3 extra parameters
-pme_order               =     4                 
-fourierspacing          =     0.12              
-ewald_rtol              =     1e-05
-;dieletrical constant for short and long ranges
-epsilon_r               =     $(options charmm36=1 martini3=15) ;for martini3 polarizable water this should be 2.5
-epsilon_rf              =     0 ; zero means infinity
-
-; non-bonded Van Der Waals forces
-rvdw                    =     $(options charmm36=1.2 martini3=1.1)                ; ideal potential up to this radius
-vdw_type                =     cutoff             ; what to do after that radius
-;cutoff demands for 3 extra parameters to deal with the discontinuity
-vdw-modifier            =     $(options charmm36=force-switch martini3=potential-shift-verlet)
-rvdw-switch             =     1.0
-DispCorr                =     $(options charmm36=EnerPres martini3=no)
-
-
-; CONSTRAINTS
-constraints             = h-bonds
-constraint_algorithm    = LINCS
-
-; FREE ENERGY
-free-energy         = yes
-couple-moltype      = System  
-couple-lambda0      = vdw-q         
-couple-lambda1      = none    
-;init-lambda         = 0.10   ;original value in the first mdp that worked
-init-lambda         = 0.50        
-nstdhdl             = 0
-couple-intramol     = yes
-
-; SOFT CORE
-;sc-alpha            = 4  ;original value in the first mdp that worked
-;sc-power            = 2  ;original value in the first mdp that worked
-
-sc-alpha                 = $(options charmm36=0.5 martini3=1.3)
-sc-coul                  = yes          
-sc-power                 = 1
-sc-sigma                 = $(options charmm36=0.3 martini3=0.47)
-
-
-EOT
-
-fi #end of condition defining that SC will be used before EM
-
-
-
-if [[ $SG == "yes" ]]; then #SlowGroth will be used before EM
-  
-echo "creating ${file_sg_mdp}"
-cat <<EOT > "0_SC/${file_sg_mdp}"
-
-
-integrator              = sd
-dt                      = 0.002
-nsteps                  = 5000
-nstxtcout               = 5000
-nstvout                 = 5000
-nstfout                 = 5000
-nstcalcenergy           = 100
-nstenergy               = 1000
-nstlog                  = 1000
-;
-; neighborsearch algorith
-cutoff-scheme            = verlet
-nstlist                  = $(options charmm36=10 martini3=20)
-rlist                    = $(options charmm36=1.2 martini3=1.1) ;this has to match the rcoulomb and rvdw
-
-
-
-; non-bonded electrostatic forces
-rcoulomb                 =     $(options charmm36=1.2 martini3=1.1)                ; ideal potential up to this radius
-coulombtype              =     $(options charmm36=PME martini3=reaction-field)     ; what to do after that radius
-;PME demands for 3 extra parameters
-pme_order                =     4                 
-fourierspacing           =     0.12              
-ewald_rtol               =     1e-05
-;dieletrical constant for short and long ranges
-epsilon_r                =     $(options charmm36=1 martini3=15) ;for martini3 polarizable water this should be 2.5
-epsilon_rf               =     0 ; zero means infinity
-
-
-
-; non-bonded Van Der Waals forces
-rvdw                     =     $(options charmm36=1.2 martini3=1.1)                ; ideal potential up to this radius
-vdw_type                 =     cutoff             ; what to do after that radius
-;cutoff demands for 3 extra parameters to deal with the discontinuity
-vdw-modifier             =     $(options charmm36=force-switch martini3=potential-shift-verlet)
-rvdw-switch              =     1.0
-DispCorr                 =     $(options charmm36=EnerPres martini3=no)
-
-
-; Naive velocities
-continuation             = no 
-gen_vel                  = yes
-gen_temp                 = ${t}
-gen_seed                 = -1
-
-; Temperature
-Tcoupl                   = V-rescale
-tc_grps                  = system
-ref_t                    = ${t} ;K
-tau_t                    = 1
-
-; Pressure
-Pcoupl                   = C-rescale
-ref_p                    = 1.0 ;bar
-tau_p                    = $(options charmm36=5      martini3=12)
-compressibility          = $(options charmm36=4.5e-5 martini3=3e-4)
-refcoord_scaling         = com
-nstcomm                  = 100
-comm_mode                = linear
-comm_grps                = 
-
-; making bonds stiff       (to avoid the need of calculating fast vibrations. something that would require dividing ts by 4!)
-constraints              = $(options charmm36=h-bonds martini3=none)
-constraint-algorithm     = lincs
-lincs-order              = 4
-
+; OPTIONS FOR ELECTROSTATICS AND VDW
+coulombtype              = cut-off
+coulomb-modifier         = Potential-shift-Verlet
+rcoulomb-switch          = 0
+rcoulomb                 = 1.1
+epsilon_r                = 15
+epsilon_rf               = 0
+vdw_type                 = cutoff
+vdw-modifier             = Potential-shift-verlet
+rvdw-switch              = 0
+rvdw                     = 1.1
 
 ; Free energy variables
-free-energy              = yes
-couple-moltype           = System ; original OOOTG
-couple-lambda0           = none
-couple-lambda1           = vdw-q
+free-energy = yes                 ;I think this might be useless, after Veronica's explanation
+init-lambda              = 0.01   ;according to Veronica, this is kept during the entire EM
+sc-alpha                 = 4
+sc-power                 = 2
+sc-coul                  = yes
+nstdhdl                  = 0 
+couple-moltype           = system
+; we are changing both the vdw and the charge. In the initial state, both are on
+couple-lambda0           = vdw-q   ;this looks backward. Veronica discovered this is ignored. em is always at 0.01 without increasing nor decreasing
+; in the final state, both are off.
+couple-lambda1           = none    ;this looks backward. Veronica discovered this is ignored. em is always at 0.01 without increasing nor decreasing
 couple-intramol          = yes
-init-lambda              = 0
-delta-lambda             = 0.0002
-nstdhdl                  = 60
-fep-lambdas              = 
-mass-lambdas             = 
-bonded-lambdas           = 
-restraint-lambdas        = 
-temperature-lambdas      = 
-calc-lambda-neighbors    = 1
-init-lambda-weights      = 
-dhdl-print-energy        = no
-sc-alpha                 = $(options charmm36=0.5 martini3=1.3)
-sc-power                 = 1
-sc-r-power               = 6     ; this value came from a martini example, should this be different for charmm36?
-sc-sigma                 = $(options charmm36=0.3 martini3=0.47)
-sc-coul                  = no
-separate-dhdl-file       = yes
-dhdl-derivatives         = yes
-dh_hist_size             = 0    ; this value came from a martini example, should this be different for charmm36?
-dh_hist_spacing          = 0.1  ; this value came from a martini example, should this be different for charmm36?
 
 
 
@@ -906,45 +781,12 @@ if [[ ${SC} == "yes" ]]; then  #use SC before EM
 
 fi #end of condition to use SC before EM
 
-
-
-if [[ ${SG} == "yes" ]]; then  #use SG before EM
-   echo "#############################################################"
-   echo "######################### SG grompp #########################"
-   echo "#############################################################"
-
-   
-   cd 0_SG || exit
-          
-   if [[ -s "sg.gro" ]]; then
-     echo "skipping sg (sg.gro already there)"
-   else
-   
-   ${GMX} grompp -f ${file_sg_mdp} -c "../../${GRO}" -p "../../${TOP}" -o "sg.tpr" -maxwarn 2 2>&1 | tee "outanderr.grompp"
-   if gmx_failed "sg" "outanderr.grompp"; then exit 1; fi
-   if [[ ! -f "sg.tpr" ]]; then echo "sg finished without saving a TPR file"; exit 1; fi
-   
-   
-   echo "########################## SG mdrun #############################"
-   
-   
-   ${GMX} mdrun -v -deffnm "sg" ${MDRUN_OPTIONS} 2>&1 | tee "outanderr.mdrun"
-   if [[ ! -f "sg.gro" ]]; then echo "sg finished without saving a GRO file"; exit 1; fi
-   
-   
-
-   fi
-
-fi #end of condition to use SG before EM
-
 echo "#############################################################"
 echo "######################### EM grompp #########################"
 echo "#############################################################"
 
 if [[ ${SC} == "yes" ]]; then #SC was used before EM
     cd ../1_EM || exit #come from 0_SC
-elif [[ ${SG} == "yes" ]]; then #SG was used before EM
-    cd ../1_EM || exit #come from 0_SG
 else
     cd 1_EM || exit    #begin at 1_EM
 fi
@@ -956,9 +798,7 @@ else
 
 
 if [[ ${SC} == "yes" ]]; then #SC was used before EM
-  ${GMX} grompp -f ${file_em_mdp} -c "../0_SC/sc.gro" -p "../../${TOP}" -o "em.tpr" 2>&1 | tee "outanderr.grompp"
-elif [[ ${SG} == "yes" ]]; then #SG was used before EM
-  ${GMX} grompp -f ${file_em_mdp} -c "../0_SG/sg.gro" -p "../../${TOP}" -o "em.tpr" 2>&1 | tee "outanderr.grompp"
+  ${GMX} grompp -f ${file_em_mdp} -c "../0_SC/sc.gro" -p "../../${TOP}" -o "em.tpr" 2>&1 | tee "outanderr.grompp"	
 else
   ${GMX} grompp -f ${file_em_mdp} -c "../../${GRO}" -p "../../${TOP}" -o "em.tpr" -maxwarn 1 2>&1 | tee "outanderr.grompp" 
 fi

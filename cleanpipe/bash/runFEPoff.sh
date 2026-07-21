@@ -96,10 +96,10 @@ echo " "
 ARCHITECTURE=$7
 echo "Architecture: ${ARCHITECTURE}"
 echo " "
-if [[ $ARCHITECTURE == "pc" || $ARCHITECTURE == "slurm" || $ARCHITECTURE == "rome" ]]; then
-    echo "    Architecture is valid"
+if [[ $ARCHITECTURE == "pc" || $ARCHITECTURE == "slurm" || $ARCHITECTURE == "rome" || $ARCHITECTURE == "genoa" || $ARCHITECTURE == "MI300" ]]; then
+    echo "Architecture is valid"
 else
-    echo "Error: architecture must be 'pc' or 'slurm' or 'rome' !"
+    echo "Error: architecture must be 'pc' 'slurm' 'rome' 'genoa' 'MI300' "
     exit 1
 fi
 echo " "

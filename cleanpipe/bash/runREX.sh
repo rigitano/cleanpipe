@@ -1,18 +1,18 @@
 #!/bin/bash
 
-# usage example:  ./runRE.sh bulk bulk_at_310.gro bulk.top 1 313 333 charmm36 rome 7 18
-#                 ./runRE.sh bulk bulk_at_310.gro bulk.top 1 313 333 charmm36 genoa 8 18
-#                 ./runRE.sh bulk bulk_at_310.gro bulk.top 1 313 333 charmm36 MI250 8 18
+# usage example:  ./runREX.sh bulk bulk_at_310.gro bulk.top 1 313 333 charmm36 rome 7 18
+#                 ./runREX.sh bulk bulk_at_310.gro bulk.top 1 313 333 charmm36 genoa 8 18
+#                 ./runREX.sh bulk bulk_at_310.gro bulk.top 1 313 333 charmm36 MI300 8 18
 
 # ARGUMENTS:
-# 1-name that goes on the runRE_<...> 
+# 1-name that goes on the runREX_<...> 
 # 2-gro
 # 3-top
 # 4-nanoseconds of production
 # 5-temperature min
 # 6 temperature max
 # 7-forcefield to be used in mdp construction (must be "charmm36" or "martini3")
-# 8-architecture (pc, slurm, rome, genoa, MI250) # rome at tgcc. genoa and MI250 at adastra
+# 8-architecture (pc, slurm, rome, genoa, MI300) # rome at tgcc. genoa and MI300 at adastra
 # 9-ntOMP
 #10-ntMPI
 
@@ -94,10 +94,10 @@ echo " "
 ARCHITECTURE=$8
 echo "Architecture:${ARCHITECTURE}"
 
-if [[ $ARCHITECTURE == "pc" || $ARCHITECTURE == "slurm" || $ARCHITECTURE == "rome" ]]; then
+if [[ $ARCHITECTURE == "pc" || $ARCHITECTURE == "slurm" || $ARCHITECTURE == "rome" || $ARCHITECTURE == "genoa" || $ARCHITECTURE == "MI300" ]]; then
     echo "Architecture is valid"
 else
-    echo "Error: architecture must be 'pc' or 'slurm' or 'rome' "
+    echo "Error: architecture must be 'pc' 'slurm' 'rome' 'genoa' 'MI300' "
     exit 1
 fi
 echo " "
@@ -155,7 +155,7 @@ fi
 
 ######################## create folder structure ########################
 
-REPLICA_ROOT="runRE_${NAME}"
+REPLICA_ROOT="runREX_${NAME}"
 
 awk -v min="$T_MIN" -v max="$T_MAX" '
     BEGIN {
@@ -344,7 +344,7 @@ echo "all mdp files created"
 GRO_ABS=$(realpath -- "$GRO")                    # Preserve the coordinate-file location before changing directory.
 TOP_ABS=$(realpath -- "$TOP")                    # Preserve the topology-file location before changing directory.
 REPLICA_ROOT_ABS=$(realpath -- "$REPLICA_ROOT")  # Obtain the absolute replica-exchange directory.
-cd -- "$REPLICA_ROOT_ABS" || exit 1              # Enter the replica-exchange directory. e.g. runRE_${NAME}
+cd -- "$REPLICA_ROOT_ABS" || exit 1              # Enter the replica-exchange directory. e.g. runREX_${NAME}
 
 
 
@@ -368,7 +368,7 @@ if [[ $ARCHITECTURE == "rome" ]]; then # insert the rome header, if the user cho
 
 cat <<EOT >> "script.${NAME}.sh"
 
-#MSUB   -r ${NAME}.realistic       # Job name
+#MSUB   -r ${NAME}.repl       # Job name
 #MSUB   -n ${NTMPI}                # Number of tasks in parallel mode
 #MSUB   -c ${NTOMP}                       # Number of cores per parallel task
 #MSUB   -W yes                     # Let multiple jobs sharing same name & user run simultaneously
@@ -425,14 +425,14 @@ elif [[ $ARCHITECTURE == "genoa" ]]; then # insert the adastra-genoa header, if 
 cat <<EOT >>  "script.${NAME}.sh"
 
 #SBATCH --account=c1613458
-#SBATCH -J ${NAME}.${t}.${i}.fep
+#SBATCH -J ${NAME}.repl
 #SBATCH --constraint=GENOA         # GENOA(192)(CPU) or MI250(64)(GPU)
 ##SBATCH --nodes=
 #SBATCH --ntasks-per-node=${NTMPI} 
 #SBATCH --cpus-per-task=${NTOMP}
 ##SBATCH --exclusive
-#SBATCH -o t${t}.l${i}.scheduler.out
-#SBATCH -e t${t}.l${i}.scheduler.err 
+#SBATCH -o ${NAME}.repl.scheduler.out
+#SBATCH -e ${NAME}.repl.scheduler.err 
 
 
 module purge
@@ -472,11 +472,39 @@ MDRUN_OPTIONS="-ntomp ${NTOMP} -pin off -maxh 23 -cpi"
 
 
 #########################################################################################################
-elif [[ $ARCHITECTURE == "MI250" ]]; then # insert the MI250-genoa header, if the user chose this architecture
+elif [[ $ARCHITECTURE == "MI300" ]]; then # insert the MI300-genoa header, if the user chose this architecture
 
 cat <<EOT >>  "script.${NAME}.sh"
 
-xxxxxxx
+#SBATCH --account=c1613458 #cad17773
+#SBATCH --job-name=${NAME}.repl
+#SBATCH --constraint=MI300
+#SBATCH --ntasks-per-node=${NTMPI} 
+#SBATCH --cpus-per-task=${NTOMP}
+#SBATCH --nodes=1
+#SBATCH --exclusive
+#SBATCH -o ${NAME}.repl.scheduler.out
+#SBATCH -e ${NAME}.repl.scheduler.err 
+
+
+
+
+module purge
+
+module load develop
+module use /lus/work/CT7/cad17773/SHARED/Configuration.spack-user-develop/modules/tcl/linux-rhel9-x86_64
+module use /lus/work/CT7/cad17773/SHARED/Configuration.spack-user-develop/modules/tcl/linux-rhel9-zen3
+module use /lus/work/CT7/cad17773/SHARED/Configuration.spack-user-develop/modules/tcl/linux-rhel9-zen4
+module load cce/20.0.0/zen4/gromacs/2026.1-aux5
+module list
+
+
+export OMP_PROC_BIND=CLOSE
+export OMP_PLACES=THREADS
+export OMP_NUM_THREADS=${NTOMP}      # number of OpenMP threads (ntomp)
+export GMX_ENABLE_DIRECT_GPU_COMM=1
+export GMX_FORCE_GPU_AWARE_MPI=1
+export MPICH_GPU_SUPPORT_ENABLED=1
 
 # ---- 24h-wall self-chaining : queue the follow-up job now ----
 # If production is already finished, stop the chain (done.txt is made in post-processing).
@@ -702,6 +730,9 @@ elif [[ $ARCHITECTURE == "rome" ]]; then
     ccc_msub script.${NAME}.sh && echo "job was sent"
 
 elif [[ $ARCHITECTURE == "genoa" ]]; then
+    sbatch script.${NAME}.sh && echo "job was sent"
+
+elif [[ $ARCHITECTURE == "MI300" ]]; then
     sbatch script.${NAME}.sh && echo "job was sent"
 
 elif [[ $ARCHITECTURE == "pc" ]]; then
