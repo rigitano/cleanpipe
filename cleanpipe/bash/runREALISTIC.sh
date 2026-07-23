@@ -175,7 +175,7 @@ options() {
 if [[ $SC == "yes" ]]; then # Soft Core option
  file_sc_mdp="sc.mdp"
 fi
-if [[ $SC == "yes" ]]; then # Slow Groth option
+if [[ $SG == "yes" ]]; then # Slow Groth option
  file_sg_mdp="sg.mdp"
 fi
 file_em_mdp="em.mdp"
@@ -235,19 +235,15 @@ free-energy         = yes
 couple-moltype      = System  
 couple-lambda0      = vdw-q         
 couple-lambda1      = none    
-;init-lambda         = 0.10   ;original value in the first mdp that worked
-init-lambda         = 0.50        
+init-lambda         = 0.10   ;theoretical 0.50 dont work     
 nstdhdl             = 0
 couple-intramol     = yes
 
 ; SOFT CORE
-;sc-alpha            = 4  ;original value in the first mdp that worked
-;sc-power            = 2  ;original value in the first mdp that worked
-
-sc-alpha                 = $(options charmm36=0.5 martini3=1.3)
-sc-coul                  = yes          
-sc-power                 = 1
-sc-sigma                 = $(options charmm36=0.3 martini3=0.47)
+sc-alpha            = 4  ;standard that dont work: $(options charmm36=0.5 martini3=1.3)
+sc-power            = 2  ;standard that dont work: 1
+sc-coul             = yes          
+sc-sigma            = $(options charmm36=0.3 martini3=0.47)
 
 
 EOT
@@ -259,7 +255,7 @@ fi #end of condition defining that SC will be used before EM
 if [[ $SG == "yes" ]]; then #SlowGroth will be used before EM
   
 echo "creating ${file_sg_mdp}"
-cat <<EOT > "0_SC/${file_sg_mdp}"
+cat <<EOT > "0_SG/${file_sg_mdp}"
 
 
 integrator              = sd
@@ -346,9 +342,9 @@ temperature-lambdas      =
 calc-lambda-neighbors    = 1
 init-lambda-weights      = 
 dhdl-print-energy        = no
-sc-alpha                 = $(options charmm36=0.5 martini3=1.3)
-sc-power                 = 1
-sc-r-power               = 6     ; this value came from a martini example, should this be different for charmm36?
+sc-alpha                 = 4 ; $(options charmm36=0.5 martini3=1.3)
+sc-power                 = 2 ; 1
+;sc-r-power               = 6     ; this value came from a martini example, should this be different for charmm36?
 sc-sigma                 = $(options charmm36=0.3 martini3=0.47)
 sc-coul                  = no
 separate-dhdl-file       = yes
@@ -360,7 +356,7 @@ dh_hist_spacing          = 0.1  ; this value came from a martini example, should
 
 EOT
 
-fi #end of condition defining that SC will be used before EM
+fi #end of condition defining that SG will be used before EM
 
 
 
