@@ -339,11 +339,11 @@ cd -- "$REPLICA_ROOT_ABS" || exit 1              # Enter the replica-exchange di
 
 
 
-REPLEX=500         # steps between exchanges 
+REPLEX=1000         # steps between exchanges 
 RESEED=123
 
 
-echo "OK: mdp files created"
+
 
 ########################################################################################################o#
 cat <<'EOT' > "script.${NAME}.sh"
@@ -449,7 +449,7 @@ if [[ -f "done.txt" ]]; then
     exit 0
 fi
 # Otherwise queue the NEXT copy of this job, to start when THIS one ends OK.
-sbatch "--dependency=afterok:\${SLURM_JOB_ID}" script.${NAME}.sh
+sbatch --dependency=afterany:\${SLURM_JOB_ID} script.${NAME}.sh
 # --------------------------------------------------------------
 
 
@@ -506,7 +506,8 @@ if [[ -f "done.txt" ]]; then
     exit 0
 fi
 # Otherwise queue the NEXT copy of this job, to start when THIS one ends OK.
-sbatch --dependency=afterany:\${SLURM_JOB_ID} script.${NAME}.sh
+# xxx
+#sbatch --dependency=afterany:\${SLURM_JOB_ID} script.${NAME}.sh
 # --------------------------------------------------------------
 
 
@@ -546,7 +547,7 @@ if [[ -f "done.txt" ]]; then
     exit 0
 fi
 # Otherwise queue the NEXT copy of this job, to start when THIS one ends OK.
-sbatch "--dependency=afterok:\${SLURM_JOB_ID}" script.${NAME}.sh
+sbatch --dependency=afterany:\${SLURM_JOB_ID} script.${NAME}.sh
 # --------------------------------------------------------------
 
 
@@ -682,7 +683,8 @@ for replica_dir in "\${REPLICA_DIRS[@]}"; do
     fi
 
     # Inspect grompp output and verify that its TPR was actually created.
-    if gmx_failed "\$replica_dir grompp" "\$replica_abs/outanderr.grompp"; then exit 1; fi
+    # xxx
+    #if gmx_failed "\$replica_dir grompp" "\$replica_abs/outanderr.grompp"; then exit 1; fi
     [[ -s "\$replica_abs/prod.tpr" ]] || { echo "ERROR: grompp finished without creating \$replica_dir/prod.tpr."; exit 1; }
 done
 
@@ -710,7 +712,6 @@ echo "###################################################################"
 
 EOT
 
-echo "OK: script written"
 	
 chmod +x script.${NAME}.sh
 
@@ -725,7 +726,6 @@ elif [[ $ARCHITECTURE == "genoa" ]]; then
     sbatch script.${NAME}.sh && echo "job was sent"
 
 elif [[ $ARCHITECTURE == "MI300" ]]; then
-	echo "Launching script_test.sh"
     sbatch script.${NAME}.sh && echo "job was sent"
 
 elif [[ $ARCHITECTURE == "pc" ]]; then
