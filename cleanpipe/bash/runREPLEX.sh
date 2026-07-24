@@ -1,11 +1,11 @@
 #!/bin/bash
 
-# usage example:  ./runREX.sh bulk bulk_at_310.gro bulk.top 1 313 333 charmm36 rome 7 18
-#                 ./runREX.sh bulk bulk_at_310.gro bulk.top 1 313 333 charmm36 genoa 8 18
-#                 ./runREX.sh bulk bulk_at_310.gro bulk.top 1 313 333 charmm36 MI300 8 18
+# usage example:  ./runREPLEX.sh bulk bulk_at_310.gro bulk.top 1 313 333 charmm36 rome 7 18
+#                 ./runREPLEX.sh bulk bulk_at_310.gro bulk.top 1 313 333 charmm36 genoa 8 18
+#                 ./runREPLEX.sh bulk bulk_at_310.gro bulk.top 1 313 333 charmm36 MI300 8 18
 
 # ARGUMENTS:
-# 1-name that goes on the runREX_<...> 
+# 1-name that goes on the runREPLEX_<...> 
 # 2-gro
 # 3-top
 # 4-nanoseconds of production
@@ -155,7 +155,7 @@ fi
 
 ######################## create folder structure ########################
 
-REPLICA_ROOT="runREX_${NAME}"
+REPLICA_ROOT="runREPLEX_${NAME}"
 
 awk -v min="$T_MIN" -v max="$T_MAX" '
     BEGIN {
@@ -171,20 +171,11 @@ mapfile -t REMD_DATA < <(
         function ceiling(x) {
             return (x == int(x)) ? int(x) : int(x) + 1
         }
-
         BEGIN {
             epsilon = 1 / sqrt(n)
-
-            n_replicas = ceiling(
-                log(tmax / tmin) / log(1 + epsilon)
-            ) + 1
-
-            ratio = exp(
-                log(tmax / tmin) / (n_replicas - 1)
-            )
-
+            n_replicas = ceiling(log(tmax / tmin) / log(1 + epsilon)) + 1
+            ratio = exp(log(tmax / tmin) / (n_replicas - 1))
             printf "%.10g %d %.10g\n", epsilon, n_replicas, ratio
-
             for (i = 0; i < n_replicas; i++)
                 printf "%.3f\n", tmin * ratio^i
         }
@@ -344,7 +335,7 @@ echo "all mdp files created"
 GRO_ABS=$(realpath -- "$GRO")                    # Preserve the coordinate-file location before changing directory.
 TOP_ABS=$(realpath -- "$TOP")                    # Preserve the topology-file location before changing directory.
 REPLICA_ROOT_ABS=$(realpath -- "$REPLICA_ROOT")  # Obtain the absolute replica-exchange directory.
-cd -- "$REPLICA_ROOT_ABS" || exit 1              # Enter the replica-exchange directory. e.g. runREX_${NAME}
+cd -- "$REPLICA_ROOT_ABS" || exit 1              # Enter the replica-exchange directory. e.g. runREPLEX_${NAME}
 
 
 
