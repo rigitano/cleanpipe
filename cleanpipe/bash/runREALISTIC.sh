@@ -9,7 +9,7 @@
 # 4-nanoseconds of production
 # 5-temperature (remeber that martini3 was parametrized at 310)
 # 6-forcefield to be used in mdp construction (must be "charmm36" or "martini3")
-# 7-architecture (pc, slurm, rome)
+# 7-architecture (pc, oxygen, rome)
 # 8-ntOMP
 # 9-ntMPI
 
@@ -80,10 +80,10 @@ echo " "
 ARCHITECTURE=$7
 echo "Architecture:${ARCHITECTURE}"
 
-if [[ $ARCHITECTURE == "pc" || $ARCHITECTURE == "slurm" || $ARCHITECTURE == "rome" ]]; then
+if [[ $ARCHITECTURE == "pc" || $ARCHITECTURE == "oxygen" || $ARCHITECTURE == "rome" ]]; then
     echo "Architecture is valid"
 else
-    echo "Error: architecture must be 'pc' or 'slurm' or 'rome' "
+    echo "Error: architecture must be 'pc' or 'oxygen' or 'rome' "
     exit 1
 fi
 echo " "
@@ -755,7 +755,7 @@ if [[ -f "4_PROD/done.txt" ]]; then
     exit 0
 fi
 # Otherwise queue the NEXT copy of this job, to start when THIS one ends OK.
-ccc_msub -E "--dependency=afterok:\${BRIDGE_MSUB_JOBID}" script.${NAME}.sh
+ccc_msub -E "--dependency=afterany:\${BRIDGE_MSUB_JOBID}" script.${NAME}.sh
 # --------------------------------------------------------------
 
 
@@ -770,7 +770,7 @@ MDRUN_OPTIONS="-maxh 23 -cpi"   # stop cleanly at ~23h, auto-continue from check
 
 
 ##########################################################################################################
-elif [[ $ARCHITECTURE == "slurm" ]]; then # insert the slurm header, if the user chose this architecture
+elif [[ $ARCHITECTURE == "oxygen" ]]; then # insert the slurm header, if the user chose this architecture
 
 cat <<EOT >> "script.${NAME}.sh"
 
@@ -795,7 +795,7 @@ if [[ -f "4_PROD/done.txt" ]]; then
     exit 0
 fi
 # Otherwise queue the NEXT copy of this job, to start when THIS one ends OK.
-sbatch "--dependency=afterok:\${SLURM_JOB_ID}" script.${NAME}.sh
+sbatch --dependency=afterany:\${SLURM_JOB_ID} script.${NAME}.sh
 # --------------------------------------------------------------
 
 
@@ -1072,7 +1072,7 @@ EOT
 chmod +x script.${NAME}.sh
 
 
-if [[ $ARCHITECTURE == "slurm" ]]; then
+if [[ $ARCHITECTURE == "oxygen" ]]; then
     sbatch script.${NAME}.sh && echo "job was sent"
 
 elif [[ $ARCHITECTURE == "rome" ]]; then

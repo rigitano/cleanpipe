@@ -14,7 +14,7 @@
 # 4-nanoseconds of production
 # 5-temperatures (remeber that martini3 was parametrized at 310)
 # 6-forcefield to use in mdp construction (must be "charmm36" or "martini3")
-# 7-architecture (pc, slurm, rome, genoa) # rome is a tgcc partition, genoa is an adastra partiion
+# 7-architecture (pc, oxygen, rome, genoa) # rome is a tgcc partition, genoa is an adastra partiion
 # 8-molecule to be decoupled
 # 9-ntOMP     #igonred in rome, because -dd works great!
 # 10-ntMPI    #igonred in rome, because -dd works great!
@@ -96,10 +96,10 @@ echo " "
 ARCHITECTURE=$7
 echo "Architecture: ${ARCHITECTURE}"
 echo " "
-if [[ $ARCHITECTURE == "pc" || $ARCHITECTURE == "slurm" || $ARCHITECTURE == "rome" || $ARCHITECTURE == "genoa" || $ARCHITECTURE == "MI300" ]]; then
+if [[ $ARCHITECTURE == "pc" || $ARCHITECTURE == "oxygen" || $ARCHITECTURE == "rome" || $ARCHITECTURE == "genoa" || $ARCHITECTURE == "MI300" ]]; then
     echo "Architecture is valid"
 else
-    echo "Error: architecture must be 'pc' 'slurm' 'rome' 'genoa' 'MI300' "
+    echo "Error: architecture must be 'pc' 'oxygen' 'rome' 'genoa' 'MI300' "
     exit 1
 fi
 echo " "
@@ -781,7 +781,7 @@ MDRUN_OPTIONS=""
 
 
 #########################################################################################################
-elif [[ $ARCHITECTURE == "slurm" ]]; then # insert the slurm header, if the user chose this architecture
+elif [[ $ARCHITECTURE == "oxygen" ]]; then # insert the slurm header, if the user chose this architecture
 
 cat <<EOT >>  "t${t}.l${i}.sh"
 
@@ -994,21 +994,21 @@ EOT
 chmod +x t${t}.l${i}.sh
 
 
-if [[ $ARCHITECTURE == "slurm" ]]; then
-    jid=$(sbatch t${t}.l${i}.sh | awk '{print $4}')
+if [[ $ARCHITECTURE == "oxygen" ]]; then
+    jid=$(sbatch --parsable "t${t}.l${i}.sh" | awk '{print $4}')
+    jid=${jid%%;*}          # federated clusters return jobid;cluster
     #build list of ids sent, to use to set the dependency of the analysis script 
     slurm_ids+=($jid)
-    DEPENDENCY_STRING=$(printf "afterok:%s:" "${slurm_ids[@]}")
-    DEPENDENCY_STRING=${DEPENDENCY_STRING%:}    # remove final colon
+    DEPENDENCY_STRING="afterok:$(IFS=:; echo "${slurm_ids[*]}")"
 
     echo "job was sent (t: ${t} Lambda: ${i}) - id ${jid}"
 
 elif [[ $ARCHITECTURE == "genoa" ]]; then
-    jid=$(sbatch t${t}.l${i}.sh | awk '{print $4}')
+    jid=$(sbatch --parsable "t${t}.l${i}.sh" | awk '{print $4}')
+    jid=${jid%%;*}          # federated clusters return jobid;cluster
     #build list of ids sent, to use to set the dependency of the analysis script 
     slurm_ids+=($jid)
-    DEPENDENCY_STRING=$(printf "afterok:%s:" "${slurm_ids[@]}")
-    DEPENDENCY_STRING=${DEPENDENCY_STRING%:}    # remove final colon
+    DEPENDENCY_STRING="afterok:$(IFS=:; echo "${slurm_ids[*]}")"
 
     echo "job was sent (t: ${t} Lambda: ${i}) - id ${jid}"
 
@@ -1117,7 +1117,7 @@ GMX="ccc_mprun gmx_mpi"
 
 
 #########################################################################################################
-elif [[ $ARCHITECTURE == "slurm" ]]; then # insert the slurm header, if the user chose this architecture
+elif [[ $ARCHITECTURE == "oxygen" ]]; then # insert the slurm header, if the user chose this architecture
 
 cat <<EOT >>  "${NAME}.${t}.ConcatAndBar.sh"
 
@@ -1410,7 +1410,7 @@ EOT
 chmod +x ${NAME}.${t}.ConcatAndBar.sh
 
 
-if [[ $ARCHITECTURE == "slurm" ]]; then
+if [[ $ARCHITECTURE == "oxygen" ]]; then
     sbatch ${NAME}.${t}.ConcatAndBar.sh
     echo "analysis job was sent. it will wait until dependencies finish"
 

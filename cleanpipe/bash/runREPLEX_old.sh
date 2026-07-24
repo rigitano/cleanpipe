@@ -12,7 +12,7 @@
 # 5-temperature min
 # 6 temperature max
 # 7-forcefield to be used in mdp construction (must be "charmm36" or "martini3")
-# 8-architecture (pc, oxygen, rome, genoa, MI300) # rome at tgcc. genoa and MI300 at adastra
+# 8-architecture (pc, slurm, rome, genoa, MI300) # rome at tgcc. genoa and MI300 at adastra
 # 9-ntOMP
 #10-ntMPI
 
@@ -94,10 +94,10 @@ echo " "
 ARCHITECTURE=$8
 echo "Architecture:${ARCHITECTURE}"
 
-if [[ $ARCHITECTURE == "pc" || $ARCHITECTURE == "oxygen" || $ARCHITECTURE == "rome" || $ARCHITECTURE == "genoa" || $ARCHITECTURE == "MI300" ]]; then
+if [[ $ARCHITECTURE == "pc" || $ARCHITECTURE == "slurm" || $ARCHITECTURE == "rome" || $ARCHITECTURE == "genoa" || $ARCHITECTURE == "MI300" ]]; then
     echo "Architecture is valid"
 else
-    echo "Error: architecture must be 'pc' 'oxygen' 'rome' 'genoa' 'MI300' "
+    echo "Error: architecture must be 'pc' 'slurm' 'rome' 'genoa' 'MI300' "
     exit 1
 fi
 echo " "
@@ -343,9 +343,9 @@ REPLEX=500         # steps between exchanges
 RESEED=123
 
 
-echo "OK: mdp files created"
 
-########################################################################################################o#
+
+##########################################################################################################
 cat <<'EOT' > "script.${NAME}.sh"
 #!/bin/bash
 
@@ -394,7 +394,7 @@ if [[ -f "done.txt" ]]; then
     exit 0
 fi
 # Otherwise queue the NEXT copy of this job, to start when THIS one ends OK.
-ccc_msub -E "--dependency=afterok:\${BRIDGE_MSUB_JOBID}" script.${NAME}.sh
+ccc_msub -E "--dependency=afterany:\${BRIDGE_MSUB_JOBID}" script.${NAME}.sh
 # --------------------------------------------------------------
 
 
@@ -449,7 +449,7 @@ if [[ -f "done.txt" ]]; then
     exit 0
 fi
 # Otherwise queue the NEXT copy of this job, to start when THIS one ends OK.
-sbatch "--dependency=afterok:\${SLURM_JOB_ID}" script.${NAME}.sh
+sbatch "--dependency=afterany:\${SLURM_JOB_ID}" script.${NAME}.sh
 # --------------------------------------------------------------
 
 
@@ -467,19 +467,17 @@ elif [[ $ARCHITECTURE == "MI300" ]]; then # insert the MI300-genoa header, if th
 
 cat <<EOT >>  "script.${NAME}.sh"
 
-#SBATCH --account=cad17773
+#SBATCH --account=c1613458 #cad17773
 #SBATCH --job-name=${NAME}.repl
 #SBATCH --constraint=MI300
 #SBATCH --ntasks-per-node=${NTMPI} 
 #SBATCH --cpus-per-task=${NTOMP}
 #SBATCH --nodes=1
-#SBATCH --ntasks=${NTMPI}
-#SBATCH --gres=gpu:4
 #SBATCH --exclusive
 #SBATCH -o ${NAME}.repl.scheduler.out
 #SBATCH -e ${NAME}.repl.scheduler.err 
 
-set -eu
+
 
 
 module purge
@@ -506,7 +504,7 @@ if [[ -f "done.txt" ]]; then
     exit 0
 fi
 # Otherwise queue the NEXT copy of this job, to start when THIS one ends OK.
-sbatch --dependency=afterany:\${SLURM_JOB_ID} script.${NAME}.sh
+sbatch "--dependency=afterany:\${SLURM_JOB_ID}" script.${NAME}.sh
 # --------------------------------------------------------------
 
 
@@ -515,12 +513,13 @@ sbatch --dependency=afterany:\${SLURM_JOB_ID} script.${NAME}.sh
 EOT
 
 GMX="gmx_mpi"                                                                   # External-MPI GROMACS (grompp, dump).
-MDRUN="srun --ntasks-per-node=${NTMPI} --cpus-per-task=${NTOMP} --threads-per-core=1 --gpus-per-node=4 --gpu-bind=closest --label -- gmx_mpi mdrun"        # srun spreads the NTMPI ranks.
-MDRUN_OPTIONS="-ntomp ${NTOMP} -pin off -maxh 23 -nb gpu -bonded gpu -update auto -cpi"   
+MDRUN="srun --cpus-per-task=${NTOMP} --threads-per-core=1 gmx_mpi mdrun"        # srun spreads the NTMPI ranks.
+MDRUN_OPTIONS="-ntomp ${NTOMP} -pin off -maxh 23 -cpi"   
+
 
 
 ##########################################################################################################
-elif [[ $ARCHITECTURE == "oxygen" ]]; then # insert the slurm header, if the user chose this architecture
+elif [[ $ARCHITECTURE == "slurm" ]]; then # insert the slurm header, if the user chose this architecture
 
 cat <<EOT >> "script.${NAME}.sh"
 
@@ -546,7 +545,7 @@ if [[ -f "done.txt" ]]; then
     exit 0
 fi
 # Otherwise queue the NEXT copy of this job, to start when THIS one ends OK.
-sbatch "--dependency=afterok:\${SLURM_JOB_ID}" script.${NAME}.sh
+sbatch "--dependency=afterany:\${SLURM_JOB_ID}" script.${NAME}.sh
 # --------------------------------------------------------------
 
 
@@ -708,14 +707,14 @@ echo "###################################################################"
 
 
 
-EOT
 
-echo "OK: script written"
+
+EOT
 	
 chmod +x script.${NAME}.sh
 
 
-if [[ $ARCHITECTURE == "oxygen" ]]; then
+if [[ $ARCHITECTURE == "slurm" ]]; then
     sbatch script.${NAME}.sh && echo "job was sent"
 
 elif [[ $ARCHITECTURE == "rome" ]]; then
@@ -725,7 +724,6 @@ elif [[ $ARCHITECTURE == "genoa" ]]; then
     sbatch script.${NAME}.sh && echo "job was sent"
 
 elif [[ $ARCHITECTURE == "MI300" ]]; then
-	echo "Launching script_test.sh"
     sbatch script.${NAME}.sh && echo "job was sent"
 
 elif [[ $ARCHITECTURE == "pc" ]]; then
