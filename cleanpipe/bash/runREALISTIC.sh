@@ -751,11 +751,11 @@ export OMP_DYNAMIC=FALSE
 # ---- 24h-wall self-chaining : queue the follow-up job now ----
 # If production is already finished, stop the chain. I'll know this checking for a done.txt file, that is created in the post processing
 if [[ -f "4_PROD/done.txt" ]]; then
-    echo "Simulation already complete. Exiting."
-    exit 0
-fi
+    echo "Simulation already complete. No need for follow-up job"
+else
 # Otherwise queue the NEXT copy of this job, to start when THIS one ends OK.
 ccc_msub -E "--dependency=afterany:\${BRIDGE_MSUB_JOBID}" script.${NAME}.sh
+fi
 # --------------------------------------------------------------
 
 
@@ -791,11 +791,12 @@ module load gromacs/2024.5
 # ---- 48h-wall self-chaining : queue the follow-up job now ----
 # If production is already finished, stop the chain. I'll know this checking for a done.txt file, that is created in the post processing
 if [[ -f "4_PROD/done.txt" ]]; then
-    echo "Simulation already complete. Exiting."
-    exit 0
-fi
+    echo "Simulation already complete. No need for follow-up job"
+ 
+else
 # Otherwise queue the NEXT copy of this job, to start when THIS one ends OK.
 sbatch --dependency=afterany:\${SLURM_JOB_ID} script.${NAME}.sh
+fi
 # --------------------------------------------------------------
 
 
@@ -1056,7 +1057,17 @@ if planned_steps_reached "prod.tpr" "prod.cpt"; then # only post-process once PR
     printf '1\n0' | ${GMX} trjconv -s "prod.tpr" -f "prod.centered.xtc" -o "prod.fitted.xtc" -fit progressive 2>&1 | tee "outanderr.fit"
     if gmx_failed "fit" "outanderr.fit"; then exit 1; fi
     
-    
+
+
+    printf '1\n0' | ${GMX} trjconv -f prod.gro -s prod.tpr -pbc mol -o prod.whole.gro
+
+
+    printf 'Density\n\n' | ${GMX} energy -f prod.edr -o density20toEND.xvg -b 20000 2>&1 | tee "outanderr.density"
+
+
+
+
+
     
 fi
 echo "###################################################################"
