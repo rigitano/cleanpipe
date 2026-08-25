@@ -7,7 +7,7 @@ from sklearn.svm import SVC
 from sklearn.preprocessing import StandardScaler
 
 
-def continuous_continuous(x, y):
+def continuous_continuous_linearRegression(x, y):
     """
     Perform linear regression on two continuous variables, calculate relevant statistics (pvalue, R-squared), and plot the results.
     x: list of numbers, independent variable. ex: [1.3, 2.5, 3.6]
@@ -236,12 +236,12 @@ def continuous_continuous(x, y):
 
 
 
-def continuous_continuous_nonlinear(x, y, model, POLY_DEGREE=2, SIN_PERIOD_GUESS=5.0, N_PERMUTATIONS=5000, N_BOOTSTRAPS=1000):
+def continuous_continuous_nonlinearRegression(x, y, MODEL, POLY_DEGREE=2, SIN_PERIOD_GUESS=5.0, N_PERMUTATIONS=5000, N_BOOTSTRAPS=1000):
     """
     Perform nonlinear regression on two continuous variables, calculate relevant statistics (pvalue, R-squared), and plot the results.
     x: list of numbers, independent variable. ex: [1.3, 2.5, 3.6]
     y: list of numbers, dependent variable. ex: [2.2, 3.8, 6.1]
-    model: string with nonlinear model. Options are "polynomial", "exponential", or "sinusoidal"
+    MODEL: string with nonlinear model. Options are "polynomial", "exponential", or "sinusoidal"
 
     POLY_DEGREE: Only used if model == "polynomial". Degree of the polynomial. Default is 2.
     SIN_PERIOD_GUESS: Only used if model == "sinusoidal". This is an initial guess for the period. For nonlinear sinusoidal fitting, giving a reasonable initial period is important
@@ -5671,7 +5671,7 @@ def categorica_categorical(variable1: list[str], variable2: list[str]):
         )
 
 
-def svm(data: list[list[float]]) -> None:
+def continuous_continuous_svm(data: list[list[float]]) -> None:
     """
 
     the input data should be a table, represented as a list of lists.
