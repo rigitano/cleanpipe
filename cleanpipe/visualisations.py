@@ -9,7 +9,7 @@ import os
 import platform
 from pathlib import Path
 import re
-import nglview as nv
+#import nglview as nv
 import MDAnalysis as mda
 import mdtraj as md
 from PIL import Image
@@ -73,6 +73,7 @@ def view_coords(s_coord, width=800, height=600):
 
 def view_traj(s_xtc,s_gro):
     """
+    xxx I dont want to use nv anymore. I must find a replacement
     
     example:
     cl.view_traj("pepticat2_in_water/3_NPT/npt.trr","pepticat2_in_water/2_NVT/nvt.gro")

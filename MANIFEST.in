@@ -1,7 +1,6 @@
 recursive-include cleanpipe/cleanpipe/mdp *
 recursive-include cleanpipe/cleanpipe/bash *
 recursive-include cleanpipe/cleanpipe/tcl *
-
 recursive-include cleanpipe/cleanpipe/USEFUL_SOLVENTS *
 recursive-include cleanpipe/cleanpipe/USEFUL_MOLECULES *
 recursive-include cleanpipe/cleanpipe/USEFUL_FORCEFIELDS *

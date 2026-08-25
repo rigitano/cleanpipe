@@ -11,4 +11,5 @@ from .visualisations import *
 from .lltools import *
 from .qm import *
 from .fitting import *
+from .dataScience import *
 #
