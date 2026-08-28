@@ -795,7 +795,9 @@ if [[ -f "4_PROD/done.txt" ]]; then
  
 else
 # Otherwise queue the NEXT copy of this job, to start when THIS one ends OK.
-sbatch --dependency=afterany:\${SLURM_JOB_ID} script.${NAME}.sh
+THIS_SCRIPT_PATH="\$(readlink -f "\$0")"
+sbatch --dependency=afterany:\$SLURM_JOB_ID "\$THIS_SCRIPT_PATH"
+
 fi
 # --------------------------------------------------------------
 
