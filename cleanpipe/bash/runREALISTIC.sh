@@ -738,7 +738,7 @@ module purge  # retire tous les modules déchargeables de l'environnement
 module load gnu/11 # charge gnu/11 et définit gnu/11 comme compilateur dans votre environnement
 module load nvhpc/24.3 # besoin de mettre avant OpenMPI comme ce dernier charge un cuda qui n'est pas compatible avec nvhpc/24.3
 module load mpi/openmpi/4 # charge la souche OpenMPI
-module load gromacs/2025.0 # charge le produit
+module load gromacs/2025.4 # charge le produit
 
 export GMX_DISABLE_GPU_DETECTION=1 # prevent GROMACS from using GPUs
 export I_MPI_PIN_CELL=core
@@ -784,8 +784,7 @@ cat <<EOT >> "script.${NAME}.sh"
 #SBATCH --exclude=node-15
 
 module purge
-module load cuda/11.8
-module load gromacs/2024.5
+module load gromacs/2025.4
 
 
 # ---- 48h-wall self-chaining : queue the follow-up job now ----

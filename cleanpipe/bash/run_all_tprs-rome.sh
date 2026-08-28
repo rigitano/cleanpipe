@@ -79,7 +79,7 @@ module purge  # retire tous les modules déchargeables de l'environnement
 module load gnu/11 # charge gnu/11 et définit gnu/11 comme compilateur dans votre environnement
 module load nvhpc/24.3 # besoin de mettre avant OpenMPI comme ce dernier charge un cuda qui n'est pas compatible avec nvhpc/24.3
 module load mpi/openmpi/4 # charge la souche OpenMPI
-module load gromacs/2025.0 # charge le produit
+module load gromacs/2025.4 # charge le produit
 # Note that sometimes it is advisable especially for small simulations to use more open MP
 # threads and less MPI ranks. However, for large systems this appears to be the most
 # efficent and reasonably fast setting.
