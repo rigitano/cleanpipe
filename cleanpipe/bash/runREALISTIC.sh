@@ -776,9 +776,8 @@ cat <<EOT >> "script.${NAME}.sh"
 
 #SBATCH --partition=calcul
 #SBATCH --cpus-per-task=${NTOMP}
+#SBATCH --ntasks-per-node=${NTMPI}
 #SBATCH --gres=gpu:1
-##SBATCH --mem-per-cpu=1GB
-##SBATCH --nodes=1
 #SBATCH --job-name=${NAME}.realistic
 #SBATCH --output=outanderr.slurm.${NAME}
 #SBATCH --exclude=node-15
@@ -861,7 +860,7 @@ gmx_failed() {
     local OUTANDERR_FILE="\$2"
     local PATTERN
 
-    PATTERN='fatal[[:space:]]+error|error[[:space:]]+in[[:space:]]+user[[:space:]]+input|ERROR[[:space:]]+[1-9][0-9]*|there (was|were) [1-9][0-9]* errors?|inconsistency[[:space:]]+in[[:space:]]+user[[:space:]]+input|too[[:space:]]+many[[:space:]]+warnings|failed|failure|assertion[[:space:]]+failed|segmentation[[:space:]]+fault|floating[[:space:]]+point[[:space:]]+exception|bus[[:space:]]+error|core[[:space:]]+dumped|aborted|killed|out[[:space:]]+of[[:space:]]+memory|cannot[[:space:]]+allocate[[:space:]]+memory|permission[[:space:]]+denied|no[[:space:]]+such[[:space:]]+file|cannot[[:space:]]+open|could[[:space:]]+not[[:space:]]+be[[:space:]]+opened|command[[:space:]]+not[[:space:]]+found'
+    PATTERN='fatal[[:space:]]+error|error[[:space:]]+in[[:space:]]+user[[:space:]]+input|ERROR[[:space:]]+[1-9][0-9]*|there (was|were) [1-9][0-9]* errors?|inconsistency[[:space:]]+in[[:space:]]+user[[:space:]]+input|too[[:space:]]+many[[:space:]]+warnings|failure|assertion[[:space:]]+failed|segmentation[[:space:]]+fault|floating[[:space:]]+point[[:space:]]+exception|bus[[:space:]]+error|core[[:space:]]+dumped|aborted|killed|out[[:space:]]+of[[:space:]]+memory|cannot[[:space:]]+allocate[[:space:]]+memory|permission[[:space:]]+denied|no[[:space:]]+such[[:space:]]+file|cannot[[:space:]]+open|could[[:space:]]+not[[:space:]]+be[[:space:]]+opened|command[[:space:]]+not[[:space:]]+found'
 
 
     if LC_ALL=C grep -Eiq "\$PATTERN" "\$OUTANDERR_FILE"; then
@@ -1051,16 +1050,16 @@ if planned_steps_reached "prod.tpr" "prod.cpt"; then # only post-process once PR
 
 
 
-    printf '1\n0' | ${GMX} trjconv -s "prod.tpr" -f "prod.xtc" -o "prod.centered.xtc" -center -pbc mol 2>&1 | tee "outanderr.center"
+    printf '1\n0\n' | ${GMX} trjconv -s "prod.tpr" -f "prod.xtc" -o "prod.centered.xtc" -center -pbc mol 2>&1 | tee "outanderr.center"
     if gmx_failed "center" "outanderr.center"; then exit 1; fi
 
 
-    printf '1\n0' | ${GMX} trjconv -s "prod.tpr" -f "prod.centered.xtc" -o "prod.fitted.xtc" -fit progressive 2>&1 | tee "outanderr.fit"
+    printf '1\n0\n' | ${GMX} trjconv -s "prod.tpr" -f "prod.centered.xtc" -o "prod.fitted.xtc" -fit progressive 2>&1 | tee "outanderr.fit"
     if gmx_failed "fit" "outanderr.fit"; then exit 1; fi
     
 
 
-    printf '1\n0' | ${GMX} trjconv -f prod.gro -s prod.tpr -pbc mol -o prod.whole.gro
+    printf '1\n0\n' | ${GMX} trjconv -f prod.gro -s prod.tpr -pbc mol -o prod.whole.gro
 
 
     printf 'Density\n\n' | ${GMX} energy -f prod.edr -o density20toEND.xvg -b 20000 2>&1 | tee "outanderr.density"
