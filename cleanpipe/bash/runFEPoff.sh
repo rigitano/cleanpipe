@@ -168,7 +168,7 @@ fi
 
 
 
-echo "####################### create folder structure ########################"
+echo "creating folder structure..."
 
 
 mkdir "${NAME}__runFEP" || exit 1
@@ -199,7 +199,7 @@ done # temperature loop
 echo "folder structure created"
 echo " "
 
-echo "######################## generate mdp files #############################"
+echo "generating mdp files..."
 #this is a funcion so I can read clearly some mdp file options
 options() {
   declare -A map
@@ -226,7 +226,7 @@ file_prod_mdp="prod_FEP_t${t}_lambda${i}.mdp"
 
 
 
-echo "creating ${file_em_mdp}"
+echo "${file_em_mdp}"
 cat <<EOT > "t${t}/Lambda_${i}/1_EM/${file_em_mdp}"
 
 ; Run control
@@ -315,7 +315,7 @@ EOT
 
 
 
-echo "creating ${file_nvt_mdp}"
+echo "${file_nvt_mdp}"
 cat <<EOT > "t${t}/Lambda_${i}/2_NVT/${file_nvt_mdp}"
 
 ; Run control
@@ -324,14 +324,14 @@ tinit                    = 0
 dt                       = $(options charmm36=0.002 martini3=0.02)
 
 nsteps                   = 50000
-nstcomm                  = 50000
+nstcomm                  = 5000
 
 ; Output control
-nstxout                  = 50000
-nstvout                  = 50000
+nstxout                  = 5000
+nstvout                  = 5000
 nstfout                  = 0
-nstlog                   = 50000
-nstenergy                = 50000
+nstlog                   = 5000
+nstenergy                = 5000
 nstxout-compressed       = 0
 
 
@@ -427,7 +427,7 @@ EOT
 
 
 
-echo "creating ${file_npt_mdp}"
+echo "${file_npt_mdp}"
 cat <<EOT > "t${t}/Lambda_${i}/3_NPT/${file_npt_mdp}"
 
 
@@ -436,14 +436,14 @@ integrator               = sd       ; Langevin dynamics
 tinit                    = 0
 dt                       = $(options charmm36=0.002 martini3=0.02)
 nsteps                   = 100000
-nstcomm                  = 50000
+nstcomm                  = 5000
 
 ; Output control
-nstxout                  = 50000
-nstvout                  = 50000
+nstxout                  = 5000
+nstvout                  = 5000
 nstfout                  = 0
-nstlog                   = 50000
-nstenergy                = 50000
+nstlog                   = 5000
+nstenergy                = 5000
 nstxout-compressed       = 0
 
 
@@ -547,7 +547,7 @@ EOT
 
 
 
-echo "creating ${file_prod_mdp}"
+echo "${file_prod_mdp}"
 cat <<EOT > "t${t}/Lambda_${i}/4_PROD/${file_prod_mdp}"
 
 
@@ -559,13 +559,14 @@ nsteps                   = ${STEPS}
 nstcomm                  = 100
 
 ; Output control
-nstxout                  = 500000
-nstvout                  = 500000
-nstfout                  = 0
-nstlog                   = 500000
+nstxout                  = 50000
+nstvout                  = 50000
+nstfout                  = 50000
+nstlog                   = 50000
 nstenergy                = 5000
-nstxout-compressed       = 500000
-
+nstxout-compressed       = 50000
+nstdhdl                  = 100
+nstcalcenergy            = 100
 
 ; box config
 pbc                      = xyz
@@ -611,7 +612,7 @@ couple-moltype           = ${MOL_TO_DECOUPLE}  ; name of molecule to decouple
 couple-lambda0           = vdw-q            ; at lambda 0: interactions are ON  
 couple-lambda1           = none             ; at lambda 1: interactions are OFF
 couple-intramol          = yes              ; for big molecules, it’s necessary to turn off the internal interactions, not just the molecule-surroundings interactions.
-nstdhdl                  = 10
+
 
 ; Vectors of lambda specified here
 ; Each combination is an index that is retrieved from init_lambda_state for each simulation
@@ -675,11 +676,11 @@ echo " "
 
 
 
-echo "creating simulation scripts for all lambdas. repeating that for all temperatures"
+echo "creating simulation scripts for all lambdas. repeating for each temperature..."
 for t in $TEMPERATURE_LIST; do
 for i in $(seq -w 0 20); do 
 
-# reset the name of the mdp files for the current temperature and lambda
+# get the name of the mdp files for the current temperature and lambda
 file_em_mdp="em_FEP_t${t}_lambda${i}.mdp"
 file_nvt_mdp="nvt_FEP_t${t}_lambda${i}.mdp"
 file_npt_mdp="npt_FEP_t${t}_lambda${i}.mdp"
@@ -1087,7 +1088,7 @@ echo " "
 
 
 
-echo "creating bar analysis scripts"
+echo "creating bar analysis scripts. 1 for each temperature..."
 # analysis script that will be run just after all the jobs are finished. each temperature will have one
 
 for t in $TEMPERATURE_LIST; do
@@ -1301,12 +1302,11 @@ chmod +x ${NAME}.${t}.BarForAllLambdas.sh
 
 cd .. #go back to runFEP so we can go to the next temperature
 done # temperature loop
-echo "bar calculation scripts were created. 1 for each temperature"
+echo "all bar calculation scripts were created"
 echo " "
 
 
-echo "louching the simulation scripts" #. Remember that they contain a chunk of code that check when all are finished for a given temperature, so that the last one will lounch the bar calculation for that temperature"
-echo " "
+echo "louching the simulation scripts for all lambdas. repeating for each temperature..." #. Remember that they contain a chunk of code that check when all are finished for a given temperature, so that the last one will lounch the bar calculation for that temperature"
 for t in $TEMPERATURE_LIST; do
 for i in $(seq -w 0 20); do 
 
@@ -1320,31 +1320,31 @@ if [[ $ARCHITECTURE == "oxygen" ]]; then
     jid=$(sbatch --parsable "t${t}.l${i}.sh")
     jid=${jid%%;*}          # federated clusters return jobid;cluster
 
-    echo "job was sent (t: ${t} Lambda: ${i}) - id ${jid}"
+    echo "job was sent - id ${jid}"
 
 elif [[ $ARCHITECTURE == "genoa" ]]; then
     jid=$(sbatch --parsable "t${t}.l${i}.sh")
     jid=${jid%%;*}          # federated clusters return jobid;cluster
 
-    echo "job was sent (t: ${t} Lambda: ${i}) - id ${jid}"
+    echo "job was sent - id ${jid}"
 
 elif [[ $ARCHITECTURE == "rome" ]]; then
     jid=$(ccc_msub t${t}.l${i}.sh | grep -Eo '[0-9]+' | tail -n1)
     #build list of ids sent, to use to set the dependency of the analysis script 
 
-    echo "job was sent (t: ${t} Lambda: ${i}) - id ${jid}"
+    echo "job was sent - id ${jid}"
 
 
 elif [[ $ARCHITECTURE == "pc" ]]; then
-    nohup ./t${t}.l${i}.sh > t${t}.l${i}.redirected.out.and.err 2>&1 &
+    nohup ./t${t}.l${i}.sh > t${t}.l${i}.outanderr 2>&1 &
     pid=$!
 
-    echo "script was lounched (t: ${t} Lambda: ${i})"
+    echo "script was lounched - pid ${pid}"
 
 fi
 
 cd ../.. 
 done # lambda loop over
 done # temperature loop over
-echo "Jobs were sent for all lambdas. this was repeated for each temperature"
+echo "scripts were louched for all lambdas and temperatures"
 echo " "

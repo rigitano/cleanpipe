@@ -372,8 +372,8 @@ emstep                   = 0.005
 ;niter                    = 20
 ;nbfgscorr                = 10
 ; Output control
-nstlog                   = 1
-nstenergy                = 1
+nstlog                   = 5000
+nstenergy                = 5000
 
 ; box config
 pbc                      = xyz
