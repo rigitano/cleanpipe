@@ -324,7 +324,9 @@ tinit                    = 0
 dt                       = $(options charmm36=0.002 martini3=0.02)
 
 nsteps                   = 50000
-nstcomm                  = 5000
+nstcomm                  = 100
+comm_mode                = linear
+comm_grps                = 
 
 ; Output control
 nstxout                  = 5000
@@ -436,7 +438,9 @@ integrator               = sd       ; Langevin dynamics
 tinit                    = 0
 dt                       = $(options charmm36=0.002 martini3=0.02)
 nsteps                   = 100000
-nstcomm                  = 5000
+nstcomm                  = 100
+comm_mode                = linear
+comm_grps                = 
 
 ; Output control
 nstxout                  = 5000
@@ -557,6 +561,8 @@ tinit                    = 0
 dt                       = $(options charmm36=0.002 martini3=0.02)
 nsteps                   = ${STEPS}
 nstcomm                  = 100
+comm_mode                = linear
+comm_grps                = 
 
 ; Output control
 nstxout                  = 50000
@@ -738,7 +744,7 @@ if [[ -f "4_PROD/done.txt" ]]; then
     echo "Simulation already complete. No need for follow-up job"
 else
 # Otherwise queue the NEXT copy of this job, to start when THIS one ends OK.
-ccc_msub -E "--dependency=afterany:\${BRIDGE_MSUB_JOBID}" t${t}.l${i}.sh
+ccc_msub -E "--dependency=afterok:\${BRIDGE_MSUB_JOBID}" t${t}.l${i}.sh
 fi
 # --------------------------------------------------------------
 
@@ -754,7 +760,7 @@ GMXS="ccc_mprun -n 1 gmx_mpi"
 #MDRUN_OPTIONS="-dd 3 3 3 -npme 13 -dlb yes" #this requires #MSUB -n 40 , but domain decomposition dont work with steep 
 #MDRUN_OPTIONS="-nt 1" #doesbt work, because -nt, -ntomp, -ntmpi, cant be used in rome, you have to set OMP_NUM_THREADS and #MSUB -n instead
 #MDRUN_OPTIONS=""
-MDRUN_OPTIONS="-maxh 23 -cpi" 
+MDRUN_OPTIONS="-maxh 20 -cpi" 
 
 
 #########################################################################################################
@@ -789,10 +795,10 @@ export OMP_NUM_THREADS=${NTOMP}      # number of OpenMP threads (ntomp)
 # If production is already finished, stop the chain. I'll know this checking for a done.txt file, that is created in the post processing
 if [[ -f "4_PROD/done.txt" ]]; then
     echo "Simulation already complete. No need for follow-up job"
- 
+    exit 0
 else
 # Otherwise queue the NEXT copy of this job, to start when THIS one ends OK.
-sbatch --dependency=afterany:\$SLURM_JOB_ID t${t}.l${i}.sh
+sbatch --dependency=afterok:\$SLURM_JOB_ID t${t}.l${i}.sh
 
 fi
 # --------------------------------------------------------------
@@ -806,7 +812,7 @@ GMX="srun gmx_mpi"
 GMXS="srun -n 1 gmx_mpi"
 
 #GMX MDRUN ADITIONAL OPTIONS. ATENTION: this must be coherent with #SBATCH
-MDRUN_OPTIONS="-maxh 23 -cpi"
+MDRUN_OPTIONS="-maxh 20 -cpi"
 
 
 
@@ -832,10 +838,10 @@ module load gromacs/2025.4
 # If production is already finished, stop the chain. I'll know this checking for a done.txt file, that is created in the post processing
 if [[ -f "4_PROD/done.txt" ]]; then
     echo "Simulation already complete. No need for follow-up job"
- 
+    exit 0
 else
 # Otherwise queue the NEXT copy of this job, to start when THIS one ends OK.
-sbatch --dependency=afterany:\$SLURM_JOB_ID t${t}.l${i}.sh
+sbatch --dependency=afterok:\$SLURM_JOB_ID t${t}.l${i}.sh
 
 fi
 # --------------------------------------------------------------
@@ -848,7 +854,7 @@ GMXS="gmx"
 
 #GMX MDRUN ADITIONAL OPTIONS. ATENTION: this must be coherent with #SBATCH --cpus-per-task
 #MDRUN_OPTIONS="-ntomp ${NTOMP} -ntmpi ${NTMPI}" #this requires  #SBATCH --cpus-per-task=1
-MDRUN_OPTIONS="-ntomp ${NTOMP} -ntmpi ${NTMPI} -maxh 47 -cpi" #ATENTION: -ntomp and -ntmpi must be coherent with #SBATCH --cpus-per-task
+MDRUN_OPTIONS="-ntomp ${NTOMP} -ntmpi ${NTMPI} -maxh 44 -cpi" #ATENTION: -ntomp and -ntmpi must be coherent with #SBATCH --cpus-per-task
 
 
 
@@ -859,7 +865,7 @@ elif [[ $ARCHITECTURE == "pc" ]]; then # insert what should be the gromacs comma
 cat <<EOT >>  "t${t}.l${i}.sh"
 
 module purge
-module load gromacs/2024.5
+module load gromacs/2025.4
 
 
 
@@ -964,8 +970,8 @@ else
 
     ${GMX} mdrun -v -deffnm "${NAME}_nvt" ${MDRUN_OPTIONS} 2>&1 | tee "outanderr.mdrun"
     if gmx_failed "${NAME}_nvt" "outanderr.mdrun"; then exit 1; fi
+    if ! planned_steps_reached "${NAME}_nvt.tpr" "${NAME}_nvt.cpt"; then echo "NVT stopped before completion; job must resume it."; exit 0; fi
     if [[ ! -f "${NAME}_nvt.gro" ]]; then echo "${NAME}_nvt finished without saving a GRO file"; exit 1; fi
-
 
 
 
@@ -986,6 +992,7 @@ else
 
     ${GMX} mdrun -v -deffnm "${NAME}_npt" ${MDRUN_OPTIONS} 2>&1 | tee "outanderr.mdrun"
     if gmx_failed "${NAME}_npt" "outanderr.mdrun"; then exit 1; fi
+    if ! planned_steps_reached "${NAME}_npt.tpr" "${NAME}_npt.cpt"; then echo "NVT stopped before completion; job must resume it."; exit 0; fi
     if [[ ! -f "${NAME}_npt.gro" ]]; then echo "${NAME}_npt finished without saving a GRO file"; exit 1; fi
 
 
@@ -1008,12 +1015,13 @@ else
 
     ${GMX} mdrun -v -deffnm "${NAME}_prod_${t}_${i}" ${MDRUN_OPTIONS} 2>&1 | tee "outanderr.mdrun" 
     if gmx_failed "${NAME}_prod_${t}_${i}" "outanderr.mdrun"; then exit 1; fi
+    if ! planned_steps_reached "${NAME}_prod_${t}_${i}.tpr" "${NAME}_prod_${t}_${i}.cpt"; then echo "NVT stopped before completion; job must resume it."; exit 0; fi
     if [[ ! -f "${NAME}_prod_${t}_${i}.gro" ]]; then echo "${NAME}_prod_${t}_${i} finished without saving a GRO file"; exit 1; fi
 
 
 
 fi
-echo "############################## LOUCH BAR CALCULATION  ###################################"
+echo "############################## LAUNCH BAR CALCULATION  ###################################"
 if [[ ! -f done.txt ]] && planned_steps_reached "${NAME}_prod_${t}_${i}.tpr" "${NAME}_prod_${t}_${i}.cpt"; then # only post-process once PROD has truly finished
     touch "done.txt"
 
@@ -1206,7 +1214,7 @@ cat <<EOT >>  "${NAME}.${t}.BarForAllLambdas.sh"
 
 
 module purge
-module load gromacs/2024.5
+module load gromacs/2025.4
 
 
 

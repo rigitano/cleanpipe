@@ -1,6 +1,9 @@
 #!/bin/bash
 
-# usage example:  ./runREALISTIC.sh a12HW a12HW.gro a12HW.top 1 298 charmm36 pc 2 8
+#this is ment to calculate surface tension of slabs and membranes in water
+
+# usage example:  ./runREALISTIC.sh a12HW a12HW.gro a12HW.top 400 298 charmm36 pc 2 8
+#always simulate more than 400 ns, because gmx enery will disconsider data before 300
 
 # ARGUMENTS:
 # 1-name that goes onthe runREALISTIC to be created and the job name
@@ -9,12 +12,13 @@
 # 4-nanoseconds of production
 # 5-temperature (remeber that martini3 was parametrized at 310)
 # 6-forcefield to be used in mdp construction (must be "charmm36" or "martini3")
-# 7-architecture (pc, slurm, rome)
+# 7-architecture (pc, oxygen, rome)
 # 8-ntOMP
 # 9-ntMPI
 
-
-SC="no" # hardcoded option to use SC before em or not. to use it, set this to "yes".
+# hardcoded option to use Soft Core or Slow Groth before EM. You can set JUST ONE to "yes"
+SC="no" # Soft Core
+SG="no" # Slow Groth
 
 
 if [ $# -lt 9 ]; then
@@ -80,10 +84,10 @@ echo " "
 ARCHITECTURE=$7
 echo "Architecture:${ARCHITECTURE}"
 
-if [[ $ARCHITECTURE == "pc" || $ARCHITECTURE == "slurm" || $ARCHITECTURE == "rome" ]]; then
+if [[ $ARCHITECTURE == "pc" || $ARCHITECTURE == "oxygen" || $ARCHITECTURE == "rome" ]]; then
     echo "Architecture is valid"
 else
-    echo "Error: architecture must be 'pc' or 'slurm' or 'rome' "
+    echo "Error: architecture must be 'pc' or 'oxygen' or 'rome' "
     exit 1
 fi
 echo " "
@@ -94,7 +98,6 @@ if [[ "$NTOMP" =~ ^[0-9]+$ ]]; then
     echo "NTOMP OK (is an integer)"
 else
     echo "NTOMP is NOT an integer"
-    exit 1
 fi
 
 
@@ -104,7 +107,6 @@ if [[ "$NTMPI" =~ ^[0-9]+$ ]]; then
     echo "NTMPI OK (is an integer)"
 else
     echo "NTMPI is NOT an integer"
-    exit 1
 fi
 echo " "
 
@@ -141,8 +143,11 @@ fi
 
 ######################## create folder structure ########################
 
-if [[ $SC == "yes" ]]; then #SC will be used before EM, to the respective folder must be created
- mkdir -p runREALISTIC_${NAME}/0_SC
+if [[ $SC == "yes" ]]; then # Soft Core option
+ mkdir -p runREALISTIC_${NAME}/0_SC 
+fi
+if [[ $SG == "yes" ]]; then # Slow groth option
+ mkdir -p runREALISTIC_${NAME}/0_SG
 fi
 mkdir -p runREALISTIC_${NAME}/1_EM
 mkdir -p runREALISTIC_${NAME}/2_NVT
@@ -168,9 +173,14 @@ options() {
 
 
 
+
+
 # Definition of the name of the mdp files of the current lambda
-if [[ $SC == "yes" ]]; then #SC will be used before EM, to the respective mdp must be created
+if [[ $SC == "yes" ]]; then # Soft Core option
  file_sc_mdp="sc.mdp"
+fi
+if [[ $SG == "yes" ]]; then # Slow Groth option
+ file_sg_mdp="sg.mdp"
 fi
 file_em_mdp="em.mdp"
 file_nvt_mdp="nvt.mdp"
@@ -179,63 +189,177 @@ file_prod_mdp="prod.mdp"
 
 
 
-if [[ $SC == "yes" ]]; then #SC will be used before EM, to the respective mdp must be created
+if [[ $SC == "yes" ]]; then #Soft Core will be used before EM
   
 echo "creating ${file_sc_mdp}"
 cat <<EOT > "0_SC/${file_sc_mdp}"
 
-; the original  came from
-; https://github.com/jacksoncrowley/TS2CG-Setup-Pipeline/blob/main/mdp/em1.mdp
-; but the important part is of the free energy variables. mainly setting the forces as 1% and putting some sc potential. jackson has no strong feeling #about the rest of the parameters.
 
 
-define			 = -DFLEXIBLE
+integrator              = steep
+emtol                   = 500 
+nsteps                  = 5000
 
-integrator               = steep
-nsteps                   = 500
-nstxout                  = 0
-nstfout                  = 0
-nstlog                   = 100 
-
-; NEIGHBORSEARCHING PARAMETERS
-cutoff-scheme            = Verlet
-nstlist                  = 20
+; box config
 pbc                      = xyz
-periodic-molecules       = no
-verlet-buffer-tolerance  = 0.005
-rlist                    = 1
 
-; OPTIONS FOR ELECTROSTATICS AND VDW
-coulombtype              = cut-off
-coulomb-modifier         = Potential-shift-Verlet
-rcoulomb-switch          = 0
-rcoulomb                 = 1.1
-epsilon_r                = 15
-epsilon_rf               = 0
-vdw_type                 = cutoff
-vdw-modifier             = Potential-shift-verlet
-rvdw-switch              = 0
-rvdw                     = 1.1
 
-; Free energy variables
-free-energy = yes                 ;I think this might be useless, after Veronica's explanation
-init-lambda              = 0.01   ;according to Veronica, this is kept during the entire EM
-sc-alpha                 = 4
-sc-power                 = 2
-sc-coul                  = yes
-nstdhdl                  = 0 
-couple-moltype           = system
-; we are changing both the vdw and the charge. In the initial state, both are on
-couple-lambda0           = vdw-q   ;this looks backward. Veronica discovered this is ignored. em is always at 0.01 without increasing nor decreasing
-; in the final state, both are off.
-couple-lambda1           = none    ;this looks backward. Veronica discovered this is ignored. em is always at 0.01 without increasing nor decreasing
-couple-intramol          = yes
+; neighborsearch algorith
+cutoff-scheme            = verlet
+nstlist                  = $(options charmm36=10 martini3=20)
+rlist                    = $(options charmm36=1.2 martini3=1.1) ;this has to match the rcoulomb and rvdw
 
+
+; non-bonded electrostatic forces
+rcoulomb                =     $(options charmm36=1.2 martini3=1.1)                ; ideal potential up to this radius
+coulombtype             =     $(options charmm36=PME martini3=reaction-field)     ; what to do after that radius
+;PME demands for 3 extra parameters
+pme_order               =     4                 
+fourierspacing          =     0.12              
+ewald_rtol              =     1e-05
+;dieletrical constant for short and long ranges
+epsilon_r               =     $(options charmm36=1 martini3=15) ;for martini3 polarizable water this should be 2.5
+epsilon_rf              =     0 ; zero means infinity
+
+; non-bonded Van Der Waals forces
+rvdw                    =     $(options charmm36=1.2 martini3=1.1)                ; ideal potential up to this radius
+vdw_type                =     cutoff             ; what to do after that radius
+;cutoff demands for 3 extra parameters to deal with the discontinuity
+vdw-modifier            =     $(options charmm36=force-switch martini3=potential-shift-verlet)
+rvdw-switch             =     1.0
+DispCorr                =     $(options charmm36=EnerPres martini3=no)
+
+
+; CONSTRAINTS
+constraints             = h-bonds
+constraint_algorithm    = LINCS
+
+; FREE ENERGY
+free-energy         = yes
+couple-moltype      = System  
+couple-lambda0      = vdw-q         
+couple-lambda1      = none    
+init-lambda         = 0.10   ;theoretical 0.50 dont work     
+nstdhdl             = 0
+couple-intramol     = yes
+
+; SOFT CORE
+sc-alpha            = 4  ;standard that dont work: $(options charmm36=0.5 martini3=1.3)
+sc-power            = 2  ;standard that dont work: 1
+sc-coul             = yes          
+sc-sigma            = $(options charmm36=0.3 martini3=0.47)
 
 
 EOT
 
 fi #end of condition defining that SC will be used before EM
+
+
+
+if [[ $SG == "yes" ]]; then #SlowGroth will be used before EM
+  
+echo "creating ${file_sg_mdp}"
+cat <<EOT > "0_SG/${file_sg_mdp}"
+
+
+integrator              = sd
+dt                      = 0.002
+nsteps                  = 5000
+nstcomm                  = 100
+comm_mode                = linear
+comm_grps                = 
+
+nstxtcout               = 5000
+nstvout                 = 5000
+nstfout                 = 5000
+nstcalcenergy           = 100
+nstenergy               = 1000
+nstlog                  = 1000
+;
+; neighborsearch algorith
+cutoff-scheme            = verlet
+nstlist                  = $(options charmm36=10 martini3=20)
+rlist                    = $(options charmm36=1.2 martini3=1.1) ;this has to match the rcoulomb and rvdw
+
+
+
+; non-bonded electrostatic forces
+rcoulomb                 =     $(options charmm36=1.2 martini3=1.1)                ; ideal potential up to this radius
+coulombtype              =     $(options charmm36=PME martini3=reaction-field)     ; what to do after that radius
+;PME demands for 3 extra parameters
+pme_order                =     4                 
+fourierspacing           =     0.12              
+ewald_rtol               =     1e-05
+;dieletrical constant for short and long ranges
+epsilon_r                =     $(options charmm36=1 martini3=15) ;for martini3 polarizable water this should be 2.5
+epsilon_rf               =     0 ; zero means infinity
+
+
+
+; non-bonded Van Der Waals forces
+rvdw                     =     $(options charmm36=1.2 martini3=1.1)                ; ideal potential up to this radius
+vdw_type                 =     cutoff             ; what to do after that radius
+;cutoff demands for 3 extra parameters to deal with the discontinuity
+vdw-modifier             =     $(options charmm36=force-switch martini3=potential-shift-verlet)
+rvdw-switch              =     1.0
+DispCorr                 =     $(options charmm36=EnerPres martini3=no)
+
+
+; Naive velocities
+continuation             = no 
+gen_vel                  = yes
+gen_temp                 = ${t}
+gen_seed                 = -1
+
+; Temperature
+Tcoupl                   = V-rescale
+tc_grps                  = system
+ref_t                    = ${t} ;K
+tau_t                    = 1
+
+; Pressure
+Pcoupl                   = no
+
+
+; making bonds stiff       (to avoid the need of calculating fast vibrations. something that would require dividing ts by 4!)
+constraints              = $(options charmm36=h-bonds martini3=none)
+constraint-algorithm     = lincs
+lincs-order              = 4
+
+
+; Free energy variables
+free-energy              = yes
+couple-moltype           = System ; original OOOTG
+couple-lambda0           = none
+couple-lambda1           = vdw-q
+couple-intramol          = yes
+init-lambda              = 0
+delta-lambda             = 0.0002
+nstdhdl                  = 60
+fep-lambdas              = 
+mass-lambdas             = 
+bonded-lambdas           = 
+restraint-lambdas        = 
+temperature-lambdas      = 
+calc-lambda-neighbors    = 1
+init-lambda-weights      = 
+dhdl-print-energy        = no
+sc-alpha                 = 4 ; $(options charmm36=0.5 martini3=1.3)
+sc-power                 = 2 ; 1
+;sc-r-power               = 6     ; this value came from a martini example, should this be different for charmm36?
+sc-sigma                 = $(options charmm36=0.3 martini3=0.47)
+sc-coul                  = no
+separate-dhdl-file       = yes
+dhdl-derivatives         = yes
+dh_hist_size             = 0    ; this value came from a martini example, should this be different for charmm36?
+dh_hist_spacing          = 0.1  ; this value came from a martini example, should this be different for charmm36?
+
+
+
+EOT
+
+fi #end of condition defining that SG will be used before EM
+
 
 
 
@@ -278,11 +402,11 @@ epsilon_rf              =     0 ; zero means infinity
 
 ; non-bonded Van Der Waals forces
 rvdw                	=     $(options charmm36=1.2 martini3=1.1)                ; ideal potential up to this radius
-vdw_type             	=     cutoff             ; what to do after that radius
+vdw_type             	=     PME             ; what to do after that radius
 ;cutoff demands for 3 extra parameters to deal with the discontinuity
-vdw-modifier         	=     $(options charmm36=force-switch martini3=potential-shift-verlet)
+vdw-modifier         	=     potential-shift-verlet
 rvdw-switch          	=     1.0
-DispCorr            	=     $(options charmm36=EnerPres martini3=no)
+DispCorr            	=     no
 
 
 
@@ -316,6 +440,8 @@ dt                       = $(options charmm36=0.002 martini3=0.02)
 
 nsteps                   = 50000
 nstcomm                  = 100
+comm_mode                = linear
+comm_grps                = 
 
 ; Output control
 nstxout                  = 5000
@@ -352,11 +478,11 @@ epsilon_rf               =     0 ; zero means infinity
 
 ; non-bonded Van Der Waals forces
 rvdw                     =     $(options charmm36=1.2 martini3=1.1)                ; ideal potential up to this radius
-vdw_type                 =     cutoff             ; what to do after that radius
+vdw_type                 =     PME             ; what to do after that radius
 ;cutoff demands for 3 extra parameters to deal with the discontinuity
-vdw-modifier             =     $(options charmm36=force-switch martini3=potential-shift-verlet)
+vdw-modifier             =     potential-shift-verlet
 rvdw-switch              =     1.0
-DispCorr                 =     $(options charmm36=EnerPres martini3=no)
+DispCorr                 =     no
 
 
 ; Naive velocities
@@ -402,8 +528,10 @@ cat <<EOT > "3_NPT/${file_npt_mdp}"
 integrator               = md
 tinit                    = 0
 dt                       = $(options charmm36=0.002 martini3=0.02)
-nsteps                   = 3000000
+nsteps                   = 100000
 nstcomm                  = 100
+comm_mode                = linear
+comm_grps                = 
 
 ; Output control
 nstxout                  = 5000
@@ -438,11 +566,11 @@ epsilon_rf               =     0 ; zero means infinity
 
 ; non-bonded Van Der Waals forces
 rvdw                     =     $(options charmm36=1.2 martini3=1.1)                ; ideal potential up to this radius
-vdw_type                 =     cutoff             ; what to do after that radius
+vdw_type                 =     PME             ; what to do after that radius
 ;cutoff demands for 3 extra parameters to deal with the discontinuity
-vdw-modifier             =     $(options charmm36=force-switch martini3=potential-shift-verlet)
+vdw-modifier             =     potential-shift-verlet
 rvdw-switch              =     1.0
-DispCorr                 =     $(options charmm36=EnerPres     martini3=no)
+DispCorr                 =     no
 
 ; Naive velocities
 continuation             = yes 
@@ -456,10 +584,12 @@ tau_t                    = 1
  
 ; Pressure
 Pcoupl                   = C-rescale
-ref_p                    = 1.0 ;bar
-tau_p                    = $(options charmm36=5      martini3=12)
-compressibility          = $(options charmm36=4.5e-5 martini3=3e-4)
+Pcoupltype               = semiisotropic
+ref_p                    = 1 1 ; XY Z
+tau_p                    = $(options charmm36=5      martini3=12) 
+compressibility          = 0 $(options charmm36=4.5e-5 martini3=3e-4) ; XY Z
 refcoord_scaling         = com
+
 
 
 ; making bonds stiff       (to avoid the need of calculating fast vibrations. something that would require dividing ts by 4!)
@@ -493,14 +623,18 @@ tinit                    = 0
 dt                       = $(options charmm36=0.002 martini3=0.02)
 nsteps                   = ${STEPS}
 nstcomm                  = 100
+comm_mode                = linear
+comm_grps                = 
 
 ; Output control
-nstxout                  = 50000
-nstvout                  = 50000
-nstfout                  = 50000
-nstlog                   = 50000
-nstenergy                = 50000
-nstxout-compressed       = 50000
+nstxout                 = 50000
+nstxout-compressed      = 50000
+nstvout                 = 500000
+nstfout                 = 500000
+nstcalcenergy           = 80   ; #Surf*SurfTen comes from PRESSURE FLUCTUATIONS, frequent evaluation means more sampling of this noisy quantity
+nstenergy               = 400  
+nstlog                  = 5000
+
 
 
 ; box config
@@ -531,11 +665,11 @@ epsilon_rf               =     0 ; zero means infinity
 
 ; non-bonded Van Der Waals forces
 rvdw                     =     $(options charmm36=1.2 martini3=1.1)                ; ideal potential up to this radius
-vdw_type                 =     cutoff             ; what to do after that radius
+vdw_type                 =     PME             ; what to do after that radius
 ;cutoff demands for 3 extra parameters to deal with the discontinuity
-vdw-modifier             =     $(options charmm36=force-switch martini3=potential-shift-verlet)
+vdw-modifier             =     potential-shift-verlet
 rvdw-switch              =     1.0
-DispCorr                 =     $(options charmm36=EnerPres martini3=no)
+DispCorr                 =     no
 
 
 
@@ -553,9 +687,10 @@ tau_t                    = 1
 
 ; Pressure
 Pcoupl                   = C-rescale
-ref_p                    = 1.0  ;bar
-tau_p                    = $(options charmm36=5      martini3=12)
-compressibility          = $(options charmm36=4.5e-5 martini3=3e-4)
+Pcoupltype               = semiisotropic
+ref_p                    = 1 1 ; XY Z
+tau_p                    = $(options charmm36=5      martini3=12) 
+compressibility          = 0 $(options charmm36=4.5e-5 martini3=3e-4) ; XY Z
 refcoord_scaling         = com
 
 
@@ -585,6 +720,7 @@ EOT
 
 
 echo "all mdp files created"
+
 
 
 ##########################################################################################################
@@ -617,7 +753,7 @@ module purge  # retire tous les modules déchargeables de l'environnement
 module load gnu/11 # charge gnu/11 et définit gnu/11 comme compilateur dans votre environnement
 module load nvhpc/24.3 # besoin de mettre avant OpenMPI comme ce dernier charge un cuda qui n'est pas compatible avec nvhpc/24.3
 module load mpi/openmpi/4 # charge la souche OpenMPI
-module load gromacs/2025.0 # charge le produit
+module load gromacs/2025.4 # charge le produit
 
 export GMX_DISABLE_GPU_DETECTION=1 # prevent GROMACS from using GPUs
 export I_MPI_PIN_CELL=core
@@ -630,31 +766,34 @@ export OMP_DYNAMIC=FALSE
 # ---- 24h-wall self-chaining : queue the follow-up job now ----
 # If production is already finished, stop the chain. I'll know this checking for a done.txt file, that is created in the post processing
 if [[ -f "4_PROD/done.txt" ]]; then
-    echo "Simulation already complete. Exiting."
+    echo "Simulation already complete. No need for chaining"
     exit 0
+else
+   # Otherwise queue the NEXT copy of this job, to start when THIS one ends OK.
+ 
+   ccc_msub -E "--dependency=afterok:\${BRIDGE_MSUB_JOBID}" script.${NAME}.sh
 fi
-# Otherwise queue the NEXT copy of this job, to start when THIS one ends OK.
-ccc_msub -E "--dependency=afterok:\${BRIDGE_MSUB_JOBID}" script.${NAME}.sh
 # --------------------------------------------------------------
 
 
 
 EOT
-
 GMX="ccc_mprun gmx_mpi"
+GMXS="ccc_mprun -n 1 gmx_mpi"
 #MDRUN_OPTIONS="-dd 3 3 3 -npme 13 -dlb yes" #ATENTION: this must be coherent with #MSUB -n 40 #domain decomposition dont work with steep 
 #MDRUN_OPTIONS="-nt 1" #nt cant be used in rome, just set OMP_NUM_THREADS and #MSUB -n
-MDRUN_OPTIONS="-maxh 23 -cpi"   # stop cleanly at ~23h, auto-continue from checkpoint
+MDRUN_OPTIONS="-maxh 20 -cpi"   # stop cleanly before 24h, auto-continue from checkpoint
 
 
 
 ##########################################################################################################
-elif [[ $ARCHITECTURE == "slurm" ]]; then # insert the slurm header, if the user chose this architecture
+elif [[ $ARCHITECTURE == "oxygen" ]]; then # insert the slurm header, if the user chose this architecture
 
 cat <<EOT >> "script.${NAME}.sh"
 
 #SBATCH --partition=calcul
 #SBATCH --cpus-per-task=${NTOMP}
+#SBATCH --ntasks-per-node=${NTMPI}
 #SBATCH --gres=gpu:1
 ##SBATCH --mem-per-cpu=1GB
 ##SBATCH --nodes=1
@@ -663,8 +802,7 @@ cat <<EOT >> "script.${NAME}.sh"
 #SBATCH --exclude=node-15
 
 module purge
-module load cuda/11.8
-module load gromacs/2024.5
+module load gromacs/2025.4
 
 
 # ---- 48h-wall self-chaining : queue the follow-up job now ----
@@ -672,17 +810,18 @@ module load gromacs/2024.5
 if [[ -f "4_PROD/done.txt" ]]; then
     echo "Simulation already complete. Exiting."
     exit 0
-fi
+else
 # Otherwise queue the NEXT copy of this job, to start when THIS one ends OK.
-sbatch "--dependency=afterok:\${SLURM_JOB_ID}" script.${NAME}.sh
+sbatch --dependency=afterok:\${SLURM_JOB_ID} script.${NAME}.sh
 # --------------------------------------------------------------
-
+fi
 
 
 EOT
 
 GMX="gmx"
-MDRUN_OPTIONS="-ntomp ${NTOMP} -ntmpi ${NTMPI} -maxh 47 -cpi" #ATENTION: -ntomp and -ntmpi must be coherent with #SBATCH --cpus-per-task
+GMXS="gmx"
+MDRUN_OPTIONS="-ntomp ${NTOMP} -ntmpi ${NTMPI} -maxh 44 -cpi" #ATENTION: -ntomp and -ntmpi must be coherent with #SBATCH --cpus-per-task
 
 
 
@@ -696,12 +835,12 @@ elif [[ $ARCHITECTURE == "pc" ]]; then # insert what should be the gromacs comma
 cat <<EOT >> "script.${NAME}.sh"
 
 module purge
-module load cuda/11.8
-module load gromacs/2024.5
+module load gromacs/2025.4
 
 EOT
 
 GMX="gmx"
+GMXS="gmx"
 MDRUN_OPTIONS="-ntomp ${NTOMP} -ntmpi ${NTMPI}"
 
 
@@ -725,8 +864,8 @@ planned_steps_reached() {
     [[ -s "\$TPR" && -s "\$CPT" ]] || return 1                                       # Return false if one of the input files is missing or empty.
 
     local CURRENT_STEP PLANNED_STEPS
-    CURRENT_STEP=\$(${GMX} dump -cp "\$CPT" 2>/dev/null | awk -F= '/^[[:space:]]*step[[:space:]]*=/{gsub(/[[:space:]]/,"",\$2); print \$2; exit}')
-    PLANNED_STEPS=\$(${GMX} dump -s "\$TPR" 2>/dev/null | awk -F= '/^[[:space:]]*nsteps[[:space:]]*=/{gsub(/[[:space:]]/,"",\$2); print \$2; exit}')
+    CURRENT_STEP=\$(${GMXS} dump -cp "\$CPT" 2>/dev/null | awk -F= '/^[[:space:]]*step[[:space:]]*=/{gsub(/[[:space:]]/,"",\$2); print \$2; exit}')
+    PLANNED_STEPS=\$(${GMXS} dump -s "\$TPR" 2>/dev/null | awk -F= '/^[[:space:]]*nsteps[[:space:]]*=/{gsub(/[[:space:]]/,"",\$2); print \$2; exit}')
 
     [[ "\$CURRENT_STEP" =~ ^[0-9]+$ && "\$PLANNED_STEPS" =~ ^[0-9]+$ ]] || return 1  # Return false if one of the value is empty or negative 
     (( CURRENT_STEP >= PLANNED_STEPS ))                                              # Return true if the planned number of steps has been reached.
@@ -738,7 +877,7 @@ gmx_failed() {
     local OUTANDERR_FILE="\$2"
     local PATTERN
 
-    PATTERN='fatal[[:space:]]+error|error[[:space:]]+in[[:space:]]+user[[:space:]]+input|ERROR[[:space:]]+[1-9][0-9]*|there (was|were) [1-9][0-9]* errors?|inconsistency[[:space:]]+in[[:space:]]+user[[:space:]]+input|too[[:space:]]+many[[:space:]]+warnings|failed|failure|assertion[[:space:]]+failed|segmentation[[:space:]]+fault|floating[[:space:]]+point[[:space:]]+exception|bus[[:space:]]+error|core[[:space:]]+dumped|aborted|killed|out[[:space:]]+of[[:space:]]+memory|cannot[[:space:]]+allocate[[:space:]]+memory|permission[[:space:]]+denied|no[[:space:]]+such[[:space:]]+file|cannot[[:space:]]+open|could[[:space:]]+not[[:space:]]+be[[:space:]]+opened|command[[:space:]]+not[[:space:]]+found'
+    PATTERN='fatal[[:space:]]+error|error[[:space:]]+in[[:space:]]+user[[:space:]]+input|ERROR[[:space:]]+[1-9][0-9]*|there (was|were) [1-9][0-9]* errors?|inconsistency[[:space:]]+in[[:space:]]+user[[:space:]]+input|too[[:space:]]+many[[:space:]]+warnings|assertion[[:space:]]+failed|segmentation[[:space:]]+fault|floating[[:space:]]+point[[:space:]]+exception|bus[[:space:]]+error|core[[:space:]]+dumped|aborted|killed|out[[:space:]]+of[[:space:]]+memory|cannot[[:space:]]+allocate[[:space:]]+memory|permission[[:space:]]+denied|no[[:space:]]+such[[:space:]]+file|cannot[[:space:]]+open|could[[:space:]]+not[[:space:]]+be[[:space:]]+opened|command[[:space:]]+not[[:space:]]+found'
 
 
     if LC_ALL=C grep -Eiq "\$PATTERN" "\$OUTANDERR_FILE"; then
@@ -762,7 +901,7 @@ if [[ ${SC} == "yes" ]]; then  #use SC before EM
      echo "skipping sc (sc.gro already there)"
    else
    
-   ${GMX} grompp -f ${file_sc_mdp} -c "../../${GRO}" -p "../../${TOP}" -o "sc.tpr" -maxwarn 2 2>&1 | tee "outanderr.grompp"
+   ${GMXS} grompp -f ${file_sc_mdp} -c "../../${GRO}" -p "../../${TOP}" -o "sc.tpr" -maxwarn 2 2>&1 | tee "outanderr.grompp"
    if gmx_failed "sc" "outanderr.grompp"; then exit 1; fi
    if [[ ! -f "sc.tpr" ]]; then echo "sc finished without saving a TPR file"; exit 1; fi
    
@@ -776,10 +915,41 @@ if [[ ${SC} == "yes" ]]; then  #use SC before EM
    
    
    module unload gromacs
-   module load gromacs/2024.5
+   module load gromacs/2025.4
    fi
 
 fi #end of condition to use SC before EM
+
+
+
+if [[ ${SG} == "yes" ]]; then  #use SG before EM
+   echo "#############################################################"
+   echo "######################### SG grompp #########################"
+   echo "#############################################################"
+
+   
+   cd 0_SG || exit
+          
+   if [[ -s "sg.gro" ]]; then
+     echo "skipping sg (sg.gro already there)"
+   else
+   
+   ${GMXS} grompp -f ${file_sg_mdp} -c "../../${GRO}" -p "../../${TOP}" -o "sg.tpr" -maxwarn 2 2>&1 | tee "outanderr.grompp"
+   if gmx_failed "sg" "outanderr.grompp"; then exit 1; fi
+   if [[ ! -f "sg.tpr" ]]; then echo "sg finished without saving a TPR file"; exit 1; fi
+   
+   
+   echo "########################## SG mdrun #############################"
+   
+   
+   ${GMX} mdrun -v -deffnm "sg" ${MDRUN_OPTIONS} 2>&1 | tee "outanderr.mdrun"
+   if [[ ! -f "sg.gro" ]]; then echo "sg finished without saving a GRO file"; exit 1; fi
+   
+   
+
+   fi
+
+fi #end of condition to use SG before EM
 
 echo "#############################################################"
 echo "######################### EM grompp #########################"
@@ -787,6 +957,8 @@ echo "#############################################################"
 
 if [[ ${SC} == "yes" ]]; then #SC was used before EM
     cd ../1_EM || exit #come from 0_SC
+elif [[ ${SG} == "yes" ]]; then #SG was used before EM
+    cd ../1_EM || exit #come from 0_SG
 else
     cd 1_EM || exit    #begin at 1_EM
 fi
@@ -798,9 +970,11 @@ else
 
 
 if [[ ${SC} == "yes" ]]; then #SC was used before EM
-  ${GMX} grompp -f ${file_em_mdp} -c "../0_SC/sc.gro" -p "../../${TOP}" -o "em.tpr" 2>&1 | tee "outanderr.grompp"	
+  ${GMXS} grompp -f ${file_em_mdp} -c "../0_SC/sc.gro" -p "../../${TOP}" -o "em.tpr" 2>&1 | tee "outanderr.grompp"
+elif [[ ${SG} == "yes" ]]; then #SG was used before EM
+  ${GMXS} grompp -f ${file_em_mdp} -c "../0_SG/sg.gro" -p "../../${TOP}" -o "em.tpr" 2>&1 | tee "outanderr.grompp"
 else
-  ${GMX} grompp -f ${file_em_mdp} -c "../../${GRO}" -p "../../${TOP}" -o "em.tpr" -maxwarn 1 2>&1 | tee "outanderr.grompp" 
+  ${GMXS} grompp -f ${file_em_mdp} -c "../../${GRO}" -p "../../${TOP}" -o "em.tpr" -maxwarn 1 2>&1 | tee "outanderr.grompp" 
 fi
 
   if gmx_failed "em" "outanderr.grompp"; then exit 1; fi
@@ -826,14 +1000,15 @@ else
 
 
 
-  ${GMX} grompp -f ${file_nvt_mdp} -c "../1_EM/em.gro" -r "../1_EM/em.gro" -p "../../${TOP}" -o "nvt.tpr" -maxwarn 1 2>&1 | tee "outanderr.grompp"
-  if gmx_failed "nvt" "outanderr.grompp"; then exit 1; fi
+  ${GMXS} grompp -f ${file_nvt_mdp} -c "../1_EM/em.gro" -r "../1_EM/em.gro" -p "../../${TOP}" -o "nvt.tpr" -maxwarn 1 2>&1 | tee "outanderr.grompp"
+  #if gmx_failed "nvt" "outanderr.grompp"; then exit 1; fi
   if [[ ! -f "nvt.tpr" ]]; then echo "nvt finished without saving a TPR file"; exit 1; fi
 
   
   echo "######################### NVT mdrun ##############################"
   ${GMX} mdrun -v -deffnm "nvt" ${MDRUN_OPTIONS} 2>&1 | tee "outanderr.mdrun"
   if gmx_failed "nvt" "outanderr.mdrun"; then exit 1; fi
+  if ! planned_steps_reached "nvt.tpr" "nvt.cpt"; then echo "NVT stopped before completion; job must resume it."; exit 0; fi
   if [[ ! -f "nvt.gro" ]]; then echo "nvt finished without saving a GRO file"; exit 1; fi
 
 
@@ -850,14 +1025,15 @@ else
 
 
 
-  ${GMX} grompp -f ${file_npt_mdp} -c "../2_NVT/nvt.gro" -r "../2_NVT/nvt.gro" -p "../../${TOP}" -o "npt.tpr" -maxwarn 1 2>&1 | tee "outanderr.grompp"
-  if gmx_failed "npt" "outanderr.grompp"; then exit 1; fi
+  ${GMXS} grompp -f ${file_npt_mdp} -c "../2_NVT/nvt.gro" -r "../2_NVT/nvt.gro" -p "../../${TOP}" -o "npt.tpr" -maxwarn 1 2>&1 | tee "outanderr.grompp"
+  #if gmx_failed "npt" "outanderr.grompp"; then exit 1; fi
   if [[ ! -f "npt.tpr" ]]; then echo "npt finished without saving a TPR file"; exit 1; fi
 
   
   echo "######################### NPT mdrun ##############################"
   ${GMX} mdrun -v -deffnm "npt" ${MDRUN_OPTIONS} 2>&1 | tee "outanderr.mdrun"
   if gmx_failed "npt" "outanderr.mdrun"; then exit 1; fi
+  if ! planned_steps_reached "npt.tpr" "npt.cpt"; then echo "npt stopped before completion; job must resume it."; exit 0; fi
   if [[ ! -f "npt.gro" ]]; then echo "npt finished without saving a GRO file"; exit 1; fi
   
   
@@ -874,34 +1050,36 @@ else
 
 
 
-  ${GMX} grompp -f ${file_prod_mdp} -c "../3_NPT/npt.gro" -p "../../${TOP}" -o "prod.tpr" -maxwarn 1 2>&1 | tee "outanderr.grompp"
-  if gmx_failed "prod" "outanderr.grompp"; then exit 1; fi
+  ${GMXS} grompp -f ${file_prod_mdp} -c "../3_NPT/npt.gro" -p "../../${TOP}" -o "prod.tpr" -maxwarn 1 2>&1 | tee "outanderr.grompp"
+  #if gmx_failed "prod" "outanderr.grompp"; then exit 1; fi
   if [[ ! -f "prod.tpr" ]]; then echo "prod finished without saving a TPR file"; exit 1; fi
 
   
   echo "################### PRODUCTION mdrun ############################"
   ${GMX} mdrun -v -deffnm "prod" ${MDRUN_OPTIONS} 2>&1 | tee "outanderr.mdrun"
   if gmx_failed "prod" "outanderr.mdrun"; then exit 1; fi
-  if [[ ! -f "prod.gro" ]]; then echo "prod finished without saving a GRO file"; exit 1; fi
+  if ! planned_steps_reached "prod.tpr" "prod.cpt"; then echo "prod stopped before completion; job must resume it."; exit 0; fi
+  if [[ ! -f "prod.gro" ]]; then echo "npt finished without saving a GRO file"; exit 1; fi
 
 
 
 fi
-echo "#################### CENTER AND FIT ###############################"
+echo "#################### CENTER/FIT and ENERGY ###############################"
 if planned_steps_reached "prod.tpr" "prod.cpt"; then # only post-process once PROD has truly finished
     touch "done.txt"
+    echo "post processing"
+    printf '1\n0\n' | ${GMXS} trjconv -f prod.gro -s prod.tpr -pbc mol -o whole.gro
 
-
-
-    printf '1\n0' | ${GMX} trjconv -s "prod.tpr" -f "prod.xtc" -o "prod.centered.xtc" -center -pbc mol 2>&1 | tee "outanderr.center"
+    printf '1\n0\n' | ${GMXS} trjconv -s "prod.tpr" -f "prod.xtc" -o "prod.centered.xtc" -center -pbc mol 2>&1 | tee "outanderr.center"
     if gmx_failed "center" "outanderr.center"; then exit 1; fi
 
 
-    printf '1\n0' | ${GMX} trjconv -s "prod.tpr" -f "prod.centered.xtc" -o "prod.fitted.xtc" -fit progressive 2>&1 | tee "outanderr.fit"
+    printf '1\n0\n' | ${GMXS} trjconv -s "prod.tpr" -f "prod.centered.xtc" -o "prod.fitted.xtc" -fit progressive 2>&1 | tee "outanderr.fit"
     if gmx_failed "fit" "outanderr.fit"; then exit 1; fi
     
-    
-    
+    printf '#Surf*SurfTen\n\n' | ${GMXS} energy -f prod.edr -o energy.surften200toEND.xvg -b 300000 2>&1 | tee "outanderr.energy.surften"
+
+     
 fi
 echo "###################################################################"
 
@@ -916,7 +1094,7 @@ EOT
 chmod +x script.${NAME}.sh
 
 
-if [[ $ARCHITECTURE == "slurm" ]]; then
+if [[ $ARCHITECTURE == "oxygen" ]]; then
     sbatch script.${NAME}.sh && echo "job was sent"
 
 elif [[ $ARCHITECTURE == "rome" ]]; then
@@ -927,14 +1105,6 @@ elif [[ $ARCHITECTURE == "pc" ]]; then
     
 
 fi
-
-
-
-
-
-
-
-
 
 
 

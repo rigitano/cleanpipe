@@ -1,6 +1,10 @@
+
 #!/bin/bash
 
-# usage example:  ./runREALISTIC.sh a12HW a12HW.gro a12HW.top 1 298 charmm36 pc 2 8
+#this is ment to calculate surface tension of slabs in vacum
+
+# usage example:  ./runREALISTIC.sh a12HW a12HW.gro a12HW.top 400 298 charmm36 pc 2 8
+#always simulate more than 400 ns, because gmx enery will disconsider data before 300
 
 # ARGUMENTS:
 # 1-name that goes onthe runREALISTIC to be created and the job name
@@ -94,7 +98,6 @@ if [[ "$NTOMP" =~ ^[0-9]+$ ]]; then
     echo "NTOMP OK (is an integer)"
 else
     echo "NTOMP is NOT an integer"
-    exit 1
 fi
 
 
@@ -104,7 +107,6 @@ if [[ "$NTMPI" =~ ^[0-9]+$ ]]; then
     echo "NTMPI OK (is an integer)"
 else
     echo "NTMPI is NOT an integer"
-    exit 1
 fi
 echo " "
 
@@ -167,6 +169,8 @@ options() {
   done
   echo "${map[$FF]}"
 }
+
+
 
 
 
@@ -317,7 +321,6 @@ tau_t                    = 1
 ; Pressure
 Pcoupl                   = no
 
-
 ; making bonds stiff       (to avoid the need of calculating fast vibrations. something that would require dividing ts by 4!)
 constraints              = $(options charmm36=h-bonds martini3=none)
 constraint-algorithm     = lincs
@@ -371,8 +374,8 @@ emstep                   = 0.005
 ;niter                    = 20
 ;nbfgscorr                = 10
 ; Output control
-nstlog                   = 5000
-nstenergy                = 5000
+nstlog                   = 1
+nstenergy                = 1
 
 ; box config
 pbc                      = xyz
@@ -438,6 +441,7 @@ nsteps                   = 50000
 nstcomm                  = 100
 comm_mode                = linear
 comm_grps                = 
+
 
 ; Output control
 nstxout                  = 5000
@@ -524,7 +528,7 @@ cat <<EOT > "3_NPT/${file_npt_mdp}"
 integrator               = md
 tinit                    = 0
 dt                       = $(options charmm36=0.002 martini3=0.02)
-nsteps                   = 3000000
+nsteps                   = 100000
 nstcomm                  = 100
 comm_mode                = linear
 comm_grps                = 
@@ -579,11 +583,8 @@ ref_t                    = ${t} ;K
 tau_t                    = 1
  
 ; Pressure
-Pcoupl                   = C-rescale
-ref_p                    = 1 ;bar
-tau_p                    = $(options charmm36=5      martini3=12)
-compressibility          = $(options charmm36=4.5e-5 martini3=3e-4)
-refcoord_scaling         = com
+Pcoupl                   = no ; nvt again
+
 
 
 ; making bonds stiff       (to avoid the need of calculating fast vibrations. something that would require dividing ts by 4!)
@@ -621,12 +622,14 @@ comm_mode                = linear
 comm_grps                = 
 
 ; Output control
-nstxout                  = 50000
-nstvout                  = 50000
-nstfout                  = 50000
-nstlog                   = 50000
-nstenergy                = 50000
-nstxout-compressed       = 50000
+nstxout                 = 50000
+nstxout-compressed      = 50000
+nstvout                 = 500000
+nstfout                 = 500000
+nstcalcenergy           = 80   ; #Surf*SurfTen comes from PRESSURE FLUCTUATIONS, frequent evaluation means more sampling of this noisy quantity
+nstenergy               = 400  
+nstlog                  = 5000
+
 
 
 ; box config
@@ -678,11 +681,12 @@ ref_t                    = ${t} ;K
 tau_t                    = 1
 
 ; Pressure
-Pcoupl                   = C-rescale
-ref_p                    = 1.0  ;bar
-tau_p                    = $(options charmm36=5      martini3=12)
-compressibility          = $(options charmm36=4.5e-5 martini3=3e-4)
-refcoord_scaling         = com
+Pcoupl                   = no
+;Pcoupltype               = semiisotropic
+;ref_p                    = 1.0 1.0
+;tau_p                    = 5
+;compressibility          = 0 4.5e-5
+comm-mode                = linear
 
 
 ; making bonds stiff       (to avoid the need of calculating fast vibrations. something that would require dividing ts by 4!)
@@ -711,6 +715,7 @@ EOT
 
 
 echo "all mdp files created"
+
 
 
 ##########################################################################################################
@@ -756,19 +761,20 @@ export OMP_DYNAMIC=FALSE
 # ---- 24h-wall self-chaining : queue the follow-up job now ----
 # If production is already finished, stop the chain. I'll know this checking for a done.txt file, that is created in the post processing
 if [[ -f "4_PROD/done.txt" ]]; then
-    echo "Simulation already complete. No need for follow-up job"
+    echo "Simulation already complete. No need for chaining"
     exit 0
 else
-# Otherwise queue the NEXT copy of this job, to start when THIS one ends OK.
-ccc_msub -E "--dependency=afterok:\${BRIDGE_MSUB_JOBID}" script.${NAME}.sh
+   # Otherwise queue the NEXT copy of this job, to start when THIS one ends OK.
+ 
+   ccc_msub -E "--dependency=afterok:\${BRIDGE_MSUB_JOBID}" script.${NAME}.sh
 fi
 # --------------------------------------------------------------
 
 
 
 EOT
-
 GMX="ccc_mprun gmx_mpi"
+GMXS="ccc_mprun -n 1 gmx_mpi"
 #MDRUN_OPTIONS="-dd 3 3 3 -npme 13 -dlb yes" #ATENTION: this must be coherent with #MSUB -n 40 #domain decomposition dont work with steep 
 #MDRUN_OPTIONS="-nt 1" #nt cant be used in rome, just set OMP_NUM_THREADS and #MSUB -n
 MDRUN_OPTIONS="-maxh 20 -cpi"   # stop cleanly before 24h, auto-continue from checkpoint
@@ -784,6 +790,8 @@ cat <<EOT >> "script.${NAME}.sh"
 #SBATCH --cpus-per-task=${NTOMP}
 #SBATCH --ntasks-per-node=${NTMPI}
 #SBATCH --gres=gpu:1
+##SBATCH --mem-per-cpu=1GB
+##SBATCH --nodes=1
 #SBATCH --job-name=${NAME}.realistic
 #SBATCH --output=outanderr.slurm.${NAME}
 #SBATCH --exclude=node-15
@@ -795,16 +803,13 @@ module load gromacs/2025.4
 # ---- 48h-wall self-chaining : queue the follow-up job now ----
 # If production is already finished, stop the chain. I'll know this checking for a done.txt file, that is created in the post processing
 if [[ -f "4_PROD/done.txt" ]]; then
-    echo "Simulation already complete. No need for follow-up job"
+    echo "Simulation already complete. Exiting."
     exit 0
 else
 # Otherwise queue the NEXT copy of this job, to start when THIS one ends OK.
-THIS_SCRIPT_PATH="\$(readlink -f "\$0")"
-sbatch --dependency=afterok:\$SLURM_JOB_ID "\$THIS_SCRIPT_PATH"
-
-fi
+sbatch --dependency=afterok:\${SLURM_JOB_ID} script.${NAME}.sh
 # --------------------------------------------------------------
-
+fi
 
 
 EOT
@@ -829,6 +834,7 @@ module load gromacs/2025.4
 EOT
 
 GMX="gmx"
+GMXS="gmx"
 MDRUN_OPTIONS="-ntomp ${NTOMP} -ntmpi ${NTMPI}"
 
 
@@ -852,8 +858,8 @@ planned_steps_reached() {
     [[ -s "\$TPR" && -s "\$CPT" ]] || return 1                                       # Return false if one of the input files is missing or empty.
 
     local CURRENT_STEP PLANNED_STEPS
-    CURRENT_STEP=\$(${GMX} dump -cp "\$CPT" 2>/dev/null | awk -F= '/^[[:space:]]*step[[:space:]]*=/{gsub(/[[:space:]]/,"",\$2); print \$2; exit}')
-    PLANNED_STEPS=\$(${GMX} dump -s "\$TPR" 2>/dev/null | awk -F= '/^[[:space:]]*nsteps[[:space:]]*=/{gsub(/[[:space:]]/,"",\$2); print \$2; exit}')
+    CURRENT_STEP=\$(${GMXS} dump -cp "\$CPT" 2>/dev/null | awk -F= '/^[[:space:]]*step[[:space:]]*=/{gsub(/[[:space:]]/,"",\$2); print \$2; exit}')
+    PLANNED_STEPS=\$(${GMXS} dump -s "\$TPR" 2>/dev/null | awk -F= '/^[[:space:]]*nsteps[[:space:]]*=/{gsub(/[[:space:]]/,"",\$2); print \$2; exit}')
 
     [[ "\$CURRENT_STEP" =~ ^[0-9]+$ && "\$PLANNED_STEPS" =~ ^[0-9]+$ ]] || return 1  # Return false if one of the value is empty or negative 
     (( CURRENT_STEP >= PLANNED_STEPS ))                                              # Return true if the planned number of steps has been reached.
@@ -889,7 +895,7 @@ if [[ ${SC} == "yes" ]]; then  #use SC before EM
      echo "skipping sc (sc.gro already there)"
    else
    
-   ${GMX} grompp -f ${file_sc_mdp} -c "../../${GRO}" -p "../../${TOP}" -o "sc.tpr" -maxwarn 2 2>&1 | tee "outanderr.grompp"
+   ${GMXS} grompp -f ${file_sc_mdp} -c "../../${GRO}" -p "../../${TOP}" -o "sc.tpr" -maxwarn 2 2>&1 | tee "outanderr.grompp"
    if gmx_failed "sc" "outanderr.grompp"; then exit 1; fi
    if [[ ! -f "sc.tpr" ]]; then echo "sc finished without saving a TPR file"; exit 1; fi
    
@@ -922,7 +928,7 @@ if [[ ${SG} == "yes" ]]; then  #use SG before EM
      echo "skipping sg (sg.gro already there)"
    else
    
-   ${GMX} grompp -f ${file_sg_mdp} -c "../../${GRO}" -p "../../${TOP}" -o "sg.tpr" -maxwarn 2 2>&1 | tee "outanderr.grompp"
+   ${GMXS} grompp -f ${file_sg_mdp} -c "../../${GRO}" -p "../../${TOP}" -o "sg.tpr" -maxwarn 2 2>&1 | tee "outanderr.grompp"
    if gmx_failed "sg" "outanderr.grompp"; then exit 1; fi
    if [[ ! -f "sg.tpr" ]]; then echo "sg finished without saving a TPR file"; exit 1; fi
    
@@ -958,11 +964,11 @@ else
 
 
 if [[ ${SC} == "yes" ]]; then #SC was used before EM
-  ${GMX} grompp -f ${file_em_mdp} -c "../0_SC/sc.gro" -p "../../${TOP}" -o "em.tpr" 2>&1 | tee "outanderr.grompp"
+  ${GMXS} grompp -f ${file_em_mdp} -c "../0_SC/sc.gro" -p "../../${TOP}" -o "em.tpr" 2>&1 | tee "outanderr.grompp"
 elif [[ ${SG} == "yes" ]]; then #SG was used before EM
-  ${GMX} grompp -f ${file_em_mdp} -c "../0_SG/sg.gro" -p "../../${TOP}" -o "em.tpr" 2>&1 | tee "outanderr.grompp"
+  ${GMXS} grompp -f ${file_em_mdp} -c "../0_SG/sg.gro" -p "../../${TOP}" -o "em.tpr" 2>&1 | tee "outanderr.grompp"
 else
-  ${GMX} grompp -f ${file_em_mdp} -c "../../${GRO}" -p "../../${TOP}" -o "em.tpr" -maxwarn 1 2>&1 | tee "outanderr.grompp" 
+  ${GMXS} grompp -f ${file_em_mdp} -c "../../${GRO}" -p "../../${TOP}" -o "em.tpr" -maxwarn 1 2>&1 | tee "outanderr.grompp" 
 fi
 
   if gmx_failed "em" "outanderr.grompp"; then exit 1; fi
@@ -988,8 +994,8 @@ else
 
 
 
-  ${GMX} grompp -f ${file_nvt_mdp} -c "../1_EM/em.gro" -r "../1_EM/em.gro" -p "../../${TOP}" -o "nvt.tpr" -maxwarn 1 2>&1 | tee "outanderr.grompp"
-  if gmx_failed "nvt" "outanderr.grompp"; then exit 1; fi
+  ${GMXS} grompp -f ${file_nvt_mdp} -c "../1_EM/em.gro" -r "../1_EM/em.gro" -p "../../${TOP}" -o "nvt.tpr" -maxwarn 1 2>&1 | tee "outanderr.grompp"
+  #if gmx_failed "nvt" "outanderr.grompp"; then exit 1; fi
   if [[ ! -f "nvt.tpr" ]]; then echo "nvt finished without saving a TPR file"; exit 1; fi
 
   
@@ -1013,8 +1019,8 @@ else
 
 
 
-  ${GMX} grompp -f ${file_npt_mdp} -c "../2_NVT/nvt.gro" -r "../2_NVT/nvt.gro" -p "../../${TOP}" -o "npt.tpr" -maxwarn 1 2>&1 | tee "outanderr.grompp"
-  if gmx_failed "npt" "outanderr.grompp"; then exit 1; fi
+  ${GMXS} grompp -f ${file_npt_mdp} -c "../2_NVT/nvt.gro" -r "../2_NVT/nvt.gro" -p "../../${TOP}" -o "npt.tpr" -maxwarn 1 2>&1 | tee "outanderr.grompp"
+  #if gmx_failed "npt" "outanderr.grompp"; then exit 1; fi
   if [[ ! -f "npt.tpr" ]]; then echo "npt finished without saving a TPR file"; exit 1; fi
 
   
@@ -1038,8 +1044,8 @@ else
 
 
 
-  ${GMX} grompp -f ${file_prod_mdp} -c "../3_NPT/npt.gro" -p "../../${TOP}" -o "prod.tpr" -maxwarn 1 2>&1 | tee "outanderr.grompp"
-  if gmx_failed "prod" "outanderr.grompp"; then exit 1; fi
+  ${GMXS} grompp -f ${file_prod_mdp} -c "../3_NPT/npt.gro" -p "../../${TOP}" -o "prod.tpr" -maxwarn 1 2>&1 | tee "outanderr.grompp"
+  #if gmx_failed "prod" "outanderr.grompp"; then exit 1; fi
   if [[ ! -f "prod.tpr" ]]; then echo "prod finished without saving a TPR file"; exit 1; fi
 
   
@@ -1052,29 +1058,20 @@ else
 
 
 fi
-echo "#################### CENTER AND FIT ###############################"
+echo "#################### CENTER/FIT and ENERGY ###############################"
 if planned_steps_reached "prod.tpr" "prod.cpt"; then # only post-process once PROD has truly finished
     touch "done.txt"
+    echo "post processing"
+    printf '1\n0\n' | ${GMXS} trjconv -f prod.gro -s prod.tpr -pbc mol -o whole.gro
 
-
-
-    printf '1\n0\n' | ${GMX} trjconv -s "prod.tpr" -f "prod.xtc" -o "prod.centered.xtc" -center -pbc mol 2>&1 | tee "outanderr.center"
+    printf '1\n0\n' | ${GMXS} trjconv -s "prod.tpr" -f "prod.xtc" -o "prod.centered.xtc" -center -pbc mol 2>&1 | tee "outanderr.center"
     if gmx_failed "center" "outanderr.center"; then exit 1; fi
 
 
-    printf '1\n0\n' | ${GMX} trjconv -s "prod.tpr" -f "prod.centered.xtc" -o "prod.fitted.xtc" -fit progressive 2>&1 | tee "outanderr.fit"
+    printf '1\n0\n' | ${GMXS} trjconv -s "prod.tpr" -f "prod.centered.xtc" -o "prod.fitted.xtc" -fit progressive 2>&1 | tee "outanderr.fit"
     if gmx_failed "fit" "outanderr.fit"; then exit 1; fi
     
-
-
-    printf '1\n0\n' | ${GMX} trjconv -f prod.gro -s prod.tpr -pbc mol -o prod.whole.gro
-
-
-    printf 'Density\n\n' | ${GMX} energy -f prod.edr -o energy.density20toEND.xvg -b 20000 2>&1 | tee "outanderr.energy.density"
-
-
-
-
+    printf '#Surf*SurfTen\n\n' | ${GMXS} energy -f prod.edr -o energy.surften300toEND.xvg -b 300000 2>&1 | tee "outanderr.energy.surften"
 
     
 fi
@@ -1102,14 +1099,6 @@ elif [[ $ARCHITECTURE == "pc" ]]; then
     
 
 fi
-
-
-
-
-
-
-
-
 
 
 

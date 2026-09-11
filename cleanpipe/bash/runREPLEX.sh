@@ -243,6 +243,8 @@ tinit                    = 0
 dt                       = $(options charmm36=0.002 martini3=0.02)
 nsteps                   = ${STEPS}
 nstcomm                  = 100
+comm_mode                = linear
+comm_grps                = 
 
 ; Output control
 nstxout                  = 50000
@@ -392,11 +394,11 @@ export OMP_DYNAMIC=FALSE
 if [[ -f "done.txt" ]]; then
     echo "Simulation already complete. Exiting."
     exit 0
-fi
+else
 # Otherwise queue the NEXT copy of this job, to start when THIS one ends OK.
 ccc_msub -E "--dependency=afterok:\${BRIDGE_MSUB_JOBID}" script.${NAME}.sh
 # --------------------------------------------------------------
-
+fi
 
 
 EOT
@@ -405,7 +407,7 @@ GMX="gmx_mpi"                                           # Serial GROMACS tools s
 MDRUN="ccc_mprun gmx_mpi mdrun"                         # External-MPI REMD launch using the allocated TGCC ranks.
 #MDRUN_OPTIONS="-dd 3 3 3 -npme 13 -dlb yes" #ATENTION: this must be coherent with #MSUB -n 40 #domain decomposition dont work with steep 
 #MDRUN_OPTIONS="-nt 1" #nt cant be used in rome, just set OMP_NUM_THREADS and #MSUB -n
-MDRUN_OPTIONS="-maxh 23 -cpi"   # stop cleanly at ~23h, auto-continue from checkpoint
+MDRUN_OPTIONS="-maxh 20 -cpi"   # stop cleanly at ~23h, auto-continue from checkpoint
 
 
 
@@ -447,11 +449,11 @@ export OMP_NUM_THREADS=${NTOMP}      # number of OpenMP threads (ntomp)
 if [[ -f "done.txt" ]]; then
     echo "Simulation already complete. Exiting."
     exit 0
-fi
+else
 # Otherwise queue the NEXT copy of this job, to start when THIS one ends OK.
-sbatch --dependency=afterany:\${SLURM_JOB_ID} script.${NAME}.sh
+sbatch --dependency=afterok:\$SLURM_JOB_ID script.${NAME}.sh
 # --------------------------------------------------------------
-
+fi
 
 
 
@@ -459,7 +461,7 @@ EOT
 
 GMX="gmx_mpi"                                                                   # External-MPI GROMACS (grompp, dump).
 MDRUN="srun --cpus-per-task=${NTOMP} --threads-per-core=1 gmx_mpi mdrun"        # srun spreads the NTMPI ranks.
-MDRUN_OPTIONS="-ntomp ${NTOMP} -pin off -maxh 23 -cpi"   
+MDRUN_OPTIONS="-ntomp ${NTOMP} -pin off -maxh 20 -cpi"   
 
 
 #########################################################################################################
@@ -504,12 +506,12 @@ export MPICH_GPU_SUPPORT_ENABLED=1
 if [[ -f "done.txt" ]]; then
     echo "Simulation already complete. Exiting."
     exit 0
-fi
+else
 # Otherwise queue the NEXT copy of this job, to start when THIS one ends OK.
-# xxx
-#sbatch --dependency=afterany:\${SLURM_JOB_ID} script.${NAME}.sh
-# --------------------------------------------------------------
 
+sbatch --dependency=afterok:\$SLURM_JOB_ID script.${NAME}.sh
+# --------------------------------------------------------------
+fi
 
 
 
@@ -517,7 +519,7 @@ EOT
 
 GMX="gmx_mpi"                                                                   # External-MPI GROMACS (grompp, dump).
 MDRUN="srun --ntasks-per-node=${NTMPI} --cpus-per-task=${NTOMP} --threads-per-core=1 --gpus-per-node=4 --gpu-bind=closest --label -- gmx_mpi mdrun"        # srun spreads the NTMPI ranks.
-MDRUN_OPTIONS="-ntomp ${NTOMP} -pin off -maxh 23 -nb gpu -bonded gpu -update auto -cpi"   
+MDRUN_OPTIONS="-ntomp ${NTOMP} -pin off -maxh 20 -nb gpu -bonded gpu -update auto -cpi"   
 
 
 ##########################################################################################################
@@ -536,8 +538,7 @@ cat <<EOT >> "script.${NAME}.sh"
 #SBATCH --exclude=node-15
 
 module purge
-module load cuda/11.8
-module load gromacs/2024.5
+module load gromacs/2025.4
 
 
 # ---- 48h-wall self-chaining : queue the follow-up job now ----
@@ -545,18 +546,18 @@ module load gromacs/2024.5
 if [[ -f "done.txt" ]]; then
     echo "Simulation already complete. Exiting."
     exit 0
-fi
+else
 # Otherwise queue the NEXT copy of this job, to start when THIS one ends OK.
-sbatch --dependency=afterany:\${SLURM_JOB_ID} script.${NAME}.sh
+sbatch --dependency=afterok:\$SLURM_JOB_ID script.${NAME}.sh
 # --------------------------------------------------------------
-
+fi
 
 
 EOT
 
 GMX="gmx_mpi"                                                   # External-MPI GROMACS executable.
 MDRUN="srun gmx_mpi mdrun"                                     # Slurm launches the allocated MPI ranks.
-MDRUN_OPTIONS="-ntomp ${NTOMP} -maxh 47 -cpi" #ATENTION: -ntomp and -ntmpi must be coherent with #SBATCH --cpus-per-task
+MDRUN_OPTIONS="-ntomp ${NTOMP} -maxh 44 -cpi" #ATENTION: -ntomp and -ntmpi must be coherent with #SBATCH --cpus-per-task
 
 
 
@@ -570,8 +571,7 @@ elif [[ $ARCHITECTURE == "pc" ]]; then # insert what should be the gromacs comma
 cat <<EOT >> "script.${NAME}.sh"
 
 module purge
-module load cuda/11.8
-module load gromacs/2024.5
+module load gromacs/2025.4
 
 EOT
 
@@ -617,7 +617,7 @@ gmx_failed() {
     local OUTANDERR_FILE="\$2"
     local PATTERN
 
-    PATTERN='fatal[[:space:]]+error|error[[:space:]]+in[[:space:]]+user[[:space:]]+input|ERROR[[:space:]]+[1-9][0-9]*|there (was|were) [1-9][0-9]* errors?|inconsistency[[:space:]]+in[[:space:]]+user[[:space:]]+input|too[[:space:]]+many[[:space:]]+warnings|failed|failure|assertion[[:space:]]+failed|segmentation[[:space:]]+fault|floating[[:space:]]+point[[:space:]]+exception|bus[[:space:]]+error|core[[:space:]]+dumped|aborted|killed|out[[:space:]]+of[[:space:]]+memory|cannot[[:space:]]+allocate[[:space:]]+memory|permission[[:space:]]+denied|no[[:space:]]+such[[:space:]]+file|cannot[[:space:]]+open|could[[:space:]]+not[[:space:]]+be[[:space:]]+opened|command[[:space:]]+not[[:space:]]+found'
+    PATTERN='fatal[[:space:]]+error|error[[:space:]]+in[[:space:]]+user[[:space:]]+input|ERROR[[:space:]]+[1-9][0-9]*|there (was|were) [1-9][0-9]* errors?|inconsistency[[:space:]]+in[[:space:]]+user[[:space:]]+input|too[[:space:]]+many[[:space:]]+warnings|assertion[[:space:]]+failed|segmentation[[:space:]]+fault|floating[[:space:]]+point[[:space:]]+exception|bus[[:space:]]+error|core[[:space:]]+dumped|aborted|killed|out[[:space:]]+of[[:space:]]+memory|cannot[[:space:]]+allocate[[:space:]]+memory|permission[[:space:]]+denied|no[[:space:]]+such[[:space:]]+file|cannot[[:space:]]+open|could[[:space:]]+not[[:space:]]+be[[:space:]]+opened|command[[:space:]]+not[[:space:]]+found'
 
 
     if LC_ALL=C grep -Eiq "\$PATTERN" "\$OUTANDERR_FILE"; then
@@ -694,6 +694,10 @@ if ! ${MDRUN} -multidir "\${REPLICA_DIRS[@]}" -deffnm prod ${MDRUN_OPTIONS} -rep
     echo "ERROR: replica-exchange mdrun returned a nonzero status."
     exit 1
 fi
+  if gmx_failed "prod" "outanderr.mdrun"; then exit 1; fi
+  if ! planned_steps_reached "prod.tpr" "prod.cpt"; then echo "prod stopped before completion; job must resume it."; exit 0; fi
+  if [[ ! -f "prod.gro" ]]; then echo "npt finished without saving a GRO file"; exit 1; fi
+
 #################################################################################################
 
 # Inspect only the current mdrun launch; tee overwrites this diagnostic log while GROMACS appends its actual simulation outputs.
