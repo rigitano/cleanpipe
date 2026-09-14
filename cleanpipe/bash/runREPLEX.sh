@@ -243,8 +243,8 @@ tinit                    = 0
 dt                       = $(options charmm36=0.002 martini3=0.02)
 nsteps                   = ${STEPS}
 nstcomm                  = 100
-comm_mode                = linear
-comm_grps                = 
+comm-mode                = linear
+comm-grps                = 
 
 ; Output control
 nstxout                  = 50000

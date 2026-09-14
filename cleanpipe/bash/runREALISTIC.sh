@@ -262,14 +262,13 @@ integrator              = sd
 dt                      = 0.002
 nsteps                  = 5000
 nstcomm                  = 100
-comm_mode                = linear
-comm_grps                = 
+comm-mode                = linear
+comm-grps                = 
 
 
 nstxtcout               = 5000
 nstvout                 = 5000
 nstfout                 = 5000
-nstcalcenergy           = 100
 nstenergy               = 1000
 nstlog                  = 1000
 ;
@@ -332,7 +331,7 @@ couple-lambda1           = vdw-q
 couple-intramol          = yes
 init-lambda              = 0
 delta-lambda             = 0.0002
-nstdhdl                  = 60
+
 fep-lambdas              = 
 mass-lambdas             = 
 bonded-lambdas           = 
@@ -340,7 +339,6 @@ restraint-lambdas        =
 temperature-lambdas      = 
 calc-lambda-neighbors    = 1
 init-lambda-weights      = 
-dhdl-print-energy        = no
 sc-alpha                 = 4 ; $(options charmm36=0.5 martini3=1.3)
 sc-power                 = 2 ; 1
 ;sc-r-power               = 6     ; this value came from a martini example, should this be different for charmm36?
@@ -350,7 +348,9 @@ separate-dhdl-file       = yes
 dhdl-derivatives         = yes
 dh_hist_size             = 0    ; this value came from a martini example, should this be different for charmm36?
 dh_hist_spacing          = 0.1  ; this value came from a martini example, should this be different for charmm36?
-
+nstdhdl                  = 60
+nstcalcenergy            = 100
+dhdl-print-energy        = no
 
 
 EOT
@@ -365,11 +365,11 @@ cat <<EOT > "1_EM/${file_em_mdp}"
 ; Run control
 integrator               = steep 
 nsteps                   = 10000
+
 ; EM criteria and other stuff
 emtol                    = 100
 emstep                   = 0.005
-;niter                    = 20
-;nbfgscorr                = 10
+
 ; Output control
 nstlog                   = 5000
 nstenergy                = 5000
@@ -436,8 +436,8 @@ dt                       = $(options charmm36=0.002 martini3=0.02)
 
 nsteps                   = 50000
 nstcomm                  = 100
-comm_mode                = linear
-comm_grps                = 
+comm-mode                = linear
+comm-grps                = 
 
 ; Output control
 nstxout                  = 5000
@@ -526,8 +526,8 @@ tinit                    = 0
 dt                       = $(options charmm36=0.002 martini3=0.02)
 nsteps                   = 3000000
 nstcomm                  = 100
-comm_mode                = linear
-comm_grps                = 
+comm-mode                = linear
+comm-grps                = 
 
 ; Output control
 nstxout                  = 5000
@@ -617,8 +617,8 @@ tinit                    = 0
 dt                       = $(options charmm36=0.002 martini3=0.02)
 nsteps                   = ${STEPS}
 nstcomm                  = 100
-comm_mode                = linear
-comm_grps                = 
+comm-mode                = linear
+comm-grps                = 
 
 ; Output control
 nstxout                  = 50000

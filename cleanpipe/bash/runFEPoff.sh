@@ -232,11 +232,11 @@ cat <<EOT > "t${t}/Lambda_${i}/1_EM/${file_em_mdp}"
 ; Run control
 integrator               = steep 
 nsteps                   = 100000
+
 ; EM criteria and other stuff
 emtol                    = 100
 emstep                   = 0.01
-;niter                    = 20
-;nbfgscorr                = 10
+
 ; Output control
 nstlog                   = 5000
 nstenergy                = 5000
@@ -325,8 +325,8 @@ dt                       = $(options charmm36=0.002 martini3=0.02)
 
 nsteps                   = 50000
 nstcomm                  = 100
-comm_mode                = linear
-comm_grps                = 
+comm-mode                = linear
+comm-grps                = 
 
 ; Output control
 nstxout                  = 5000
@@ -380,7 +380,7 @@ couple-moltype           = ${MOL_TO_DECOUPLE}  ; name of molecule to decouple
 couple-lambda0           = vdw-q            ; at lambda 0: interactions are ON  
 couple-lambda1           = none             ; at lambda 1: interactions are OFF
 couple-intramol          = yes              ; for big molecules, it’s necessary to turn off the internal interactions, not just the molecule-surroundings interactions.
-nstdhdl                  = 10
+nstdhdl                  = 100 ; in the peptide project, this was 10. The error bars were very smalls then
 
 ; Vectors of lambda specified here
 ; Each combination is an index that is retrieved from init_lambda_state for each simulation
@@ -439,8 +439,8 @@ tinit                    = 0
 dt                       = $(options charmm36=0.002 martini3=0.02)
 nsteps                   = 100000
 nstcomm                  = 100
-comm_mode                = linear
-comm_grps                = 
+comm-mode                = linear
+comm-grps                = 
 
 ; Output control
 nstxout                  = 5000
@@ -561,8 +561,8 @@ tinit                    = 0
 dt                       = $(options charmm36=0.002 martini3=0.02)
 nsteps                   = ${STEPS}
 nstcomm                  = 100
-comm_mode                = linear
-comm_grps                = 
+comm-mode                = linear
+comm-grps                = 
 
 ; Output control
 nstxout                  = 50000
@@ -1021,32 +1021,13 @@ else
 
 
 fi
-echo "############################## LAUNCH BAR CALCULATION  ###################################"
+echo "############################## POST PROCESSING  ###################################"
 if [[ ! -f done.txt ]] && planned_steps_reached "${NAME}_prod_${t}_${i}.tpr" "${NAME}_prod_${t}_${i}.cpt"; then # only post-process once PROD has truly finished
     touch "done.txt"
 
 
     
-    # this lambda is done. lets check if all the other lambdas are also done. if so, lets louch the bar calculation script.sh
-    # notice that this test will be done for all lambdas, but only the last one to finish will enter the condition
-    
-    n=\$(find ../.. -path '*/4_PROD/done.txt' | wc -l)
-    if (( n == 21 )); then
-     
-        if [[ ${ARCHITECTURE} == "rome" ]]; then
-            cd ../../
-            ccc_msub ${NAME}.${t}.BarForAllLambdas.sh
-        elif [[ ${ARCHITECTURE} == "genoa" ]]; then
-            cd ../../
-            sbatch ${NAME}.${t}.BarForAllLambdas.sh
-        elif [[ ${ARCHITECTURE} == "oxygen" ]]; then
-            cd ../../
-            sbatch ${NAME}.${t}.BarForAllLambdas.sh
-        elif [[ ${ARCHITECTURE} == "pc" ]]; then
-            cd ../../
-            nohup ./${NAME}.${t}.BarForAllLambdas.sh > outanderror.BarForAllLambdas 2>&1 &
-        fi
-    fi
+
 
 
     echo "############################## CENTER AND FIT - Temperature ${t} Lambda ${i}  ###################################"
@@ -1059,6 +1040,39 @@ if [[ ! -f done.txt ]] && planned_steps_reached "${NAME}_prod_${t}_${i}.tpr" "${
 
     printf '1\n0\n' | ${GMXS} trjconv -s "${NAME}_prod_${t}_${i}.tpr" -f "${NAME}_prod_${t}_${i}.centered.xtc" -o "${NAME}_prod_${t}_${i}.fitted.xtc" -fit progressive 2>&1 | tee "outanderr.fit"
     if gmx_failed "${NAME}_fit" "outanderr.fit"; then exit 1; fi
+
+
+
+    echo "############################## MAYBE LAUNCH BAR CALCULATION  ###################################"
+
+    # this lambda is done. lets check if all the other lambdas are also done. if so, lets louch the bar calculation script.sh
+    # notice that this test will be done for all lambdas, but only the last one to finish will enter the condition
+    
+    n=\$(find ../.. -path '*/4_PROD/done.txt' | wc -l)
+    if (( n == 21 )); then
+     
+        if [[ ${ARCHITECTURE} == "rome" ]]; then
+            cd ../../
+            ccc_msub ${NAME}.${t}.BarForAllLambdas.sh
+            echo "launched in rome"
+        elif [[ ${ARCHITECTURE} == "genoa" ]]; then
+            cd ../../
+            sbatch ${NAME}.${t}.BarForAllLambdas.sh
+            echo "launched in genoa"
+        elif [[ ${ARCHITECTURE} == "oxygen" ]]; then
+            cd ../../
+            sbatch ${NAME}.${t}.BarForAllLambdas.sh
+            echo "launched in oxygen"
+        elif [[ ${ARCHITECTURE} == "pc" ]]; then
+            cd ../../
+            nohup ./${NAME}.${t}.BarForAllLambdas.sh > outanderror.BarForAllLambdas 2>&1 &
+            echo "launched in pc"
+        elif
+            echo "not launched"
+        fi
+    fi
+
+
 
 
 

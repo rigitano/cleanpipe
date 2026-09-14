@@ -266,8 +266,8 @@ integrator              = sd
 dt                      = 0.002
 nsteps                  = 5000
 nstcomm                  = 100
-comm_mode                = linear
-comm_grps                = 
+comm-mode                = linear
+comm-grps                = 
 
 
 nstxtcout               = 5000
@@ -368,14 +368,14 @@ cat <<EOT > "1_EM/${file_em_mdp}"
 ; Run control
 integrator               = steep 
 nsteps                   = 10000
+
 ; EM criteria and other stuff
 emtol                    = 100
 emstep                   = 0.005
-;niter                    = 20
-;nbfgscorr                = 10
+
 ; Output control
-nstlog                   = 1
-nstenergy                = 1
+nstlog                   = 5000
+nstenergy                = 5000
 
 ; box config
 pbc                      = xyz
@@ -439,8 +439,8 @@ dt                       = $(options charmm36=0.002 martini3=0.02)
 
 nsteps                   = 50000
 nstcomm                  = 100
-comm_mode                = linear
-comm_grps                = 
+comm-mode                = linear
+comm-grps                = 
 
 
 ; Output control
@@ -530,8 +530,8 @@ tinit                    = 0
 dt                       = $(options charmm36=0.002 martini3=0.02)
 nsteps                   = 100000
 nstcomm                  = 100
-comm_mode                = linear
-comm_grps                = 
+comm-mode                = linear
+comm-grps                = 
 
 ; Output control
 nstxout                  = 5000
@@ -618,8 +618,8 @@ tinit                    = 0
 dt                       = $(options charmm36=0.002 martini3=0.02)
 nsteps                   = ${STEPS}
 nstcomm                  = 100
-comm_mode                = linear
-comm_grps                = 
+comm-mode                = linear
+comm-grps                = 
 
 ; Output control
 nstxout                 = 50000
@@ -682,11 +682,8 @@ tau_t                    = 1
 
 ; Pressure
 Pcoupl                   = no
-;Pcoupltype               = semiisotropic
-;ref_p                    = 1.0 1.0
-;tau_p                    = 5
-;compressibility          = 0 4.5e-5
-comm-mode                = linear
+
+
 
 
 ; making bonds stiff       (to avoid the need of calculating fast vibrations. something that would require dividing ts by 4!)
