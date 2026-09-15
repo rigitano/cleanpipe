@@ -4,7 +4,7 @@
 #this is ment to calculate surface tension of slabs and membranes in water
 
 # usage example:  ./runREALISTIC.sh a12HW a12HW.gro a12HW.top 400 298 charmm36 pc 2 8
-#always simulate more than 400 ns, because gmx enery will disconsider data before 300
+#always simulate more than 600 ns, because gmx enery will disconsider data before 300, and 300 sampling is required
 
 # ARGUMENTS:
 # 1-name that goes onthe runREALISTIC to be created and the job name
@@ -1077,7 +1077,7 @@ if planned_steps_reached "prod.tpr" "prod.cpt"; then # only post-process once PR
     printf '1\n0\n' | ${GMXS} trjconv -s "prod.tpr" -f "prod.centered.xtc" -o "prod.fitted.xtc" -fit progressive 2>&1 | tee "outanderr.fit"
     if gmx_failed "fit" "outanderr.fit"; then exit 1; fi
     
-    printf '#Surf*SurfTen\n\n' | ${GMXS} energy -f prod.edr -o energy.surften200toEND.xvg -b 300000 2>&1 | tee "outanderr.energy.surften"
+    printf '#Surf*SurfTen\n\n' | ${GMXS} energy -f prod.edr -o energy.surften300toEND.xvg -b 300000 2>&1 | tee "outanderr.energy.surften"
 
     
 fi

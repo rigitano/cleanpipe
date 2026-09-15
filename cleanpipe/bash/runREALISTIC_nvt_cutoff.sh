@@ -4,7 +4,7 @@
 #this is ment to calculate surface tension of slabs in vacum
 
 # usage example:  ./runREALISTIC.sh a12HW a12HW.gro a12HW.top 400 298 charmm36 pc 2 8
-#always simulate more than 400 ns, because gmx enery will disconsider data before 300
+#always simulate more than 600 ns, because gmx enery will disconsider data before 300, and 300 sampling is required
 
 # ARGUMENTS:
 # 1-name that goes onthe runREALISTIC to be created and the job name
