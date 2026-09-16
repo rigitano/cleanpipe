@@ -396,7 +396,6 @@ End
 
 @ensure_original_directory
 def build_membrane(
-    out_specs_filename,
     out_system_name,
     lipids_by_domain,
     shape_type,
@@ -423,8 +422,7 @@ def build_membrane(
     Parameters
     ----------
 
-    out_specs_filename : str
-        Output .str filename.
+
     out_system_name : str
         Name of the folder that will be created, and also the .gro and .top that will appear there).
     lipids_by_domain : dict
@@ -480,6 +478,9 @@ def build_membrane(
 
     Path(out_system_name).mkdir(parents=True, exist_ok=True)
     os.chdir(out_system_name)
+
+
+    out_specs_filename = "system_specification.str"
 
     # ------------------------------------------------------------------
     # Helper function: run command with error checking
