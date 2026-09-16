@@ -10,6 +10,10 @@ import os
 import functools
 import shutil
 
+
+import numpy as np
+from scipy.spatial import cKDTree
+
 from pathlib import Path
 
 
@@ -109,7 +113,7 @@ box full of {s_extracted_mol_name}
 """
     with open(f"{s_outName}/{s_outName}.top", "w") as f:  # written directly inside the folder, no need to mv it later
         f.write(topology_text)
-        
+
     ###################################################
 
     # bring the original gro and itp to the system folder
@@ -741,3 +745,466 @@ def build_membrane(
     top_file.write_text(
         martini_includes + top_file.read_text()
     )
+
+    files_to_copy = [
+        "runREALISTIC.sh",
+        "runBENCHMARK-rome.sh",
+    ]
+    module_path = Path(__file__).resolve().parent # Where the cl module lives
+    source_dir = module_path / "bash" # Folder containing the source files
+    dest_dir = Path(s_outSytemName) # Destination folder
+    for filename in files_to_copy:
+        src = source_dir / filename
+        dst = dest_dir / filename
+        shutil.copy(src, dst)
+
+
+
+
+
+
+
+
+
+
+def slab_in_water(gro_in,
+                        top_in,
+                        layer_thickness,          # nm, per layer
+                        out_dir,
+                        s_forceField,
+                        solvent_box="spc216.gro",  # pre-equilibrated water box
+                        min_dist=0.22,             # nm, water<->slab clash cutoff
+                        gmx="gmx",
+                        keep_workdir=False,
+                        verbose=True):
+
+    """
+
+
+    Build a  [ water | your slab | water ]  sandwich along z, for interfacial
+    tension calculations, WITHOUT ever inserting water inside your original system.
+
+    Side view (z is vertical), Lz = original box height, t = layer thickness:
+
+        2t + Lz  +---------------------+  <- new box top  (PBC partner of the bottom)
+                |    water layer B    |   t
+        t + Lz  +---------------------+
+                |                     |
+                |   your original     |   Lz   (atoms untouched, only shifted up)
+                |   .gro system       |
+            t  +---------------------+
+                |    water layer A    |   t
+            0  +---------------------+  <- new box bottom
+
+
+    Why not "make the box taller and run gmx solvate on the whole thing"?
+    Because solvate would also push water into every cavity of your slab.
+    Here the water is generated on its own and merely *stacked* around the slab.
+
+
+    The trick used to make the water (important, read this):
+    --------------------------------------------------------
+    * ONE pre-equilibrated water box of size (Lx, Ly, 2t) is generated with
+    `gmx solvate -cs spc216.gro -box Lx Ly 2t`.
+    * It is cut in half at z = t. The lower half becomes layer A, the upper half
+    becomes layer B (shifted up by Lz).
+    -> The two faces that end up meeting across the *outer* periodic boundary are
+        exactly the two faces that were already periodic partners inside the
+        original water box. So that junction is perfectly packed, and the two
+        layers are still two genuinely different water configurations (not copies).
+    * The two *inner* faces touch your slab. Waters that bump into it are deleted
+    whole-molecule, which is exactly what `gmx solvate` does when it solvates a
+    protein.
+
+    Outputs go into a brand-new folder. The inputs are never touched.
+
+    Dependencies: numpy, scipy, and your own `bricksFileSystem` helper.
+    """
+
+
+    """
+    Put a water layer of `layer_thickness` nm above AND below the system in
+    `gro_in`, keeping x and y exactly as they are.
+
+    Parameters
+    ----------
+    gro_in, top_in   : paths to the original system (never modified)
+    layer_thickness  : thickness in nm of EACH water layer
+    out_dir          : new folder to create; everything is written there
+    out_name         : basename of the outputs -> out_name.gro / out_name.top
+    solvent_box      : solvent coordinates for `gmx solvate -cs`
+                       (spc216.gro is fine for any 3-point model: SPC, SPC/E, TIP3P)
+
+    min_dist         : a whole water molecule is deleted if any of its atoms is
+                       closer than this to any slab atom (0.22 nm ~ what
+                       `gmx solvate` uses by default for C/N/O)
+    gmx              : name/path of the GROMACS binary
+    keep_workdir     : keep the intermediate files for debugging
+    verbose          : print a short report
+
+    Returns
+    -------
+    dict with 'gro', 'top', 'n_water', 'box'
+
+
+    example:
+    cl.slab_in_water(
+        gro_in="slab.gro",
+        top_in="slab.top",
+        s_forceField="charmm36-jul2022",
+        layer_thickness=3.0,              # nm of water on each side
+        out_dir="slab_test",
+    )
+
+    """
+
+
+
+
+    def _keep_non_clashing(wat_xyz, wat_mol, slab_xyz, box, min_dist):
+        """Boolean mask over water atoms: False for every atom of a water molecule
+        that has at least one atom closer than `min_dist` to a slab atom.
+
+        The KD-tree is built with `boxsize=box`, i.e. it measures distances through
+        the periodic boundaries in x, y and z - which is what the real simulation
+        will do too.
+        """
+        # KD-tree with PBC needs every coordinate inside [0, L)
+        wrap = lambda p: np.where((p % box) >= box, 0.0, (p % box))
+
+        tree = cKDTree(wrap(slab_xyz), boxsize=box)
+        dist, _ = tree.query(wrap(wat_xyz), k=1, distance_upper_bound=min_dist)
+        clashing_atom = np.isfinite(dist)        # inf = nothing within min_dist
+
+        bad_molecules = np.unique(wat_mol[clashing_atom])
+        return ~np.isin(wat_mol, bad_molecules)
+
+    # =====================================================================
+    # 1. Minimal .gro reader / writer
+    #    .gro is a FIXED-COLUMN text format, all lengths in nm:
+    #       cols  0:5   residue number
+    #       cols  5:10  residue name
+    #       cols 10:15  atom name
+    #       cols 15:20  atom number
+    #       then 3 (or 6, if velocities) equal-width float fields
+    #    Last line = box vectors.
+    # =====================================================================
+
+    def _coord_field_width(atom_line):
+        """Figure out how wide the coordinate columns are (8 by default, but files
+        written with extra precision use wider fields)."""
+        body = atom_line[20:].rstrip()
+        for n_fields in (3, 6):                      # xyz, or xyz + velocities
+            if len(body) % n_fields == 0:
+                w = len(body) // n_fields
+                if 7 <= w <= 15:                     # sane column width
+                    return w
+        return 8                                     # GROMACS default
+
+
+    def _read_gro(path):
+        """Read a .gro file. Velocities are ignored (they are meaningless after we
+        rebuild the system anyway; minimisation/equilibration will regenerate them)."""
+        with open(path) as fh:
+            lines = fh.read().splitlines()
+
+        title    = lines[0]
+        n_atoms  = int(lines[1].strip())
+        body     = lines[2:2 + n_atoms]
+        box_line = lines[2 + n_atoms]
+
+        w = _coord_field_width(body[0])
+
+        resid    = np.empty(n_atoms, dtype=int)
+        resname  = []
+        atomname = []
+        xyz      = np.empty((n_atoms, 3), dtype=float)
+
+        for i, line in enumerate(body):
+            resid[i] = int(line[0:5])
+            resname.append(line[5:10].strip())
+            atomname.append(line[10:15].strip())
+            # atom number (cols 15:20) is dropped: we renumber everything on output
+            c = line[20:]
+            xyz[i] = [float(c[k * w:(k + 1) * w]) for k in range(3)]
+
+        box = np.array([float(v) for v in box_line.split()], dtype=float)
+
+        return dict(title=title, resid=resid, resname=resname,
+                    atomname=atomname, xyz=xyz, box=box)
+
+
+    def _write_gro(path, title, resid, resname, atomname, xyz, box_xyz):
+        """Write a rectangular-box .gro file with the standard GROMACS formatting."""
+        n = len(xyz)
+        with open(path, "w") as fh:
+            fh.write(title.strip() + "\n")
+            fh.write("%d\n" % n)
+            for i in range(n):
+                fh.write("%5d%-5s%5s%5d%8.3f%8.3f%8.3f\n" % (
+                    resid[i] % 100000,            # .gro fields wrap at 99999
+                    resname[i][:5],
+                    atomname[i][:5],
+                    (i + 1) % 100000,
+                    xyz[i, 0], xyz[i, 1], xyz[i, 2]))
+            fh.write("%10.5f%10.5f%10.5f\n" % tuple(box_xyz))
+
+
+    def _molecule_ids(resid):
+        """Give every atom the index of the molecule it belongs to.
+        A new molecule starts whenever the residue number changes (true for water:
+        GROMACS requires one residue per solvent molecule)."""
+        is_new = np.ones(len(resid), dtype=bool)
+        is_new[1:] = resid[1:] != resid[:-1]
+        return np.cumsum(is_new) - 1
+
+
+    # =====================================================================
+    # 2. Topology helper: add the new water molecules to the .top
+    # =====================================================================
+
+    def _patch_topology(top_path, water_resname, n_water, water_itp_include=None):
+        """Append '<water_resname>  <n_water>' to [ molecules ], and optionally add
+        the #include line for the water model.
+
+        NOTE: [ molecules ] must list molecules in the SAME ORDER as the atoms in
+        the .gro. We write the solute first and all the water last, so appending at
+        the end of the file is correct.
+        """
+        with open(top_path) as fh:
+            lines = fh.read().splitlines()
+
+
+        
+
+        # -- optionally insert the water model #include right after the force field
+        if water_itp_include:
+            already_there = any(water_itp_include in l for l in lines)
+            if not already_there:
+                # put it just after the force field include, else after the 1st include
+                pos = None
+                for i, l in enumerate(lines):
+                    if l.strip().startswith("#include") and "forcefield.itp" in l:
+                        pos = i + 1
+                        break
+                if pos is None:
+                    for i, l in enumerate(lines):
+                        if l.strip().startswith("#include"):
+                            pos = i + 1
+                            break
+                if pos is None:
+                    pos = 0
+                lines.insert(pos, '#include "%s"' % water_itp_include)
+
+        # -- append the solvent count at the very end (= end of [ molecules ])
+        lines.append("%-15s %d" % (water_resname, n_water))
+
+        with open(top_path, "w") as fh:
+            fh.write("\n".join(lines) + "\n")
+
+
+    # the main code
+
+    out_name=out_dir          # basename of the outputs -> out_name.gro / out_name.top
+
+
+    # ---------------------------------------------------------------
+    # 3.1 Read the original system and sanity-check it
+    # ---------------------------------------------------------------
+    gro_in = os.path.abspath(gro_in)
+    top_in = os.path.abspath(top_in)
+    out_dir = os.path.abspath(out_dir)
+
+    slab = _read_gro(gro_in)
+    box = slab["box"]
+
+    # Only rectangular boxes make sense for a flat slab geometry.
+    if len(box) > 3 and np.any(np.abs(box[3:]) > 1e-6):
+        raise ValueError("The input box is triclinic. A slab needs a rectangular box "
+                         "(use `gmx editconf -bt cubic` / -box first).")
+    Lx, Ly, Lz = box[0], box[1], box[2]
+
+    if abs(Lx - Ly) > 1e-3:
+        print("[warning] x (%.3f) and y (%.3f) differ - you said 'square', "
+              "double-check this is what you want." % (Lx, Ly))
+    if layer_thickness <= 0:
+        raise ValueError("layer_thickness must be > 0 nm")
+    if layer_thickness < 1.0:
+        print("[warning] a %.2f nm layer is thin: the two interfaces will feel "
+              "each other through PBC. 2-3 nm is a safer minimum." % layer_thickness)
+
+    t = float(layer_thickness)
+    Lz_new = Lz + 2.0 * t
+    new_box = np.array([Lx, Ly, Lz_new])
+
+    # ---------------------------------------------------------------
+    # 3.2 Create the output folder + a scratch subfolder, copy the topology
+    # ---------------------------------------------------------------
+    work_dir = os.path.join(out_dir, "_work")
+    bricksFileSystem.run_and_capture(f'mkdir -p "{work_dir}"')
+
+    top_out = os.path.join(out_dir, out_name + ".top")
+    gro_out = os.path.join(out_dir, out_name + ".gro")
+
+    # copy the .top ... and any .itp sitting next to it (they are usually
+    # #included with a relative path, so they must travel with the .top)
+    bricksFileSystem.run_and_capture(f'cp "{top_in}" "{top_out}"')
+    src_dir = os.path.dirname(top_in)
+    for f in sorted(os.listdir(src_dir)):
+        if f.endswith(".itp"):
+            bricksFileSystem.run_and_capture(
+                f'cp "{os.path.join(src_dir, f)}" "{os.path.join(out_dir, f)}"')
+
+    # ---------------------------------------------------------------
+    # 3.3 Generate ONE water box of size (Lx, Ly, 2t)  -- pure solvent,
+    #     no -cp, so nothing of yours is involved.
+    # ---------------------------------------------------------------
+    water_gro = os.path.join(work_dir, "water_box.gro")
+    bricksFileSystem.run_and_capture(
+        f'{gmx} solvate -cs {solvent_box} '
+        f'-box {Lx:.5f} {Ly:.5f} {2.0 * t:.5f} '
+        f'-o "{water_gro}"')
+
+    water = _read_gro(water_gro)
+    w_xyz = water["xyz"]
+    w_mol = _molecule_ids(water["resid"])           # which atoms form one molecule
+    water_resname = water["resname"][0]             # normally "SOL"
+
+    # ---------------------------------------------------------------
+    # 3.4 Cut the water box in half at z = t and move the two halves into place
+    #     A molecule goes with its centre, so molecules are never chopped.
+    # ---------------------------------------------------------------
+    n_mol = w_mol.max() + 1
+    # mean z of each molecule (bincount = fast "group by molecule and average")
+    mol_z = np.bincount(w_mol, weights=w_xyz[:, 2]) / np.bincount(w_mol)
+    mol_is_lower = mol_z < t                        # lower half -> layer A
+    atom_is_lower = mol_is_lower[w_mol]
+
+    lower_xyz = w_xyz[atom_is_lower].copy()                 # stays at z in [0, t]
+    upper_xyz = w_xyz[~atom_is_lower].copy()
+    upper_xyz[:, 2] += Lz                                   # pushed above the slab
+
+    lower_mol = w_mol[atom_is_lower]
+    upper_mol = w_mol[~atom_is_lower]
+
+    # ---------------------------------------------------------------
+    # 3.5 Lift the original system by t, so it sits between the two layers
+    # ---------------------------------------------------------------
+    slab_xyz = slab["xyz"].copy()
+    slab_xyz[:, 2] += t
+
+    # ---------------------------------------------------------------
+    # 3.6 Delete water molecules that clash with the slab
+    #     (whole molecules only, otherwise the topology breaks)
+    # ---------------------------------------------------------------
+    wat_xyz = np.vstack([lower_xyz, upper_xyz])
+    # relabel molecules 0..N-1 over the two concatenated halves
+    wat_mol = np.concatenate([lower_mol, upper_mol + n_mol])
+    _, wat_mol = np.unique(wat_mol, return_inverse=True)
+
+    keep_atom = _keep_non_clashing(wat_xyz, wat_mol, slab_xyz, new_box, min_dist)
+
+    wat_xyz = wat_xyz[keep_atom]
+    wat_mol = wat_mol[keep_atom]
+    _, wat_mol = np.unique(wat_mol, return_inverse=True)     # renumber again
+    n_water = int(wat_mol.max()) + 1 if len(wat_mol) else 0
+
+    # water atom/residue names, in the same kept order
+    w_resname_all = np.array(water["resname"])
+    w_atomname_all = np.array(water["atomname"])
+    order = np.concatenate([np.where(atom_is_lower)[0], np.where(~atom_is_lower)[0]])
+    wat_resname = list(w_resname_all[order][keep_atom])
+    wat_atomname = list(w_atomname_all[order][keep_atom])
+
+    # ---------------------------------------------------------------
+    # 3.7 Write the merged .gro:  SLAB FIRST, then all the water.
+    #     (order must match [ molecules ] in the .top)
+    # ---------------------------------------------------------------
+    first_water_resid = int(slab["resid"].max()) + 1
+    all_resid = np.concatenate([slab["resid"], first_water_resid + wat_mol])
+    all_resname = list(slab["resname"]) + wat_resname
+    all_atomname = list(slab["atomname"]) + wat_atomname
+    all_xyz = np.vstack([slab_xyz, wat_xyz])
+
+    _write_gro(gro_out,
+               "%s | water sandwich, %.2f nm per layer" % (slab["title"].strip(), t),
+               all_resid, all_resname, all_atomname, all_xyz, new_box)
+
+    # ---------------------------------------------------------------
+    # 3.8 Patch the topology
+    # ---------------------------------------------------------------
+
+    if "charmm36-jul2022" in s_forceField.lower():
+        water_itp_include = "charmm36-jul2022.ff/tip3p.itp"
+    elif "martini3001" in s_forceField.lower():
+        pass #water in the main martini3001 itp, so no need to include a separate water itp
+    elif "martini22" in s_forceField.lower():
+        pass #water in the main martini22 itp, so no need to include a separate water itp
+        
+    
+    _patch_topology(top_out, water_resname, n_water, water_itp_include)
+
+    # ---------------------------------------------------------------
+    # 3.9 Clean up and report
+    # ---------------------------------------------------------------
+    if not keep_workdir:
+        bricksFileSystem.run_and_capture(f'rm -rf "{work_dir}"')
+
+    if verbose:
+        print("Original box : %.3f x %.3f x %.3f nm  (%d atoms)"
+              % (Lx, Ly, Lz, len(slab["xyz"])))
+        print("New box      : %.3f x %.3f x %.3f nm  (%d atoms)"
+              % (Lx, Ly, Lz_new, len(all_xyz)))
+        print("Slab now at  : z = %.3f .. %.3f nm" % (t, t + Lz))
+        print("Water added  : %d molecules (%d removed for clashing with the slab)"
+              % (n_water, n_mol - n_water))
+        print("Wrote        : %s" % gro_out)
+        print("               %s" % top_out)
+
+
+    # ---------------------------------------------------------------
+    # 4. bring forcefield  to the folder
+    # ---------------------------------------------------------------
+
+    if s_forceField in ["charmm36-jul2022", "martini3001", "martini22"]: #if the user chose one the forcefields that I have stored myself in USEFUL_FORCEFIELDS
+    
+        module_path = Path(__file__).resolve().parent # Where the cl module lives
+        s_ffLocation = module_path / "USEFUL_FORCEFIELDS"
+        
+        if "charmm36-jul2022" in s_forceField.lower():
+            bricksFileSystem.run_and_capture(f'cp -r "{s_ffLocation}/charmm36-jul2022.ff" {out_dir.rstrip("/")}/') # in the case of charmm, the actual folder has a .ff in the end
+            bricksFileSystem.run_and_capture(f'cp -r "{s_ffLocation}/toppar" {out_dir.rstrip("/")}/') #and this extra file must alse come
+            #ff_inclusion_text = "charmm36-jul2022.ff/forcefield.itp"
+        elif "martini3001" in s_forceField.lower():
+            bricksFileSystem.run_and_capture(f'cp -r "{s_ffLocation}/martini3001" {out_dir.rstrip("/")}/')
+            #ff_inclusion_text = "martini3001/martini_v3.0.0.itp"
+        elif "martini22" in s_forceField.lower():
+            bricksFileSystem.run_and_capture(f'cp -r "{s_ffLocation}/martini22" {out_dir.rstrip("/")}/')
+            #ff_inclusion_text = "martini22/martini_v2.2.itp"
+        
+        
+    else: #if the user gave the folder of the forcefield
+        s_forceField = str(Path(s_forceField).expanduser().resolve()) #resolve all ../ ~/ ../../ ./ to absolute path
+        s_ffLocation = bricksFileSystem.get_file_location(s_forceField) # get forcefiled original location (relative to where the program was louched)
+        s_forceField_name = bricksFileSystem.get_filename_without_extension(s_forceField) # now we update the variable so It will have just the ff name. without location nor extention
+        
+        bricksFileSystem.run_and_capture(f'cp -r "{s_forceField}" {out_dir.rstrip("/")}/') # in the case of charmm, the actual folder has a .ff in the end
+        ff_inclusion_text = f"{s_forceField_name}/xxxxxxxx.itp"
+
+    
+ 
+    #copy usefull scripts to the system folder
+    files_to_copy = [
+        "runREALISTIC.sh",
+        "runREALISTIC_expandz_cutoff.sh",
+        "runREALISTIC_expandz_pme.sh",
+        "runREALISTIC_nvt_cutoff.sh",
+        "runREALISTIC_nvt_pme.sh",
+    ]
+    module_path = Path(__file__).resolve().parent # Where the cl module lives
+    source_dir = module_path / "bash" # Folder containing the source files
+    dest_dir = Path(out_dir) # Destination folder
+    for filename in files_to_copy:
+        src = source_dir / filename
+        dst = dest_dir / filename
+        shutil.copy(src, dst)
