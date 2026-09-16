@@ -22,6 +22,7 @@ setup(
         'py3Dmol',
         'scipy',
         'scikit-learn',
+        'TS2CG',
     ],
 
     include_package_data=True,  # this triggers MANIFEST.in to handle recursive inclusion of non-python files
