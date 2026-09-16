@@ -426,7 +426,7 @@ def build_membrane(
     out_specs_filename : str
         Output .str filename.
     out_system_name : str
-        Name of the folder that will be created, and also the .gro and .top that will be saved there).
+        Name of the folder that will be created, and also the .gro and .top that will appear there).
     lipids_by_domain : dict
         Mapping of domain IDs to lipid definitions.
         Format: {domain: [(lipid_name, ratio_up, ratio_down, APL), ...]}.
@@ -686,10 +686,10 @@ def build_membrane(
     top_file = Path(f"{out_system_name}.top")
 
     martini_includes = (
-        '#include "martini_v300/martini_v3.0.0.itp"\n'
-        '#include "martini_v300/martini_v3.0.0_ffbonded_v2.itp"\n'
-        '#include "martini_v300/martini_v3.0.0_phospholipids_v1.itp"\n'
-        '#include "martini_v300/martini_v3.0_sterols_v1.0.itp"\n'
+        '#include "martini3001/martini_v3.0.0.itp"\n'
+        '#include "martini3001/martini_v3.0.0_ffbonded_v2.itp"\n'
+        '#include "martini3001/martini_v3.0.0_phospholipids_v1.itp"\n'
+        '#include "martini3001/martini_v3.0.0_sterols_v1.0.itp"\n'
         '\n'
     )
 
