@@ -32,63 +32,107 @@ def ensure_original_directory(func):
             os.chdir(original_directory)
     return wrapper
 
-def pdb2box_full_of_that(s_pdbfile, s_forceField, s_box_size, n_mol_max):
+@ensure_original_directory
+def molecule2box_full_of_that(molecule, s_forceField, s_box_size, n_mol_max):
     """
-
-    usage example:
-    cl.pdb2box_full_of_that("octn.pdb","charmm36-jul2022", "5 5 5", 1000)
+    usage example: cl.molecule2box_full_of_that(["octn.gro", "octn.itp"], "charmm36-jul2022", "5 5 5", 1000)
 
     create a 5x5x5 box system filled with a lot of copies of the molecule
-
-    as gromacs dont have such tool, its necessary to be creative, and use "pdb2gmx" to create a system with 1 molecule, then
-    use "insert-molecules" to fill the box with copyes of the molecule, then modify the top to reflect the new total
+    as gromacs dont have such tool, its necessary to be creative, and use "insert-molecules"
+    to fill the box with copyes of the molecule, then modify the top to reflect the new total
     the top file is also edited to change name of the system. and also the name of the molecule
-    here we also make sure the outputs are renamed to be blabla_filledbox.gro, blabla_filledbox.top and blabla_filledbox.posres.top
-
+    here the outputs are named box_full_of_blabla.gro and box_full_of_blabla.top, inside the
+    folder box_full_of_blabla/
     """
 
-    #check if the filename inside s_pdbfile is valid
-    bricksFileSystem.check_extention(s_pdbfile,['.pdb']) 
-    #obtain just the file name. ex: blabla/blabla/filename.bla
-    s_filename = bricksFileSystem.get_filename_without_extension(s_pdbfile) 
+    #if the variable 'molecule' contains a list, I will presume is a .gro and a .itp file names
+    if isinstance(molecule, list) and len(molecule) == 2:
 
+        #get the gro and itp as ABSOLUTE paths, so the os.chdir() done later cant break them
+        s_gro = str(Path(molecule[0]).expanduser().resolve())
+        s_itp = str(Path(molecule[1]).expanduser().resolve())
 
-    bricksFileSystem.run_and_capture(f"mkdir box_full_of_{s_filename}")
-    s_outPathAndName = f"box_full_of_{s_filename}/box_full_of_{s_filename}"
+        #check if the filename inside s_gro and s_itp are valid
+        bricksFileSystem.check_extention(s_gro, ['.gro'])
+        bricksFileSystem.check_extention(s_itp, ['.itp'])
 
+        #get the name of the molecule inside the itp
+        ll_moleculetype = bricksTOP.parse_directive(s_itp, '[ moleculetype ]')
+        s_extracted_mol_name = ll_moleculetype[0][0]
 
-    #create a system with 1 molecule.
-    bricksFileSystem.run_and_capture(f"gmx pdb2gmx -f {s_filename}.pdb -o {s_outPathAndName}_just1mol.gro -p {s_outPathAndName}.top -i posres.itp -water none -ff {s_forceField}")
-    
-    #pdb2gmx generates a useless posres.itp with useless posres for 1 molecule. so I delete the posres.itp and the inclusion in the top
-    bricksFileSystem.delete("posres.itp")
-    bricksTOP.remove_posres_inclusion(f"{s_outPathAndName}.top")
+    else:
+        raise ValueError("The 'molecule' parameter must be a list containing [gro_file, itp_file].")
 
-    #manipulate the GRO file to create a and fill it with copyes of the molecule
-    captured_output = bricksFileSystem.run_and_capture(f"gmx insert-molecules -ci {s_outPathAndName}_just1mol.gro -nmol {str(n_mol_max)} -rot xyz -box {s_box_size} -o {s_outPathAndName}.gro")
-    print(f"\nCLEANPIPE MESSAGE\ngro file written: \n                     {s_outPathAndName}.gro")
+    #the output folder must exist BEFORE anything is copied into it (this is why the molecule
+    #is parsed first and the forcefield is copied only after)
+    s_outName = f"box_full_of_{s_extracted_mol_name}"
+    bricksFileSystem.run_and_capture(f'mkdir -p "{s_outName}"')  # -p so running it twice doesnt crash
 
-    #now we have the final gro with a lot of molecules. its time to delete the initial one
-    bricksFileSystem.delete(f"{s_outPathAndName}_just1mol.gro")
+    if str(s_forceField).lower() in ["charmm36-jul2022", "martini3001", "martini22"]:
 
-    #get the number of added molecules. 
+        #if the user chose one the forcefields that I have stored myself in USEFUL_FORCEFIELDS
+        module_path = Path(__file__).resolve().parent  # Where the cl module lives
+        s_ffLocation = module_path / "USEFUL_FORCEFIELDS"
+
+        if "charmm36-jul2022" in s_forceField.lower():
+            bricksFileSystem.run_and_capture(f'cp -r "{s_ffLocation}/charmm36-jul2022.ff" "{s_outName}/"')  # in the case of charmm, the actual folder has a .ff in the end
+            bricksFileSystem.run_and_capture(f'cp -r "{s_ffLocation}/toppar" "{s_outName}/"')  # and this extra file must alse come
+            ff_inclusion_text = "charmm36-jul2022.ff/forcefield.itp"
+
+        elif "martini3001" in s_forceField.lower():
+            bricksFileSystem.run_and_capture(f'cp -r "{s_ffLocation}/martini3001" "{s_outName}/"')
+            ff_inclusion_text = "martini3001/martini_v3.0.0.itp"
+
+        elif "martini22" in s_forceField.lower():
+            bricksFileSystem.run_and_capture(f'cp -r "{s_ffLocation}/martini22" "{s_outName}/"')
+            ff_inclusion_text = "martini22/martini_v2.2.itp"
+    else:
+
+        #if the user gave the folder of the forcefield
+        s_forceField = str(Path(s_forceField).expanduser().resolve())  #resolve all ../ ~/ ../../ ./ to absolute path
+        s_ff_foldername = Path(s_forceField).name  # the folder name AS IT IS, a .ff folder must keep its .ff
+        bricksFileSystem.run_and_capture(f'cp -r "{s_forceField}" "{s_outName}/"')
+        ff_inclusion_text = f"{s_ff_foldername}/forcefield.itp"
+
+    ############### manualy create top ###############
+
+    s_itp_name = Path(s_itp).name  # the top will sit next to the copyed itp, so only the filename goes in the #include
+    topology_text = f"""
+#include "{ff_inclusion_text}"
+#include "{s_itp_name}"
+
+[ system ]
+box full of {s_extracted_mol_name}
+
+[ molecules ]
+{s_extracted_mol_name}   1
+"""
+    with open(f"{s_outName}/{s_outName}.top", "w") as f:  # written directly inside the folder, no need to mv it later
+        f.write(topology_text)
+        
+    ###################################################
+
+    # bring the original gro and itp to the system folder
+    bricksFileSystem.run_and_capture(f'cp "{s_gro}" "{s_outName}/"')
+    bricksFileSystem.run_and_capture(f'cp "{s_itp}" "{s_outName}/"')
+
+    #cd into the output folder we created and do everithing there
+    os.chdir(s_outName)
+
+    #manipulate the GRO file to create a box and fill it with copyes of the molecule
+    #(from here on the names are relative to the folder we are already inside of)
+    captured_output = bricksFileSystem.run_and_capture(f'gmx insert-molecules -ci "{Path(s_gro).name}" -nmol {str(n_mol_max)} -rot xyz -box {s_box_size} -o "{s_outName}.gro"')
+    print(f"\nCLEANPIPE MESSAGE\ngro file written: \n {s_outName}/{s_outName}.gro")
+
+    #get the number of added molecules.
     match = re.search(r'Added\s+(\d+)\s+molecules', captured_output)
+    if match is None:  # if gmx failed or printed something else, dont crash with a cryptic NoneType error
+        raise RuntimeError(f"could not read how many molecules 'gmx insert-molecules' added:\n{captured_output}")
     added_molecules = int(match.group(1))
 
-    #change the ugly molecule name currently inside the TOP file.
-    uglyMolName = bricksTOP.getMoleculeName(f"{s_outPathAndName}.top")
-    molName = s_filename
-    bricksTOP.replaceMoleculeName(f"{s_outPathAndName}.top", uglyMolName, molName)
-
     #update the TOP file with the new total the molecule
-    bricksTOP.update_molecule_quantity(f"{s_outPathAndName}.top", molName, added_molecules)
-
-    #split the TOP file, into a ITP that describes the molecule and a simple TOP that contains only name of the system and the totals.
-    bricksTOP.decompose_TOP_file_into_TOP_and_ITPs(f"{s_outPathAndName}.top")
+    bricksTOP.update_molecule_quantity(f"{s_outName}.top", s_extracted_mol_name, added_molecules)
     
-
-    #give a name for the system
-    bricksTOP.setSystemName(f"{s_outPathAndName}.top", f"box filled with {s_filename}" )
 
 @ensure_original_directory
 def molecule2molecule_in_solvent(molecule, s_outSytemName, solvent, s_forceField, s_boxSize, s_maxsol=0, s_aditional_arguments=''):

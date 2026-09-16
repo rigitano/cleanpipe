@@ -353,7 +353,7 @@ def run_and_capture(command):
             stderr=final_error
         )
     
-    return final_output
+    return final_output+final_error
 
 
 
