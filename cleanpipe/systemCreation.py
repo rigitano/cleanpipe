@@ -738,7 +738,10 @@ def build_membrane(
         '#include "martini3001/martini_v3.0.0.itp"\n'
         '#include "martini3001/martini_v3.0.0_ffbonded_v2.itp"\n'
         '#include "martini3001/martini_v3.0.0_phospholipids_v1.itp"\n'
-        '#include "martini3001/martini_v3.0.0_sterols_v1.0.itp"\n'
+        '#include "martini3001/martini_v3.0_sterols_v1.0.itp"\n'
+        '#include "martini3001/martini_v3.0.0_solvents_v1.itp"\n'
+        '#include "martini3001/martini_v3.0.0_ions_v1.itp"\n'
+        '#include "martini3001/martini_v3.0.0_sugars_v1.itp"\n'
         '\n'
     )
 
@@ -754,9 +757,7 @@ def build_membrane(
     source_dir = module_path / "bash" # Folder containing the source files
     dest_dir = Path(out_system_name) # Destination folder
     for filename in files_to_copy:
-        src = source_dir / filename
-        dst = dest_dir
-        shutil.copy(src, dst)
+        bricksFileSystem.run_and_capture(f'cp -r "{source_dir}/{filename}" .')
 
 
 
