@@ -752,10 +752,10 @@ def build_membrane(
     ]
     module_path = Path(__file__).resolve().parent # Where the cl module lives
     source_dir = module_path / "bash" # Folder containing the source files
-    dest_dir = Path(s_outSytemName) # Destination folder
+    dest_dir = Path(out_system_name) # Destination folder
     for filename in files_to_copy:
         src = source_dir / filename
-        dst = dest_dir / filename
+        dst = dest_dir
         shutil.copy(src, dst)
 
 
