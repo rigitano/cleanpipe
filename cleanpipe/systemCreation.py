@@ -762,11 +762,6 @@ def build_membrane(
 
 
 
-
-
-
-
-
 def slab_in_water(gro_in,
                         top_in,
                         layer_thickness,          # nm, per layer
